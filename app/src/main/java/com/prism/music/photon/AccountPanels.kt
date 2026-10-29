@@ -33,9 +33,10 @@ internal fun YouTubeAccountCard(model: PhotonViewModel) {
     Surface(Modifier.fillMaxWidth().padding(22.dp), shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainer) {
         Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("YouTube account", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            GoogleAccountActions(model)
-            HorizontalDivider()
             YouTubeHomeConnection(model)
+            HorizontalDivider()
+            Text("Optional comment permission", style = MaterialTheme.typography.titleMedium)
+            GoogleAccountActions(model)
         }
     }
 }
@@ -47,12 +48,12 @@ internal fun GoogleAccountActions(model: PhotonViewModel) {
     val context = LocalContext.current
     var consent by remember { mutableStateOf(false) }
     var setup by remember { mutableStateOf(false) }
-    state.identity?.let { Text("Connected as ${it.name}", fontWeight = FontWeight.SemiBold) }
+    state.identity?.let { Text("Comments authorized as ${it.name}", fontWeight = FontWeight.SemiBold) }
         ?: Text("Connect Google to post real YouTube comments from Photon.", style = MaterialTheme.typography.bodyMedium)
     if (state.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
     state.error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        FilledTonalButton(enabled = !state.busy && !posting, onClick = { consent = true }) { Text(if (state.identity == null) "Sign in with Google" else "Reconnect") }
+        FilledTonalButton(enabled = !state.busy && !posting, onClick = { consent = true }) { Text(if (state.identity == null) "Authorize comments" else "Reconnect comments") }
         if (state.identity != null || state.busy) TextButton(enabled = !posting, onClick = model::disconnectAccount) { Text("Disconnect") }
     }
     TextButton(onClick = { setup = true }) { Text("Google sign-in setup / troubleshooting") }

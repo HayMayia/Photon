@@ -86,7 +86,11 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
         if (paused) { searchJob?.cancel(); shelfJob?.cancel(); shelves.value = emptyList(); mutableBrowse.value = BrowseState() }
         else { home(); if (!library.value.youtubeHome) refreshShelves() }
     }
-    fun connectYouTubeHome(accountIndex: Int) = refreshYouTubeHome(accountIndex, connecting = true)
+    fun connectYouTubeHome(accountIndex: Int) {
+        // Enter account Home before fetching: a failure must be visible, not leave the old local feed on screen.
+        app.library.update { it.copy(youtubeHome = true, youtubeWebUser = accountIndex, youtubeSessionReady = false) }
+        refreshYouTubeHome(accountIndex, connecting = true)
+    }
     fun refreshYouTubeHome(accountIndex: Int = library.value.youtubeWebUser, connecting: Boolean = false) {
         youtubeHomeJob?.cancel(); youtubeMoreJob?.cancel(); consumedHomeTokens.clear()
         youtubeHomeJob = viewModelScope.launch {

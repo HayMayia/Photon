@@ -30,11 +30,11 @@ internal fun YouTubeHomeConnection(model: PhotonViewModel) {
     var disclosure by remember { mutableStateOf(false) }
     var signingIn by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("Your actual YouTube Home", style = MaterialTheme.typography.titleMedium)
-        Text("Separate from comment authorization. Uses your YouTube web session, not Photon's local recommendation ranking.", style = MaterialTheme.typography.bodySmall)
+        Text("Google sign-in · account Home", style = MaterialTheme.typography.titleMedium)
+        Text("Sign in through Google's own page. Photon then loads your account's YouTube Home automatically, like Prism. Comment permission below is optional and does not connect Home.", style = MaterialTheme.typography.bodySmall)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilledTonalButton(modifier = Modifier.weight(1f), onClick = { disclosure = true }) { Text(if (library.youtubeHome) "Review / switch web account" else "Connect YouTube Home") }
-            TextButton(modifier = Modifier.weight(0.6f), onClick = model::disconnectYouTubeHome) { Text("Clear web session") }
+            FilledTonalButton(modifier = Modifier.weight(1f), onClick = { disclosure = true }) { Text(if (library.youtubeHome) "Switch Google account" else "Sign in with Google") }
+            TextButton(modifier = Modifier.weight(0.6f), onClick = model::disconnectYouTubeHome) { Text("Sign out of Home") }
         }
         if (feed.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
         feed.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
@@ -60,9 +60,9 @@ internal fun YouTubeHomeConnection(model: PhotonViewModel) {
             Text("Off until you explicitly enable it. One report after 15 seconds of actual native playback, only with freshly verified enabled Google history; no offline uploads or automatic report retries.", style = MaterialTheme.typography.bodySmall)
         }
     }
-    if (disclosure) AlertDialog(onDismissRequest = { disclosure = false }, title = { Text("Connect a YouTube web session?") },
-        text = { Text("To read the real YouTube Home feed, Photon needs a separate website session, like Prism's feed integration. Google comment authorization cannot provide it. Google's pages handle your login; Photon does not read password fields. WebView keeps sensitive session cookies in this app's private storage (app backup is disabled), and Photon uses these cookies only with allowlisted YouTube hosts to read Home and history controls. Confirmed Google pause/resume changes and separately opted-in playback reports also make authenticated YouTube requests. Disconnect clears this app's web cookies, not Google's native authorization.\n\nThis unofficial integration can stop working. If Google blocks embedded sign-in, Photon will not disguise its login browser or ask you to paste cookies. Home shows YouTube's returned cards/messages without a generated fallback, Google watch-history controls are read separately; unknown state blocks tracking. Optional playback reports require another explicit opt-in and a confirmed active history setting. Website interactions are handled by YouTube itself.", Modifier.heightIn(max = 400.dp).verticalScroll(rememberScrollState())) },
-        confirmButton = { TextButton(onClick = { disclosure = false; model.beginYouTubeWebChange(); signingIn = true }) { Text("Continue to YouTube") } },
+    if (disclosure) AlertDialog(onDismissRequest = { disclosure = false }, title = { Text("Sign in with Google for Home?") },
+        text = { Text("Like Prism, Photon opens Google's own login page and handles the resulting YouTube authentication internally. After sign-in it loads your account Home automatically; there is no second session-connect step. Optional comment authorization below is separate. Google's pages handle your login; Photon does not read password fields. WebView keeps sensitive session cookies in this app's private storage (app backup is disabled), and Photon uses these cookies only with allowlisted YouTube hosts to read Home and history controls. Confirmed Google pause/resume changes and separately opted-in playback reports also make authenticated YouTube requests. Disconnect clears this app's web cookies, not Google's native authorization.\n\nThis unofficial integration can stop working. If Google blocks embedded sign-in, Photon will not disguise its login browser or ask you to paste cookies. Home shows YouTube's returned cards/messages without a generated fallback, Google watch-history controls are read separately; unknown state blocks tracking. Optional playback reports require another explicit opt-in and a confirmed active history setting. Website interactions are handled by YouTube itself.", Modifier.heightIn(max = 400.dp).verticalScroll(rememberScrollState())) },
+        confirmButton = { TextButton(onClick = { disclosure = false; model.beginYouTubeWebChange(); signingIn = true }) { Text("Continue with Google") } },
         dismissButton = { TextButton(onClick = { disclosure = false }) { Text("Cancel") } })
     if (confirmSync) AlertDialog(onDismissRequest = { confirmSync = false }, title = { Text("Add real plays to YouTube history?") },
         text = { Text("Photon will report a video once after at least 15 seconds of real playback, for the connected website account. It checks Google's history setting before sending; paused or unknown state blocks reporting. This can change your account's history and future recommendations. Previously saved local history and downloaded/offline plays are not uploaded. Additional local pause will be turned off when you enable this; Google's pause is never overridden. Switching/reviewing web accounts disables reporting until you opt in again.") },
@@ -76,6 +76,11 @@ internal fun YouTubeHomeConnection(model: PhotonViewModel) {
 }
 
 internal object YouTubeSessionNavigation {
+    // evaluateJavascript returns a JSON-encoded string only after the trusted page confirms LOGGED_IN.
+    fun verifiedIndex(result: String): Int? = runCatching {
+        val value = Json.parseToJsonElement(result) as? JsonPrimitive
+        if (value?.isString != true) null else value.content.toIntOrNull()?.takeIf { it in 0..9 }
+    }.getOrNull()
     private val hosts = setOf("www.youtube.com", "youtube.com", "m.youtube.com", "accounts.youtube.com", "consent.youtube.com", "accounts.google.com", "consent.google.com", "www.google.com")
     fun allowed(url: String): Boolean = runCatching {
         val uri = java.net.URI(url)
@@ -91,10 +96,20 @@ private fun YouTubeSessionDialog(done: (Int) -> Unit, close: () -> Unit) {
     DisposableEffect(Unit) { onDispose { active = false } }
     var error by remember { mutableStateOf<String?>(null) }
     var host by remember { mutableStateOf("www.youtube.com") }
+    fun finishIfSignedIn(view: WebView, explicit: Boolean = false) {
+        val current = view.url.orEmpty()
+        if (!active || !YouTubeSessionNavigation.allowed(current) || Uri.parse(current).host !in setOf("www.youtube.com", "m.youtube.com", "youtube.com")) return
+        view.evaluateJavascript("(function(){return window.ytcfg && ytcfg.get && ytcfg.get('LOGGED_IN') === true ? String(ytcfg.get('SESSION_INDEX')) : null;})()") { result ->
+            if (!active || view.url != current) return@evaluateJavascript
+            val index = YouTubeSessionNavigation.verifiedIndex(result)
+            if (index != null) { active = false; CookieManager.getInstance().flush(); done(index) }
+            else if (explicit) error = "Finish Google's sign-in first. Photon will connect account Home automatically when YouTube confirms the login."
+        }
+    }
     Dialog(onDismissRequest = { active = false; close() }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
-                Text("YouTube website session · $host", Modifier.padding(12.dp), style = MaterialTheme.typography.labelMedium)
+                Text("Sign in with Google · $host", Modifier.padding(12.dp), style = MaterialTheme.typography.labelMedium)
                 Text("If Google says this browser is unsupported, stop here. No cookie-paste or browser-disguise bypass is provided.", Modifier.padding(horizontal = 12.dp), style = MaterialTheme.typography.bodySmall)
                 error?.let { Text(it, Modifier.padding(12.dp), color = MaterialTheme.colorScheme.error) }
                 AndroidView(modifier = Modifier.weight(1f).fillMaxWidth(), factory = { context ->
@@ -117,28 +132,20 @@ private fun YouTubeSessionDialog(done: (Int) -> Unit, close: () -> Unit) {
                                 if (url != null && !YouTubeSessionNavigation.allowed(url)) { view.stopLoading(); error = "Untrusted navigation blocked."; return }
                                 host = url?.let { Uri.parse(it).host }.orEmpty()
                             }
+                            override fun onPageFinished(view: WebView, url: String?) {
+                                if (error == null) finishIfSignedIn(view)
+                            }
                             override fun onReceivedSslError(view: WebView, handler: SslErrorHandler, sslError: SslError) {
                                 handler.cancel(); error = "Secure connection failed. Sign-in was stopped."
                             }
                         }
                         browser = this
-                        loadUrl("https://www.youtube.com/")
+                        loadUrl("https://accounts.google.com/AccountChooser?continue=https%3A%2F%2Fwww.youtube.com%2F&service=youtube")
                     }
                 }, onRelease = { it.stopLoading(); it.destroy() })
                 Row(Modifier.fillMaxWidth().padding(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(onClick = { active = false; close() }) { Text("Cancel") }
-                    Button(enabled = error == null, onClick = {
-                        val view = browser
-                        val current = view?.url.orEmpty()
-                        if (!YouTubeSessionNavigation.allowed(current) || Uri.parse(current).host !in setOf("www.youtube.com", "m.youtube.com", "youtube.com")) {
-                            error = "Finish sign-in and return to the YouTube website first."
-                        } else if (view != null) view.evaluateJavascript("(function(){return window.ytcfg && ytcfg.get ? String(ytcfg.get('SESSION_INDEX')) : null;})()") { result ->
-                            if (!active || view.url != current) return@evaluateJavascript
-                            val index = runCatching { Json.parseToJsonElement(result).jsonPrimitive.content.toIntOrNull() }.getOrNull()
-                            if (index == null || index !in 0..9) error = "Could not verify the web account selection. Open YouTube Home and try again."
-                            else { active = false; CookieManager.getInstance().flush(); done(index) }
-                        }
-                    }) { Text("Use this YouTube session") }
+                    TextButton(onClick = { error = null; browser?.let { finishIfSignedIn(it, explicit = true) } }) { Text("Check sign-in") }
                 }
             }
         }

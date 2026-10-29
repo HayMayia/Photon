@@ -1,0 +1,9 @@
+Photon Android OAuth registration
+
+Package name: io.github.haymayia.photon
+SHA-1 certificate fingerprint: 23:FE:D9:B2:C2:37:F4:C3:B7:CB:67:A7:71:D0:32:56:E3:4A:EB:36
+
+Client type: Android
+Scope: https://www.googleapis.com/auth/youtube.force-ssl
+
+Public certificate identity only. No private key or password is included.

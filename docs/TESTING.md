@@ -81,3 +81,42 @@ The official YouTube browser link is not evidence of native account integration.
 - [Successful 0.2 build](https://github.com/HayMayia/Photon/actions/runs/40856646519)
 - [0.2 APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40856646519/artifacts/12890570366)
 - Physical-device checks remain unverified until a tester reports them.
+
+## 0.3 manual acceptance cases
+
+- **UI-03:** Home has Prism-style shortcut tiles and distinct Quick picks,
+  Continue watching (if unfinished history exists), Ready offline (if downloads
+  exist), Made for you, Music and general-video shelves. Check light/dark and
+  Settings accent changes. Categories must not restrict general YouTube searches.
+- **AUD-01:** Open a video with both original and higher-bitrate dubbed tracks.
+  Compare against YouTube's explicit Original audio option, not its auto-dub default.
+  Photon should use original audio and display its selection label. Repeat after
+  changing video resolution and after downloading/playing offline.
+- **AUD-02:** A source with no soundtrack labels displays unverified language.
+  Explicit dub-only sources must not silently change the spoken language.
+  Live HLS language selection is a separate, unverified source behavior.
+- **ART-01:** Download while online, enable airplane mode, force-stop/reopen:
+  downloaded thumbnails must come from the saved files, with audible offline video.
+- **ART-02:** On an old download, choose Settings → Save offline thumbnails while
+  on an allowed network. Then repeat ART-01. Clearing only Android's app **cache**
+  must not remove saved thumbnail files. **Do not clear app storage/data**.
+- **ART-03:** Delete a download: its private thumbnail file is deleted too. Failed
+  image retrieval must not mark a successfully saved video as failed. Missing
+  artwork should be retriable without downloading the entire video again.
+- **COMM-03:** Open video → View Channel / Comments; use Home → Shorts. Comments
+  must come from YouTube extraction. Posting remains a browser action until native
+  authenticated account integration exists; never report a local-only comment as posted.
+
+The 0.1 user report confirms basic playback on one device, not all new 0.3 cases.
+
+### 0.3 build verification
+
+Debug APK assembly and all **37 focused tests passed** at `601c02a`. The new tests
+cover original-over-dubbed audio selection, no explicit dub/descriptive fallback,
+mixed music/video shelf definitions, offline-artwork data persistence and migration.
+They do not prove live stream metadata accuracy or network image retrieval.
+
+- [Successful build](https://github.com/HayMayia/Photon/actions/runs/40858409686)
+- [0.3 APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40858409686/artifacts/12890507624)
+- XML/SVG parse check: 215 files valid; git diff whitespace check passed.
+- New physical-device cases above remain unverified pending tester feedback.

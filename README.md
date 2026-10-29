@@ -4,18 +4,20 @@
 [Yigder's Prism](https://github.com/Yigder/Prism), retaining its real Compose theme,
 fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
 
-> **0.2.0 alpha — expanded native features, not complete Prism/YouTube parity.**
-> **[Download 0.2 APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40856646519/artifacts/12890570366)**
+> **0.3.0 alpha — Prism-style shelves, original-audio selection and offline artwork.**
+> **[Download 0.3 APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40858409686/artifacts/12890507624)**
 > — GitHub sign-in required; extract and install `app-debug.apk`.
-> APK assembly and the 27 focused Photon tests passed at code revision `6fb5e2e`
-> ([verified build](https://github.com/HayMayia/Photon/actions/runs/40856646519)).
-> Physical-device results still require a tester; a build is not proof that a
-> particular YouTube video, phone or TV works.
+> APK assembly and all 37 focused Photon tests passed at code revision `601c02a`
+> ([verified build](https://github.com/HayMayia/Photon/actions/runs/40858409686)).
+> Physical-device results still require testing; the user's 0.1 playback result
+> is not evidence for the new 0.3 UI, audio selection or artwork I/O.
+
 
 ## Feature status
 
 | Feature | Current implementation |
 |---|---|
+| Home design | Prism section headers, typography, shape tokens and spectrum colours; shortcut tiles, Quick picks, Continue watching, Ready offline, Made for you and separate music/video discovery shelves; violet default and accent selection |
 | Videos | Standard YouTube search, topic discovery, result pagination, video/channel/public-playlist links and Android Share → Photon |
 | Channel pages | Native channel details, Videos and Shorts tabs, paginated uploads |
 | Subscriptions | **Device-local** subscribe/unsubscribe and refresh uploads from up to 20 subscribed channels; not Google subscriptions |
@@ -25,8 +27,9 @@ fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
 | Recommendations | On-device ranking of related videos from engaged watch-history seeds, saved-video weighting, seen-video exclusion, subscription boosting and channel diversity; cold-start topic discovery remains search-based |
 | History/resume | Recorded by the playback service, including background playback; periodic positions, playing-time accumulation (not seek distance), and resume across app restarts; recently finished videos restart from the beginning |
 | Casting | LAN discovery/control for Google Cast and DLNA using Prism's protocols; proxies a combined MP4 or serves your downloaded merged MP4; **keep Photon open**; no live/adaptive-stream casting |
+| Audio language | Original AAC audio takes priority over bitrate. Explicit dubs/descriptive/secondary tracks are not selected automatically. Missing labels are shown as unverified; source availability still limits playback |
 | Downloads | Available MP4/AVC + AAC qualities; foreground progress/cancel; separate audio/video muxed on-device with MediaMuxer |
-| Offline | Play/delete downloaded MP4 files including sound |
+| Offline | Play/delete downloaded MP4 files including sound; thumbnail images are real app-private files rather than only an evictable image cache; old-download artwork is repaired when an allowed network is available |
 | Player | Seeking, background session, lock-screen/headset controls, full-screen landscape, explicit PiP and mini-player |
 | Testing tools | Settings → **Share device test report**; bounded local playback events without credentials/stream URLs; [device checklist](docs/TESTING.md) and issue template |
 | Google login, YouTube likes/account sync | **Not implemented natively.** Settings provides an explicitly labelled official-YouTube browser link; this does not sign Photon in or sync its library |
@@ -91,13 +94,28 @@ the external compilation/test gate.
   safely record them.
 - Only compatible available progressive MP4/AVC + AAC streams are offered. No
   guaranteed 1080p/4K; device codecs, IP/region restrictions and source availability vary.
+- The original-audio policy can pair a separate original track even with a combined
+  MP4. For such sources, download/mux first and cast the merged copy; the live
+  proxy does not merge tracks on the fly.
 - Cast quality uses a combined MP4 source rather than silently sending video-only
   adaptive media. If unavailable, download/mux first and cast the offline copy.
   Keep Photon open while casting; background cast lifecycle and TV compatibility
   remain device-test items. No live casting.
 - Downloads restart rather than resume partial files. Android may restrict long
-  background work. Downloads are app-private and **removed on uninstall**. Public
-  export and guaranteed-offline thumbnails are not implemented.
+  background work. Downloads and thumbnail files are app-private and **removed on
+  uninstall**. Public export is not implemented. A missing/failed thumbnail does
+  not fail the video download; Settings → Save offline thumbnails retries older
+  or missing images, respecting Wi-Fi-only. Artwork unavailable from YouTube cannot
+  be guaranteed offline.
+- Original soundtracks are selected when labelled and available in compatible AAC.
+  Unlabelled audio remains unverified; if only explicitly dubbed alternatives are
+  available, playback fails rather than silently changing language. Existing
+  downloads must be downloaded again to replace a previously selected dub.
+- Live HLS retains its source-defined audio; the new progressive-audio policy does
+  not promise original-language selection for live manifests.
+- Discovery shelves use explicit public YouTube queries and are labelled as such;
+  they are not signed-in YouTube Music album charts or a clone of every Prism
+  feature. All standard YouTube video links/searches remain supported.
 - Local history/progress covers 100 recent videos. Progress is periodically saved
   (up to about five seconds may be lost on abrupt process death). Seeking does not
   add the seek distance to watched time. Queue continuation requires the active

@@ -51,3 +51,13 @@ its unchanged music metadata path. The Photon manifest declares LAN/multicast
 permissions and allows HTTP for dynamically addressed UPnP TVs; casting targets
 are explicitly validated as LAN addresses. No authenticated Google account client
 or live recorder is claimed. Device testing remains separate from unit/build checks.
+
+## 0.3 refinements
+
+Photon Home now directly uses Prism's `SectionHeader`, typography, shape and
+spectrum tokens, with shortcut tiles and distinct music/video shelves. The original
+music Home is not misrepresented as a general-YouTube API. AAC soundtrack selection
+prefers `ORIGINAL` over bitrate, excludes explicit dubbed/descriptive fallbacks, and
+filters embedded video-source audio when merging a chosen original track. Offline
+artwork is saved as bounded, validated image files beside videos; repair work can
+backfill older downloads. Accent and new thumbnail fields preserve old-data defaults.

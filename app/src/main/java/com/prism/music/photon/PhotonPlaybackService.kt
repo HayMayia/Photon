@@ -53,9 +53,10 @@ class PhotonPlaybackService : MediaSessionService() {
         val itemRevision = extras?.getLong("photon_web_revision", -1) ?: -1
         val opened = extras?.getLong("photon_open_elapsed", 0) ?: 0
         val id = player.currentMediaItem?.mediaId
-        val remote = extras?.getBoolean("photon_remote", false) == true
-        val viewKey = if (remote && opened > 0 && id != null) "$id:$opened:$itemRevision" else null
-        val eligible = remote && library.accountHistorySync && library.youtubeHome && library.youtubeSessionReady &&
+        // Genuine plays may use downloaded bytes too. Live Google verification is still mandatory;
+        // this does not queue or backfill plays made without a verified online account.
+        val viewKey = if (opened > 0 && id != null) "$id:$opened:$itemRevision" else null
+        val eligible = opened > 0 && library.accountHistorySync && library.youtubeHome && library.youtubeSessionReady &&
             itemRevision == library.youtubeSessionRevision && !history.locallyPaused()
         accountHistoryGate.tick(viewKey, now, player.isPlaying, eligible)?.let { watched ->
             if (id != null) scope.launch { try { history.report(id, watched, itemRevision) } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { /* No automatic retry or UI credential logging. */ } }

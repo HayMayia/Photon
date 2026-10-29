@@ -380,7 +380,8 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
             mutableWatch.value = WatchState(video = download.video, error = "The downloaded file is missing. Remove this entry and download it again.")
             return
         }
-        mutableWatch.value = WatchState(video = download.video, localPath = download.path, request = System.nanoTime(), startPositionMs = library.value.progress[download.video.id]?.resumeMs() ?: 0)
+        mutableWatch.value = WatchState(video = download.video, localPath = download.path, request = System.nanoTime(), startPositionMs = library.value.progress[download.video.id]?.resumeMs() ?: 0,
+            openedAtMs = android.os.SystemClock.elapsedRealtime(), webRevision = library.value.youtubeSessionRevision)
     }
 
     fun quality(quality: VideoQuality) {

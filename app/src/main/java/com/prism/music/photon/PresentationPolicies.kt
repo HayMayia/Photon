@@ -3,6 +3,7 @@ package com.prism.music.photon
 /** Shapes follow explicit Shorts metadata, never guesses based on a video's duration. */
 internal object VideoArtworkShape {
     fun ratio(short: Boolean): Float = if (short) 9f / 16f else 16f / 9f
+    fun portraitPriority(short: Boolean, width: Int, height: Int): Int = if (short && width > 0 && height > width) 1 else 0
     fun rowWidth(short: Boolean): Int = if (short) 72 else 128
 }
 

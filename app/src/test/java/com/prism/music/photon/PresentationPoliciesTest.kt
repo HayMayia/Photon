@@ -9,6 +9,9 @@ class PresentationPoliciesTest {
         assertEquals(9f / 16f, VideoArtworkShape.ratio(true), 0f)
         assertEquals(16f / 9f, VideoArtworkShape.ratio(false), 0f)
         assertTrue(VideoArtworkShape.rowWidth(true) < VideoArtworkShape.rowWidth(false))
+        assertEquals(1, VideoArtworkShape.portraitPriority(true, 360, 640))
+        assertEquals(0, VideoArtworkShape.portraitPriority(true, -1, 1080))
+        assertEquals(0, VideoArtworkShape.portraitPriority(false, 360, 640))
     }
     @Test fun validDraftEnablesAuthorizationOrReviewWithoutACommentGrantYet() {
         assertTrue(CommentComposerPolicy.canReview("My comment", false, false, false))

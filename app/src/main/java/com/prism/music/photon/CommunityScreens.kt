@@ -167,9 +167,11 @@ internal fun CommentsPanel(model: PhotonViewModel, video: Video) {
             Text("Channel: ${account.identity?.name.orEmpty()}")
             Text("Video: ${video.title} (${video.id})")
             Text(draft.take(1000) + if (draft.length > 1000) "…" else "", maxLines = 12, overflow = TextOverflow.Ellipsis)
+            (CommentComposerPolicy.reason(draft, posting, account.busy, page?.disabled == true)
+                ?: if (account.identity == null) "Comment permission is missing. Cancel this review and authorize commenting; your draft stays." else null)?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             Text("This submits your full draft to YouTube, not a local note. Check for an existing comment before retrying after a network error.", style = MaterialTheme.typography.bodySmall)
         } },
-        confirmButton = { TextButton(enabled = account.identity != null && CommentComposerPolicy.canReview(draft, posting, account.busy, page?.disabled == true), onClick = { confirming = false; model.postComment(video, draft) }) { Text("Post publicly") } },
+        confirmButton = { Button(enabled = account.identity != null && CommentComposerPolicy.canReview(draft, posting, account.busy, page?.disabled == true), onClick = { confirming = false; model.postComment(video, draft) }) { Text("Post publicly") } },
         dismissButton = { TextButton(onClick = { confirming = false }) { Text("Cancel") } })
 }
 

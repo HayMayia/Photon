@@ -219,6 +219,7 @@ private fun CommunityVideoRow(source: Video, open: () -> Unit) {
             Text(video.title, maxLines = 2, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold)
             Text(video.channel, style = MaterialTheme.typography.labelMedium)
         }
+        VideoHeart(video)
     }
 }
 

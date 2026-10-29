@@ -701,6 +701,7 @@ private fun VideoRow(source: Video, open: () -> Unit, save: () -> Unit, saved: B
             Text(video.title, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             Text(video.channel, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        if (actionIcon != null) VideoHeart(video)
         IconButton(onClick = save, modifier = Modifier.size(34.dp)) { Icon(actionIcon ?: if (saved) PrismIcons.HeartFilled else PrismIcons.Heart, if (actionIcon != null) "Delete download" else if (saved) "Unsave video" else "Save video", Modifier.size(18.dp), tint = if (actionIcon == null && saved) Color(0xFFFF3355) else MaterialTheme.colorScheme.onSurfaceVariant) }
     }
 }

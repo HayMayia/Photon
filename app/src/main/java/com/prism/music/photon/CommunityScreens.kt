@@ -40,7 +40,7 @@ internal fun CollectionScreen(model: PhotonViewModel, library: PhotonLibrary, op
             }
             current.channel?.let { channel ->
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    AsyncImage(channel.avatar, null, Modifier.size(64.dp))
+                    ChannelAvatar(AccountEntry(channel.url.substringAfterLast('/'), channel.name, AccountEntryKind.CHANNEL, artwork = channel.avatar), model)
                     Column(Modifier.weight(1f)) {
                         if (channel.subscribers >= 0) Text("${channel.subscribers} subscribers")
                         Text("Subscription changes are sent to YouTube", style = MaterialTheme.typography.labelSmall)

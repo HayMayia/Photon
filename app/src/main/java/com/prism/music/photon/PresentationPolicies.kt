@@ -28,3 +28,8 @@ internal object PhotonNavigation {
         if (current == target) history else (history + current).takeLast(32)
     fun previous(history: List<Int>, current: Int): Int? = history.lastOrNull() ?: 0.takeIf { current != 0 }
 }
+
+internal object PlayerLayoutPolicy {
+    fun immersive(manual: Boolean, landscape: Boolean, expanded: Boolean, pip: Boolean, shorts: Boolean): Boolean =
+        expanded && (manual || landscape) && !pip && !shorts
+}

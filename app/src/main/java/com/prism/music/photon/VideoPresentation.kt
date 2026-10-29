@@ -4,6 +4,7 @@ import androidx.compose.runtime.*
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.jsoup.Jsoup
+import kotlinx.serialization.json.*
 
 /** Classification uses YouTube's canonical Shorts route, never duration or vertical dimensions. */
 internal object ShortsPresentation {
@@ -12,8 +13,16 @@ internal object ShortsPresentation {
         thumbnail = if (metadata.short) metadata.thumbnail.ifBlank { source.thumbnail } else source.thumbnail,
         channelAvatar = source.channelAvatar.ifBlank { metadata.channelAvatar })
     fun fromHtml(id: String, html: String): Pair<Boolean, String>? {
-        val doc = Jsoup.parse(html)
+        val doc = Jsoup.parse(html.substringBefore("</head>") + "</head>")
+        // Shorts often canonicalize to /watch. The matching reel command is stronger evidence.
+        val initial = runCatching { YouTubeWebBootstrap.assigned(html, "ytInitialData") }.getOrNull()
+        val reel = initial?.let { data -> GoogleAccountControls.objects(data).any { node ->
+            ((node["reelWatchEndpoint"] as? JsonObject)?.get("videoId") as? JsonPrimitive)?.contentOrNull == id ||
+                ((node["webCommandMetadata"] as? JsonObject)?.get("url") as? JsonPrimitive)?.contentOrNull?.substringBefore('?') == "/shorts/$id"
+        } } == true
         val canonical = doc.selectFirst("link[rel=canonical]")?.attr("href").orEmpty()
+        val image = safeArtwork(doc.selectFirst("meta[property=og:image]")?.attr("content").orEmpty())
+        if (reel) return true to image
         val uri = runCatching { java.net.URI(canonical) }.getOrNull() ?: return null
         if (uri.scheme != "https" || uri.host !in setOf("www.youtube.com", "youtube.com") || uri.userInfo != null) return null
         val short = when {
@@ -21,8 +30,7 @@ internal object ShortsPresentation {
             uri.path == "/watch" && uri.rawQuery?.split('&')?.contains("v=$id") == true -> false
             else -> return null
         }
-        val image = doc.selectFirst("meta[property=og:image]")?.attr("content").orEmpty()
-        return short to safeArtwork(image)
+        return short to image
     }
     fun safeArtwork(url: String): String = url.takeIf { runCatching {
         val uri = java.net.URI(it)

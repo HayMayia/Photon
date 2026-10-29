@@ -29,22 +29,24 @@ internal fun YouTubeHomeConnection(model: PhotonViewModel) {
     var confirmSync by remember { mutableStateOf(false) }
     var changePause by remember { mutableStateOf<Boolean?>(null) }
     var disclosure by remember { mutableStateOf(false) }
+    var historySettings by remember { mutableStateOf(false) }
     var signingIn by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("Google sign-in · account Home", style = MaterialTheme.typography.titleMedium)
-        Text("Sign in through Google's own page. The app then loads your account's YouTube Home automatically. Comment permission below is optional and does not connect Home.", style = MaterialTheme.typography.bodySmall)
+        Text("Google account", style = MaterialTheme.typography.titleMedium)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilledTonalButton(modifier = Modifier.weight(1f), onClick = { disclosure = true }) { Text(if (library.youtubeHome) "Switch Google account" else "Sign in with Google") }
-            TextButton(modifier = Modifier.weight(0.6f), onClick = model::disconnectYouTubeHome) { Text("Sign out of Home") }
+            TextButton(modifier = Modifier.weight(0.6f), onClick = model::disconnectYouTubeHome) { Text("Sign out") }
         }
         if (feed.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
         feed.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        TextButton(onClick = { historySettings = !historySettings }) { Text("History & privacy") }
+        if (historySettings) {
         Row {
-            Text("Additional local history pause", Modifier.weight(1f))
+            Text("Pause device history", Modifier.weight(1f))
             Switch(library.historyPaused, model::pauseHistory)
         }
-        Text("Google's last verified watch-history state: ${history.status.name.lowercase()}. In connected mode, paused, unknown or stale Google state also blocks local tracking. Additional local pause never changes Google's setting.", style = MaterialTheme.typography.bodySmall)
         if (library.youtubeHome) {
+            Text("YouTube history: ${history.status.name.lowercase()}", style = MaterialTheme.typography.bodySmall)
             history.message?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
             if (history.checking) LinearProgressIndicator(Modifier.fillMaxWidth())
             Row {
@@ -55,14 +57,14 @@ internal fun YouTubeHomeConnection(model: PhotonViewModel) {
                 }
             }
             Row {
-                Text("Report real playback to YouTube history", Modifier.weight(1f))
+                Text("Save plays to YouTube history", Modifier.weight(1f))
                 Switch(library.accountHistorySync, { enabled -> if (enabled) confirmSync = true else model.enableAccountHistory(false) }, enabled = library.youtubeSessionReady)
             }
             Row {
-                Text("Include short actual plays (1 second minimum)", Modifier.weight(1f))
+                Text("Include short plays", Modifier.weight(1f))
                 Switch(library.includeShortPlays, { enabled -> if (enabled) confirmShortPlays = true else model.includeShortPlays(false) }, enabled = library.youtubeSessionReady)
             }
-            Text("Off until you explicitly enable it. One report after ${if (library.includeShortPlays) 1 else 15} seconds of actual native playback, only with freshly verified enabled Google history; no offline uploads or automatic report retries.", style = MaterialTheme.typography.bodySmall)
+        }
         }
     }
     if (disclosure) AlertDialog(onDismissRequest = { disclosure = false }, title = { Text("Sign in with Google for Home?") },

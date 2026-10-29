@@ -46,6 +46,18 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     private var youtubeMoreJob: Job? = null
     private val consumedHomeTokens = mutableSetOf<String>()
     val googleChange = MutableStateFlow(GoogleChangeState())
+    val channelArtwork = MutableStateFlow<Map<String, String>>(emptyMap())
+    private val avatarPending = mutableSetOf<String>()
+    fun loadChannelArtwork(id: String) {
+        if (id in channelArtwork.value || !avatarPending.add(id)) return
+        viewModelScope.launch {
+            try {
+                val image = app.videos.channelArtwork(id)
+                if (image.isNotBlank()) channelArtwork.value = (channelArtwork.value + (id to image)).entries.toList().takeLast(256).associate { it.toPair() }
+            } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { /* A visible initial remains when artwork cannot load. */ }
+            finally { avatarPending.remove(id) }
+        }
+    }
     val videoPresentation = MutableStateFlow<Map<String, Video>>(emptyMap())
     private val presentationRevisions = mutableMapOf<String, Long>()
     private val presentationPending = mutableSetOf<String>()

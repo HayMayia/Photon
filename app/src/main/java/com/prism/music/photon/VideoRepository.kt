@@ -169,6 +169,17 @@ class VideoRepository {
         }
     }
 
+    private val avatarCache = ExpiringVideoCache<String>(256, 1_800_000)
+    private val avatarSlots = kotlinx.coroutines.sync.Semaphore(2)
+    suspend fun channelArtwork(id: String): String = withContext(Dispatchers.IO) {
+        require(id.matches(Regex("UC[A-Za-z0-9_-]{20,30}")))
+        avatarCache.get(id) ?: avatarSlots.withPermit {
+            val info = org.schabi.newpipe.extractor.channel.ChannelInfo.getInfo(ServiceList.YouTube, "https://www.youtube.com/channel/$id")
+            info.avatars.sortedByDescending { it.height }.map { ShortsPresentation.safeArtwork(it.url) }
+                .firstOrNull { it.isNotBlank() }.orEmpty().also { if (it.isNotBlank()) avatarCache.put(id, it) }
+        }
+    }
+
     suspend fun channel(url: String, next: Page? = null, shorts: Boolean = false): CollectionPage = withContext(Dispatchers.IO) {
         require(YouTubeLinks.channelUrl(url) != null) { "Invalid YouTube channel link" }
         val info = org.schabi.newpipe.extractor.channel.ChannelInfo.getInfo(ServiceList.YouTube, url)

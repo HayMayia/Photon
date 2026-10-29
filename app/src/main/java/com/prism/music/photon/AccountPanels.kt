@@ -30,13 +30,14 @@ object GoogleSignInSetup {
 
 @Composable
 internal fun YouTubeAccountCard(model: PhotonViewModel) {
+    var comments by remember { mutableStateOf(false) }
     Surface(Modifier.fillMaxWidth().padding(22.dp), shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainer) {
         Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("YouTube account", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             YouTubeHomeConnection(model)
             HorizontalDivider()
-            Text("Optional comment permission", style = MaterialTheme.typography.titleMedium)
-            GoogleAccountActions(model)
+            TextButton(onClick = { comments = !comments }) { Text("Comment account") }
+            if (comments) GoogleAccountActions(model)
         }
     }
 }

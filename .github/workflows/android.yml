@@ -38,6 +38,11 @@ jobs:
             yes | "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --licenses >/dev/null || true
             "$SDKMANAGER" --sdk_root="$ANDROID_HOME" 'platforms;android-37.2' 'build-tools;36.0.0'
           } 2>&1 | tee sdk.log
+      - name: Restore permanent signing key for trusted builds
+        if: github.event_name != 'pull_request' && hashFiles('signing/photon-signing.p12.enc') != ''
+        env:
+          PHOTON_SIGNING_PASSWORD: ${{ secrets.PHOTON_SIGNING_PASSWORD }}
+        run: python3 signing/ci-signing.py restore
       - name: Build installable debug APK
         shell: bash
         run: |
@@ -49,11 +54,27 @@ jobs:
         run: |
           set -o pipefail
           ./gradlew :app:testDebugUnitTest --tests 'com.prism.music.photon.*' --stacktrace 2>&1 | tee tests.log
+      - name: Stage APK and verify registered signing certificate
+        run: |
+          mkdir -p "$RUNNER_TEMP/photon-artifact"
+          cp app/build/outputs/apk/debug/*.apk "$RUNNER_TEMP/photon-artifact/"
+          if [ "$GITHUB_EVENT_NAME" != 'pull_request' ] && [ -f signing/ANDROID_OAUTH.txt ]; then
+            "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs app/build/outputs/apk/debug/app-debug.apk > "$RUNNER_TEMP/photon-apk-certificate.txt"
+            python3 - <<'PYVERIFY'
+          import os, pathlib, re
+          expected = re.search(r'SHA-1 certificate fingerprint: ([A-Fa-f0-9:]+)', pathlib.Path('signing/ANDROID_OAUTH.txt').read_text()).group(1).replace(':', '').lower()
+          actual = re.search(r'Signer #1 certificate SHA-1 digest: ([A-Fa-f0-9]+)', (pathlib.Path(os.environ['RUNNER_TEMP']) / 'photon-apk-certificate.txt').read_text()).group(1).lower()
+          if actual != expected:
+              raise SystemExit('APK certificate differs from the registered permanent signing identity')
+          print('APK certificate matches permanent OAuth identity.')
+          PYVERIFY
+            cp signing/ANDROID_OAUTH.txt "$RUNNER_TEMP/photon-artifact/"
+          fi
       - uses: actions/upload-artifact@v4
         if: success()
         with:
           name: Photon-Android-APK
-          path: app/build/outputs/apk/debug/*.apk
+          path: ${{ runner.temp }}/photon-artifact/*
           if-no-files-found: error
           retention-days: 90
       - name: Publish build diagnostics
@@ -75,3 +96,7 @@ jobs:
           pathlib.Path('diagnostics.json').write_text(json.dumps({'name': 'Photon build diagnostics', 'head_sha': os.environ['GITHUB_SHA'], 'status': 'completed', 'conclusion': 'failure', 'output': {'title': 'Build failure details', 'summary': '```text\n' + text + '\n```'}}))
           PY
           gh api "repos/$GITHUB_REPOSITORY/check-runs" --method POST --input diagnostics.json
+
+      - name: Remove plaintext signing key and properties
+        if: always() && github.event_name != 'pull_request'
+        run: rm -f "$RUNNER_TEMP/photon-signing.p12" keystore.properties

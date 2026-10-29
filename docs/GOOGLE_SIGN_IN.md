@@ -8,6 +8,10 @@ After registration below, use **Photon → Settings → YouTube account → Sign
 
 **If Google rejects the app, adding the account to Android is not enough.** Photon is independently built and is not automatically registered with Google. A one-time Cloud project/client registration is still required. No programming or client-secret file is needed for this native flow, but the Console steps must be completed by the project owner. Do not share your password, cookies, access tokens or private signing key.
 
+## Stable signing first (guided setup)
+
+Before registering the final Android client, complete [the owner-only permanent signing setup](../signing/README.md). The current 0.5 downloadable APK still has a temporary certificate. The new automation has not generated a key yet: it needs a GitHub Actions secret supplied directly by the owner. Once bootstrap and the signed APK build succeed, use `signing/ANDROID_OAUTH.txt`, not an old APK's fingerprint. No end user needs this developer setup.
+
 ## One-time app-owner setup
 
 1. Open [Google Cloud Console](https://console.cloud.google.com/), sign in yourself, select/create a project (for example **Photon personal**), then go to **APIs & Services → Library → YouTube Data API v3 → Enable**.

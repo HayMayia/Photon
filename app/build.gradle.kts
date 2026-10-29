@@ -27,8 +27,8 @@ android {
         applicationId = "io.github.haymayia.photon"
         minSdk = 26
         targetSdk = 36
-        versionCode = 5
-        versionName = "0.5.0-alpha"
+        versionCode = 6
+        versionName = "0.5.1-alpha"
         vectorDrawables { useSupportLibrary = true }
         // The name under the launcher icon; a side-by-side build (below) is called "Photon Dev" so it can't be mistaken for Prism.
         manifestPlaceholders["appLabel"] = "@string/app_name"
@@ -58,6 +58,8 @@ android {
 
     buildTypes {
         debug {
+            // Trusted CI/local builds with a real key must keep the same certificate across APKs.
+            if (useReleaseKey && !project.hasProperty("sideBySide")) signingConfig = signingConfigs.getByName("release")
             // `-PsideBySide`: a debug Prism that installs next to the real one (for trying changes on your own phone), as
             // "Photon Dev". `-PsideBySide=name` installs as com.prism.music.name instead of .dev, beside an older dev copy.
             if (project.hasProperty("sideBySide")) {

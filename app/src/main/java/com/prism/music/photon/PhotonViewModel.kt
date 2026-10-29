@@ -44,6 +44,37 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     private var youtubeHomeJob: Job? = null
     private var youtubeMoreJob: Job? = null
     private val consumedHomeTokens = mutableSetOf<String>()
+    val accountLibrary = MutableStateFlow(AccountLibraryState())
+    private var accountLibraryJob: Job? = null
+    private val accountLibraryTokens = mutableSetOf<String>()
+    fun openAccountShelf(shelf: AccountShelf, playlist: String? = null, title: String = shelf.label, more: Boolean = false) {
+        if (more && (accountLibrary.value.busy || accountLibrary.value.moreBusy)) return
+        accountLibraryJob?.cancel()
+        val previous = accountLibrary.value
+        val oldPage = previous.page
+        if (more && (oldPage?.continuation == null || oldPage.continuation in accountLibraryTokens || accountLibraryTokens.size >= 200)) return
+        if (!more) accountLibraryTokens.clear()
+        accountLibraryJob = viewModelScope.launch {
+            val revision = library.value.youtubeSessionRevision
+            accountLibrary.value = if (more) previous.copy(moreBusy = true, error = null) else AccountLibraryState(shelf, playlist, title, busy = true)
+            try {
+                val session = app.youtubeHistory.session()
+                val kind = if (playlist != null || shelf in listOf(AccountShelf.HISTORY, AccountShelf.LIKED)) AccountEntryKind.VIDEO else if (shelf == AccountShelf.CHANNELS) AccountEntryKind.CHANNEL else AccountEntryKind.PLAYLIST
+                val page = if (more) app.accountLibrary.more(session, oldPage!!, kind) else app.accountLibrary.load(session, shelf, playlist)
+                if (revision != library.value.youtubeSessionRevision || !library.value.youtubeSessionReady) return@launch
+                if (more) accountLibraryTokens += oldPage!!.continuation!!
+                val items = ((if (more) oldPage!!.items else emptyList()) + page.items).distinctBy { it.kind to it.id }
+                accountLibrary.value = AccountLibraryState(shelf, playlist, title, page.copy(items = items, continuation = page.continuation?.takeUnless { it in accountLibraryTokens }))
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) {
+                if (revision == library.value.youtubeSessionRevision) accountLibrary.value = if (more) previous.copy(moreBusy = false, error = "More account items could not load. Existing rows are retained; retry explicitly.") else AccountLibraryState(shelf, playlist, title, error = "Could not read this YouTube account list. Retry or check the connected account. No local items were substituted.")
+            }
+        }
+    }
+    fun moreAccountShelf() { val state = accountLibrary.value; openAccountShelf(state.shelf, state.playlist, state.title, more = true) }
+    private fun invalidateAccountLibrary() {
+        accountLibraryJob?.cancel(); accountLibraryTokens.clear(); accountLibrary.value = AccountLibraryState()
+    }
     val googleHistory = app.youtubeHistory.state
     fun refreshGoogleHistory() { viewModelScope.launch { app.youtubeHistory.refresh() } }
     fun setGoogleHistoryPaused(paused: Boolean) { viewModelScope.launch { try { app.youtubeHistory.changePause(paused) } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { app.youtubeHistory.invalidate() } } }
@@ -52,6 +83,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
         if (enabled) refreshGoogleHistory()
     }
     fun beginYouTubeWebChange() {
+        invalidateAccountLibrary()
         youtubeHomeJob?.cancel(); youtubeMoreJob?.cancel()
         app.library.update { it.copy(youtubeSessionRevision = it.youtubeSessionRevision + 1, youtubeSessionReady = false, accountHistorySync = false) }
         app.youtubeHistory.invalidate(); youtubeHome.value = YouTubeHomeState(error = "Finish reconnecting the web account. History reporting is off.")
@@ -114,6 +146,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
     fun disconnectYouTubeHome() {
+        invalidateAccountLibrary()
         youtubeHomeJob?.cancel(); youtubeMoreJob?.cancel(); consumedHomeTokens.clear()
         app.library.update { it.copy(youtubeHome = false, youtubeWebUser = 0, youtubeSessionReady = false,
             youtubeSessionRevision = it.youtubeSessionRevision + 1, accountHistorySync = false) }

@@ -199,6 +199,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
     var fullscreen by rememberSaveable { mutableStateOf(false) }
     var search by rememberSaveable { mutableStateOf("") }
     var libraryTab by rememberSaveable { mutableIntStateOf(0) }
+    var localLibrary by rememberSaveable { mutableStateOf(false) }
     var qualitySheet by remember { mutableStateOf(false) }
     var downloadSheet by remember { mutableStateOf(false) }
     var playerError by remember { mutableStateOf<String?>(null) }
@@ -368,9 +369,9 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                             discover = { model.search(it); tab = 1 },
                             forYou = { model.home(); tab = 1 },
                             shorts = { model.shorts(); shortsMode = true },
-                            subscriptions = { model.subscriptionsFeed(); tab = 1 },
-                            downloads = { tab = 2; libraryTab = 2 },
-                            saved = { tab = 2; libraryTab = 0 },
+                            subscriptions = { if (library.youtubeHome) { localLibrary = false; model.openAccountShelf(AccountShelf.CHANNELS); tab = 2 } else { model.subscriptionsFeed(); tab = 1 } },
+                            downloads = { localLibrary = true; tab = 2; libraryTab = 2 },
+                            saved = { localLibrary = !library.youtubeHome; tab = 2; libraryTab = 0 },
                             settings = { tab = 3 }, search = { tab = 1 })
                         1 -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 20.dp)) {
                             item {
@@ -420,7 +421,14 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                                 }
                             }
                         }
-                        2 -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
+                        2 -> Column(Modifier.fillMaxSize()) {
+                            if (library.youtubeHome) Row(Modifier.padding(horizontal = 22.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                FilterChip(selected = !localLibrary, onClick = { localLibrary = false }, label = { Text("YouTube account") })
+                                FilterChip(selected = localLibrary, onClick = { localLibrary = true }, label = { Text("On device") })
+                            }
+                            if (library.youtubeHome && !localLibrary) AccountLibraryScreen(model, library.youtubeSessionRevision, library.youtubeSessionReady,
+                                open = { open(it) }, channel = { model.openCollection(it, channel = true) })
+                            else LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
                             item {
                                 PageHeading("Library", "Your corner of YouTube. Kept on this device.")
                                 Row(Modifier.padding(horizontal = 22.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -453,6 +461,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                                     }
                                 }
                             }
+                        }
                         }
                         3 -> SettingsPage(library, model, notifications)
                     }

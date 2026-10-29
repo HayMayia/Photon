@@ -43,7 +43,7 @@ internal fun PhotonHome(model: PhotonViewModel, library: PhotonLibrary, open: (V
                         shorts: () -> Unit, subscriptions: () -> Unit, downloads: () -> Unit, saved: () -> Unit,
                         settings: () -> Unit, search: () -> Unit) {
     if (library.youtubeHome) {
-        ActualYouTubeHome(model, open, settings, search, shorts, subscriptions, downloads, saved)
+        ActualYouTubeHome(model, open, settings, search, shorts, subscriptions, downloads, saved, discover)
         return
     }
     val shelves by model.shelves.collectAsStateWithLifecycle()
@@ -179,7 +179,7 @@ private fun HomeCover(video: Video, music: Boolean, open: () -> Unit) {
 /** Account Home never falls back to local ranking, quick picks or search shelves. */
 @Composable
 private fun ActualYouTubeHome(model: PhotonViewModel, open: (Video) -> Unit, settings: () -> Unit, search: () -> Unit,
-                              shorts: () -> Unit, subscriptions: () -> Unit, downloads: () -> Unit, saved: () -> Unit) {
+                              shorts: () -> Unit, subscriptions: () -> Unit, downloads: () -> Unit, saved: () -> Unit, discover: (String) -> Unit) {
     val feed by model.youtubeHome.collectAsStateWithLifecycle()
     val list = rememberLazyListState()
     LaunchedEffect(feed.page?.continuation, feed.page?.videos?.size, feed.loadingMore, feed.autoMore, feed.error) {
@@ -189,19 +189,45 @@ private fun ActualYouTubeHome(model: PhotonViewModel, open: (Video) -> Unit, set
     }
     LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(22.dp)) {
         item {
-            Row {
-                Text("YouTube Home", Modifier.weight(1f), style = MaterialTheme.typography.headlineLarge)
-                IconButton(onClick = search) { Icon(PrismIcons.Search, "Search YouTube") }
-                IconButton(onClick = settings) { Icon(PrismIcons.Settings, "Settings") }
+            val ui = LocalUi.current
+            val scheme = MaterialTheme.colorScheme
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("YOUR WORLD, REFRACTED", style = MaterialTheme.typography.labelLarge, color = scheme.onSurfaceVariant)
+                    Text("Photon", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
+                }
+                IconButton(onClick = search) { Icon(PrismIcons.Search, "Search all YouTube") }
+                Surface(shape = CircleShape, color = scheme.primaryContainer, onClick = settings) {
+                    Icon(PrismIcons.Settings, "Settings", Modifier.padding(13.dp).size(22.dp), tint = scheme.primary)
+                }
             }
-            Text("Returned by your connected YouTube website session · not Photon's local ranking", style = MaterialTheme.typography.bodySmall)
-            TextButton(onClick = { model.refreshYouTubeHome() }) { Text("Refresh YouTube Home") }
-            Row(Modifier.horizontalScroll(rememberScrollState())) {
-                TextButton(onClick = shorts) { Text("Discover Shorts") }
-                TextButton(onClick = subscriptions) { Text("Local subscriptions") }
-                TextButton(onClick = downloads) { Text("Downloads") }
-                TextButton(onClick = saved) { Text("Saved") }
+            Box(Modifier.padding(vertical = 14.dp).fillMaxWidth().height(2.dp).background(PrismTokens.spectrum))
+            Text("Every video. Every song. Your light.", color = scheme.onSurfaceVariant)
+            val shortcuts = listOf(
+                Triple("Explore videos", PrismIcons.Play, { discover("popular videos documentaries") }),
+                Triple("Explore music", PrismIcons.Song, { discover("official music videos songs") }),
+                Triple("History", PrismIcons.History, { model.openAccountShelf(AccountShelf.HISTORY); saved() }),
+                Triple("Playlists", PrismIcons.Library, { model.openAccountShelf(AccountShelf.PLAYLISTS); saved() }),
+                Triple("Liked videos", PrismIcons.Heart, { model.openAccountShelf(AccountShelf.LIKED); saved() }),
+                Triple("Channels", PrismIcons.Person, subscriptions),
+                Triple("Shorts", PrismIcons.Phone, shorts),
+                Triple("Downloads", PrismIcons.Download, downloads)
+            )
+            shortcuts.chunked(2).forEachIndexed { row, pair ->
+                Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    pair.forEachIndexed { column, (label, icon, action) ->
+                        val tint = PrismTokens.spectrumAt((row * 2 + column) / 7f)
+                        Surface(onClick = action, modifier = Modifier.weight(1f), shape = ui.tile, color = tint.copy(alpha = 0.12f)) {
+                            Row(Modifier.padding(horizontal = 14.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Icon(icon, null, Modifier.size(23.dp), tint = tint)
+                                Text(label, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                    }
+                }
             }
+            SectionHeader("Made for you", strapline = "RECOMMENDED BY YOUR YOUTUBE ACCOUNT")
+            TextButton(enabled = !feed.busy, onClick = { model.refreshYouTubeHome() }) { Text("Refresh recommendations") }
             if (feed.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
             feed.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             feed.page?.message?.let { Text(it, Modifier.padding(vertical = 12.dp)) }

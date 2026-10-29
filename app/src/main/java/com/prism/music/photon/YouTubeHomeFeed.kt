@@ -66,7 +66,7 @@ object YouTubeHomeParser {
         return cards(JsonArray(batches))
     }
 
-    private fun cards(primary: JsonElement): YouTubeHomePage {
+    internal fun cards(primary: JsonElement): YouTubeHomePage {
         val videos = linkedMapOf<String, Video>()
         val messages = mutableListOf<String>()
         var next: String? = null

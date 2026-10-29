@@ -466,6 +466,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                     else -> change.kind.name.lowercase().replace('_', ' ')
                 }
                 Text("$verb: ${change.title}")
+                if (change.kind == GoogleChangeKind.DELETE_PLAYLIST) Text("Permanently deletes this selected YouTube playlist. The videos themselves are not deleted. This cannot be undone.", color = MaterialTheme.colorScheme.error)
                 if (change.id.isNotBlank()) Text("Target: ${change.id}", style = MaterialTheme.typography.bodySmall)
                 Text("This changes the Google account connected to Home, not a local list or the separate comment account. Likes/subscriptions are read before changing and verified afterward. New playlists are private. A failed/ambiguous request is not automatically retried.")
             }

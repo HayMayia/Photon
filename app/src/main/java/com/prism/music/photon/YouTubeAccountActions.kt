@@ -1,6 +1,7 @@
 package com.prism.music.photon
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.*
 import okhttp3.OkHttpClient
@@ -13,10 +14,11 @@ data class GoogleChangeResult(val message: String, val liked: Boolean? = null, v
 
 /** Structured controls only; never decides Google state from a local cache or an English button label. */
 internal object GoogleAccountControls {
-    fun objects(node: JsonElement): Sequence<JsonObject> = sequence {
+    fun objects(node: JsonElement, depth: Int = 0): Sequence<JsonObject> = sequence {
+        if (depth > 70) return@sequence
         when (node) {
-            is JsonObject -> { yield(node); for (value in node.values) yieldAll(objects(value)) }
-            is JsonArray -> for (value in node) yieldAll(objects(value))
+            is JsonObject -> { yield(node); for (value in node.values) yieldAll(objects(value, depth + 1)) }
+            is JsonArray -> for (value in node) yieldAll(objects(value, depth + 1))
             else -> Unit
         }
     }
@@ -58,6 +60,10 @@ internal class YouTubeAccountActionsApi(client: OkHttpClient = OkHttpClient()) {
         val html = transport.html(path, session)
         val root = YouTubeWebBootstrap.assigned(html, "ytInitialData")
         if (!YouTubeWebBootstrap.signedIn(root, html) || root.containsKey("error")) throw IOException("Could not verify the Google account")
+        if (path.startsWith("/watch?v=")) {
+            val player = YouTubeWebBootstrap.assigned(html, "ytInitialPlayerResponse")
+            if ((player["videoDetails"] as? JsonObject)?.get("videoId")?.jsonPrimitive?.contentOrNull != path.substringAfter("/watch?v=")) throw IOException("Mismatched account watch response")
+        }
         val context = YouTubeWebBootstrap.context(html) ?: throw IOException("Missing account context")
         return Document(root, context, html)
     }
@@ -69,6 +75,14 @@ internal class YouTubeAccountActionsApi(client: OkHttpClient = OkHttpClient()) {
             if (result.containsKey("error") || result["status"]?.jsonPrimitive?.contentOrNull?.let { it != "STATUS_SUCCEEDED" } == true)
                 throw IOException("YouTube did not confirm the account change")
             return result
+        }
+        suspend fun verify(path: String, predicate: (JsonObject) -> Boolean): Boolean {
+            repeat(3) { attempt ->
+                checkPermission()
+                if (predicate(read(path, session).root)) return true
+                if (attempt < 2) delay(1000L)
+            }
+            return false
         }
         checkPermission()
         when (change.kind) {
@@ -83,7 +97,7 @@ internal class YouTubeAccountActionsApi(client: OkHttpClient = OkHttpClient()) {
                 if (old == desired) return@withContext GoogleChangeResult("YouTube already has this like state; verified without another write.", liked = desired)
                 send(if (desired) "like/like" else "like/removelike", before.context, buildJsonObject { putJsonObject("target") { put("videoId", change.id) } })
                 checkPermission()
-                if (GoogleAccountControls.liked(read(path, session).root, change.id) != desired) throw IOException("Like change could not be verified; check YouTube before retrying")
+                if (!verify(path) { GoogleAccountControls.liked(it, change.id) == desired }) throw IOException("Like change could not be verified; check YouTube before retrying")
                 GoogleChangeResult(if (desired) "Liked on YouTube, verified by a fresh read." else "Like removed on YouTube, verified by a fresh read.", liked = desired)
             }
             GoogleChangeKind.SUBSCRIBE -> {
@@ -95,7 +109,7 @@ internal class YouTubeAccountActionsApi(client: OkHttpClient = OkHttpClient()) {
                 if (old == desired) return@withContext GoogleChangeResult("YouTube already has this subscription state; verified without another write.", subscribed = desired)
                 send(if (desired) "subscription/subscribe" else "subscription/unsubscribe", before.context, buildJsonObject { putJsonArray("channelIds") { add(change.id) } })
                 checkPermission()
-                if (GoogleAccountControls.subscribed(read(path, session).root, change.id) != desired) throw IOException("Subscription change could not be verified; check YouTube before retrying")
+                if (!verify(path) { GoogleAccountControls.subscribed(it, change.id) == desired }) throw IOException("Subscription change could not be verified; check YouTube before retrying")
                 GoogleChangeResult(if (desired) "Subscribed on YouTube, verified by a fresh read." else "Unsubscribed on YouTube, verified by a fresh read.", subscribed = desired)
             }
             GoogleChangeKind.CREATE_PLAYLIST -> {

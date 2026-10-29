@@ -230,3 +230,14 @@ See docs/YOUTUBE_HOME.md for implementation limits, privacy and device acceptanc
 - [ ] Native comments, captions, ±10s seek, original audio, cast/downloads and stable-key update remain intact.
 
 New source adds 28 focused test methods: 19 continuation/pause-policy/playback-gate/URL/session checks and nine synthetic account-mutation/read-back/report/scoped-cookie/concurrency protocol checks. All use synthetic data/local interceptors; no live account writes occur in tests. All 99 focused tests, APK assembly and permanent certificate verification passed in run [40877422966](https://github.com/HayMayia/Photon/actions/runs/40877422966), source `a6bb93d`, 7m31s. Locally, all six signing Python tests and parsing of 92 main XML/SVG files passed. These checks do not replace the unticked live-device checks above.
+
+
+## 0.7.1 login-to-Home correction
+
+- [ ] From Settings, the primary **Sign in with Google** opens Google's account chooser for Home, not native comment OAuth.
+- [ ] Returning to an authenticated YouTube page completes automatically, without “Use this YouTube session”. A signed-out/missing/invalid account proof cannot complete.
+- [ ] Return to Home: account cards or an explicit account-loading/error state replaces the previous local feed. No silent fallback after a connection attempt.
+- [ ] Comment permissions remain optional, explicitly labelled, and do not falsely claim to connect Home. Existing native comment identity/grant remains intact.
+- [ ] Cancel, unsupported Google login, failed TLS, navigation away and delayed JavaScript callbacks cannot complete login or switch accounts incorrectly.
+
+Seven new synthetic completion-proof tests cover default/non-default account index, signed-out null, missing configuration, malformed/unsupported values and result type. APK assembly, all **106 focused tests** and permanent signing-certificate verification passed in [run 40881293556](https://github.com/HayMayia/Photon/actions/runs/40881293556), source `09f81c1`, 8m1s. All six local Python signing tests and 92 main XML/SVG parses passed again. Live-device checks above are not claimed as complete.

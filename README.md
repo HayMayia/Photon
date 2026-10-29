@@ -4,11 +4,14 @@
 [Yigder's Prism](https://github.com/Yigder/Prism), retaining its real Compose theme,
 fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
 
-> **0.7.0 alpha — account Home pagination, Google history controls and opt-in native play reporting.**
-> **[Download 0.7 APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40877422966/artifacts/12899720911)**
+> **0.7.1 alpha — fix Google login completing without changing Home.**
+> **[Download 0.7.1 APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40881293556/artifacts/12900029482)**
 > — GitHub sign-in required; extract and install `app-debug.apk`.
-> APK assembly, all **99 focused Photon tests** and permanent certificate matching
-> passed at revision `a6bb93d` ([verified build](https://github.com/HayMayia/Photon/actions/runs/40877422966), 7m31s).
+> APK assembly, all **106 focused Photon tests** and permanent certificate matching
+> passed at revision `09f81c1` ([verified build](https://github.com/HayMayia/Photon/actions/runs/40881293556), 8m1s).
+> The primary **Sign in with Google** now connects account Home automatically after Google's login.
+> Optional native comment permission is separately labelled **Authorize comments**; it does not connect Home.
+> No extra “Use this YouTube session” step; failed Home loads show errors rather than silently keeping the local feed.
 > Home follows authenticated YouTube continuations; native pause/resume requires confirmation and read-back.
 > Optional history registration requires 15 actual playing seconds, fresh enabled Google history and the same website account/session.
 > **Live web-session sign-in, Google pause changes and saved history still need device verification.**

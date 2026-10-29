@@ -1,16 +1,24 @@
-# Account Home, Google history controls and real-play reporting (0.7 alpha)
+# Account Home, Google history controls and real-play reporting (0.7.1 alpha)
 
 These are unofficial YouTube website integrations, adapted for ordinary videos rather than Prism's music-only endpoints. They are separate from the supported native Google authorization used for comments. They can fail if Google blocks embedded sign-in or changes website responses. A successful build/fixture test does not establish a working live account integration.
 
 ## Connect and use
 
-1. Home or Settings → YouTube account → **Connect YouTube Home**.
-2. Read the website-session disclosure, finish Google's/YouTube's own login, review the account, return to YouTube and choose **Use this YouTube session**.
+1. Settings → YouTube account → the top **Sign in with Google** button → **Continue with Google**.
+2. Choose your account or log in on Google's own page. When YouTube confirms the authenticated account, Photon automatically closes the login page and loads account Home. There is no separate “Use this YouTube session” step. **Check sign-in** is a retry if the page callback has not fired. Internally this uses the same website-authentication approach as Prism, not an OAuth-to-cookie conversion.
 3. Home displays supported YouTube recommendation cards in server order. Scrolling near the end requests the next continuation automatically; **Load more** also supports explicit retries.
 4. In account settings use **Check Google history** to read the current watch-history control. **Pause on YouTube / Resume on YouTube** each require confirmation because they change the connected account's setting, not just Photon.
 5. To have real native plays reported, explicitly enable **Report real playback to YouTube history** and accept its separate disclosure. Enabling removes the additional local pause, but never overrides a paused/unknown Google setting.
 
 Google may reject embedded WebView sign-in. Photon does not disguise the login browser or ask for pasted cookies. The official comment OAuth token cannot be converted into a YouTube website session. Switching a Cloud project to Production does not remove an embedded-browser rejection or complete Google verification.
+
+## 0.7.1: login succeeds but Home stays unchanged
+
+The former top “Sign in with Google” button only requested native **comment permission**. It never activated account Home, so completing it could leave the local Home unchanged with no error. This was an implementation/UI wiring gap, not evidence of a failed Google account.
+
+The primary button now opens the Google account chooser for account Home and automatically completes on a trusted YouTube page only when `LOGGED_IN === true` and a valid selected account index are returned. Optional native comment authorization is below it, labelled **Authorize comments / Reconnect comments**, with its verified identity explicitly labelled as a comment identity. Account Home is selected before fetching so a failed fetch displays an account-Home loading/error state instead of silently retaining the local feed. Existing comment grants do not become website credentials; do not claim an OAuth token alone loads recommendations.
+
+Live embedded sign-in may still be rejected by Google. Login keeps the real WebView user-agent and does not copy Prism's user-agent-disguise or cookie-paste alternatives.
 
 ## Home continuation behavior
 
@@ -69,4 +77,7 @@ Keep OAuth testing while validating accounts; add another email as a test user i
 
 Prism's `YouTubeMusic.home/continueBrowse`, `playerExtras/registerPlayback` informed the architecture; ordinary-video requests and safeguards are implemented separately. Structured history-control shape was checked against public TeamPiped/rustypipe and yewtubes history fixtures; tests use newly constructed synthetic data, not copied account history/identifiers/action tokens.
 
-0.7 APK assembly, all **99 focused Photon tests**, and permanent signing-certificate matching passed in [run 40877422966](https://github.com/HayMayia/Photon/actions/runs/40877422966), source `a6bb93d487a0cfdc2e791a1fd93298c501493f74`, in 7m31s. [Signed APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40877422966/artifacts/12899720911) is 31,154,174 bytes. Live-device acceptance remains pending. The tests cover account continuation, structured pause parsing, policy freshness, real-play gating, global-setting read-back, account changes, scoped cookies and ambiguous-report failure. No test sends live account mutations.
+Previous 0.7 APK assembly, all **99 focused Photon tests**, and permanent signing-certificate matching passed in [run 40877422966](https://github.com/HayMayia/Photon/actions/runs/40877422966), source `a6bb93d487a0cfdc2e791a1fd93298c501493f74`, in 7m31s. [Signed APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40877422966/artifacts/12899720911) is 31,154,174 bytes. Live-device acceptance remains pending. The tests cover account continuation, structured pause parsing, policy freshness, real-play gating, global-setting read-back, account changes, scoped cookies and ambiguous-report failure. No test sends live account mutations.
+
+
+**0.7.1 automated verification:** [run 40881293556](https://github.com/HayMayia/Photon/actions/runs/40881293556), source `09f81c14ad4d0e07d71a1777d0e186d4fde8e338`, passed APK assembly, **106 focused Photon tests** and permanent signing-certificate verification in 8m1s. [APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40881293556/artifacts/12900029482): 31,154,580 bytes. Version code 9; update without uninstalling. Real-device Google login and account Home behavior still require acceptance; synthetic completion proofs are not live sign-in tests.

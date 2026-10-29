@@ -287,16 +287,14 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
         searchJob?.cancel()
         searchJob = viewModelScope.launch {
             page = null
-            mutableBrowse.value = BrowseState(busy = true, query = "Subscriptions")
-            val videos = mutableListOf<Video>()
-            val failures = mutableListOf<String>()
-            for (channel in library.value.subscriptions.take(20)) {
-                try { videos += app.videos.channel(channel.url).videos.take(8) }
-                catch (cancelled: CancellationException) { throw cancelled }
-                catch (_: Exception) { failures += channel.name }
-            }
-            mutableBrowse.value = BrowseState(videos = videos.distinctBy { it.id }, query = "Subscriptions",
-                error = if (failures.isEmpty()) null else "Could not refresh: ${failures.joinToString()}")
+            val revision = library.value.youtubeSessionRevision
+            mutableBrowse.value = BrowseState(busy = true, query = "Google subscriptions")
+            try {
+                val result = app.youtubeHome.subscriptions(app.youtubeHistory.session())
+                if (revision != library.value.youtubeSessionRevision || !library.value.youtubeSessionReady) return@launch
+                mutableBrowse.value = BrowseState(videos = result.videos, query = "Google subscriptions", error = result.message)
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { if (revision == library.value.youtubeSessionRevision) mutableBrowse.value = BrowseState(query = "Google subscriptions", error = "Could not read Google subscriptions. Sign in with the primary Google button and retry. No local channel feed was substituted.") }
         }
     }
 
@@ -309,7 +307,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 val result = app.videos.search("shorts")
                 page = result
                 val videos = result.videos.filter { it.short }.toMutableList()
-                val sources = (library.value.subscriptions.map { it.url } + library.value.history.map { it.channelUrl } + result.videos.map { it.channelUrl })
+                val sources = result.videos.map { it.channelUrl }
                     .filter { it.isNotBlank() }.distinct().take(3)
                 for (url in sources) {
                     try { videos += app.videos.channel(url, shorts = true).videos.map { it.copy(short = true) } }

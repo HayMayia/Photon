@@ -92,4 +92,15 @@ class YouTubeAccountLibraryTest {
         catch (_: IllegalArgumentException) { }
         assertEquals(0, requests)
     }
+    @Test fun subscriptionFeedReadsGoogleNotTheLocalChannelCache() = runBlocking {
+        val client = OkHttpClient.Builder().addInterceptor { chain ->
+            assertEquals("/feed/subscriptions", chain.request().url.encodedPath)
+            assertEquals("2", chain.request().url.queryParameter("authuser"))
+            val content = html(video.replace("playlistVideoRenderer", "videoRenderer"))
+            Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(200).message("OK")
+                .body(content.toResponseBody("text/html".toMediaType())).build()
+        }.build()
+        assertEquals(1, YouTubeHomeApi(client).subscriptions(session).videos.size)
+    }
+
 }

@@ -31,7 +31,7 @@ internal class YouTubeWebTransport(client: OkHttpClient = OkHttpClient()) {
         }
         .callTimeout(30, TimeUnit.SECONDS).build()
     suspend fun html(path: String, session: YouTubeWebSession): String = withContext(Dispatchers.IO) {
-        require(path in setOf("/", "/feed/history", "/feed/playlists", "/feed/channels") || Regex("/playlist\\?list=[A-Za-z0-9_-]{2,150}").matches(path) || Regex("/channel/UC[A-Za-z0-9_-]{20,30}").matches(path) || path.startsWith("/watch?v=") && Regex("/watch\\?v=[A-Za-z0-9_-]{11}").matches(path))
+        require(path in setOf("/", "/feed/history", "/feed/playlists", "/feed/channels", "/feed/subscriptions") || Regex("/playlist\\?list=[A-Za-z0-9_-]{2,150}").matches(path) || Regex("/channel/UC[A-Za-z0-9_-]{20,30}").matches(path) || path.startsWith("/watch?v=") && Regex("/watch\\?v=[A-Za-z0-9_-]{11}").matches(path))
         val url = "https://www.youtube.com$path".toHttpUrl().newBuilder().addQueryParameter("authuser", session.account.toString()).addQueryParameter("hl", "en").build()
         execute(builder(url, session).get().build())
     }

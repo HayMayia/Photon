@@ -20,6 +20,10 @@ class YouTubeHomeApi(client: OkHttpClient = OkHttpClient()) {
         val html = transport.html("/", session)
         YouTubeHomeParser.parse(html).copy(context = YouTubeWebBootstrap.context(html))
     }
+    suspend fun subscriptions(session: YouTubeWebSession): YouTubeHomePage = withContext(Dispatchers.IO) {
+        val html = transport.html("/feed/subscriptions", session)
+        YouTubeHomeParser.parse(html).copy(context = YouTubeWebBootstrap.context(html))
+    }
     suspend fun more(session: YouTubeWebSession, page: YouTubeHomePage): YouTubeHomePage = withContext(Dispatchers.IO) {
         val token = page.continuation?.takeIf { it.length in 1..32768 } ?: throw IOException("No further Home page")
         val context = page.context ?: throw IOException("Refresh Home to obtain a web context")

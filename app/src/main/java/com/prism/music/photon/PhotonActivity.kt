@@ -156,7 +156,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
         controller.prepare()
         controller.playWhenReady = play
     }
-    LaunchedEffect(watch.video?.id) {
+    LaunchedEffect(watch.video?.id, watch.busy, controller) {
         if (watch.video != null) {
             expanded = true
             if (watch.busy) { controller?.stop(); controller?.clearMediaItems() }
@@ -363,7 +363,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
 @Composable
 @UnstableApi
 private fun VideoSurface(controller: MediaController?, modifier: Modifier, controls: Boolean) {
-    AndroidView(factory = { context -> PlayerView(context).apply { player = controller; useController = controls; setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING); keepScreenOn = true } },
+    AndroidView(factory = { context -> PlayerView(context).apply { player = controller; useController = controls; setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING) } },
         modifier = modifier.background(Color.Black),
         update = { it.player = controller; it.useController = controls },
         onRelease = { it.player = null })

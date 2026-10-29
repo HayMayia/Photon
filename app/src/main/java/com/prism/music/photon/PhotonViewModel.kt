@@ -119,6 +119,10 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     val googleHistory = app.youtubeHistory.state
     fun refreshGoogleHistory() { viewModelScope.launch { app.youtubeHistory.refresh() } }
     fun setGoogleHistoryPaused(paused: Boolean) { viewModelScope.launch { try { app.youtubeHistory.changePause(paused) } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { app.youtubeHistory.invalidate() } } }
+    fun includeShortPlays(enabled: Boolean) {
+        app.library.update { it.copy(includeShortPlays = enabled, accountHistorySync = if (enabled) true else it.accountHistorySync, historyPaused = if (enabled) false else it.historyPaused) }
+        if (enabled) refreshGoogleHistory()
+    }
     fun enableAccountHistory(enabled: Boolean) {
         app.library.update { it.copy(accountHistorySync = enabled, historyPaused = if (enabled) false else it.historyPaused) }
         if (enabled) refreshGoogleHistory()

@@ -76,7 +76,7 @@ internal object YouTubePlaybackUrls {
     fun allowed(url: HttpUrl): Boolean = url.scheme == "https" && url.port == 443 && url.username.isEmpty() && url.password.isEmpty() &&
         url.host in setOf("www.youtube.com", "s.youtube.com") && url.encodedPath == "/api/stats/playback"
     fun forVideo(html: String, videoId: String, watchedMs: Long): Pair<HttpUrl, JsonObject> {
-        require(watchedMs >= 15_000 && Regex("[A-Za-z0-9_-]{11}").matches(videoId))
+        require(watchedMs >= 1_000 && Regex("[A-Za-z0-9_-]{11}").matches(videoId))
         val player = YouTubeWebBootstrap.assigned(html, "ytInitialPlayerResponse")
         if (!YouTubeWebBootstrap.signedIn(player, html)) throw IOException("YouTube did not confirm a signed-in player response")
         if ((player["videoDetails"] as? JsonObject)?.get("videoId")?.jsonPrimitive?.content != videoId ||
@@ -99,6 +99,7 @@ internal object YouTubePlaybackUrls {
 /** Pure policy used by both tracking and tests. Fresh pause evidence is mandatory. */
 internal object AccountHistoryPolicy {
     const val FRESH_MS = 30_000L
+    fun reportThreshold(library: PhotonLibrary): Long = if (library.includeShortPlays) 1_000L else 15_000L
     fun active(state: GoogleHistoryState, revision: Long, now: Long): Boolean = state.revision == revision &&
         state.status == GoogleHistoryStatus.ENABLED && now - state.checkedAtMs in 0 until FRESH_MS
     fun localPaused(library: PhotonLibrary, state: GoogleHistoryState, now: Long): Boolean = library.historyPaused ||
@@ -112,13 +113,13 @@ internal class PlaybackHistoryGate {
     private var playing = false
     private var accumulated = 0L
     private var attempted = false
-    fun tick(viewKey: String?, now: Long, isPlaying: Boolean, eligible: Boolean): Long? {
+    fun tick(viewKey: String?, now: Long, isPlaying: Boolean, eligible: Boolean, minimumPlayedMs: Long = 15_000L): Long? {
         if (viewKey != key) { key = viewKey; previous = now; playing = false; accumulated = 0; attempted = false }
         if (eligible && playing && viewKey != null) accumulated += (now - previous).coerceIn(0, 10_000)
         previous = now
         playing = isPlaying && eligible
         if (!eligible) accumulated = 0
-        if (eligible && accumulated >= 15_000 && !attempted) { attempted = true; return accumulated }
+        if (eligible && accumulated >= minimumPlayedMs.coerceAtLeast(1_000L) && !attempted) { attempted = true; return accumulated }
         return null
     }
 }
@@ -192,7 +193,7 @@ class YouTubeHistoryCoordinator(private val store: PhotonStore, client: OkHttpCl
             message = "History change was not confirmed. Refresh before retrying; no automatic change retry was sent.") }
     }
     suspend fun report(videoId: String, watchedMs: Long, revision: Long) = mutex.withLock {
-        if (watchedMs < 15_000 || !Regex("[A-Za-z0-9_-]{11}").matches(videoId)) return@withLock
+        if (watchedMs < AccountHistoryPolicy.reportThreshold(store.state.value) || !Regex("[A-Za-z0-9_-]{11}").matches(videoId)) return@withLock
         val session = session()
         fun permitted() = pendingChanges.get() == 0 && same(session) && session.revision == revision && store.state.value.accountHistorySync && !store.state.value.historyPaused
         if (!permitted()) return@withLock

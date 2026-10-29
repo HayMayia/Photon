@@ -58,7 +58,7 @@ class PhotonPlaybackService : MediaSessionService() {
         val viewKey = if (opened > 0 && id != null) "$id:$opened:$itemRevision" else null
         val eligible = opened > 0 && library.accountHistorySync && library.youtubeHome && library.youtubeSessionReady &&
             itemRevision == library.youtubeSessionRevision && !history.locallyPaused()
-        accountHistoryGate.tick(viewKey, now, player.isPlaying, eligible)?.let { watched ->
+        accountHistoryGate.tick(viewKey, now, player.isPlaying, eligible, AccountHistoryPolicy.reportThreshold(library))?.let { watched ->
             if (id != null) scope.launch { try { history.report(id, watched, itemRevision) } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { /* No automatic retry or UI credential logging. */ } }
         }
         if (history.locallyPaused()) {

@@ -25,6 +25,7 @@ internal fun YouTubeHomeConnection(model: PhotonViewModel) {
     val library by model.library.collectAsStateWithLifecycle()
     val feed by model.youtubeHome.collectAsStateWithLifecycle()
     val history by model.googleHistory.collectAsStateWithLifecycle()
+    var confirmShortPlays by remember { mutableStateOf(false) }
     var confirmSync by remember { mutableStateOf(false) }
     var changePause by remember { mutableStateOf<Boolean?>(null) }
     var disclosure by remember { mutableStateOf(false) }
@@ -57,15 +58,23 @@ internal fun YouTubeHomeConnection(model: PhotonViewModel) {
                 Text("Report real playback to YouTube history", Modifier.weight(1f))
                 Switch(library.accountHistorySync, { enabled -> if (enabled) confirmSync = true else model.enableAccountHistory(false) }, enabled = library.youtubeSessionReady)
             }
-            Text("Off until you explicitly enable it. One report after 15 seconds of actual native playback, only with freshly verified enabled Google history; no offline uploads or automatic report retries.", style = MaterialTheme.typography.bodySmall)
+            Row {
+                Text("Include short actual plays (1 second minimum)", Modifier.weight(1f))
+                Switch(library.includeShortPlays, { enabled -> if (enabled) confirmShortPlays = true else model.includeShortPlays(false) }, enabled = library.youtubeSessionReady)
+            }
+            Text("Off until you explicitly enable it. One report after ${if (library.includeShortPlays) 1 else 15} seconds of actual native playback, only with freshly verified enabled Google history; no offline uploads or automatic report retries.", style = MaterialTheme.typography.bodySmall)
         }
     }
     if (disclosure) AlertDialog(onDismissRequest = { disclosure = false }, title = { Text("Sign in with Google for Home?") },
         text = { Text("Like Prism, Photon opens Google's own login page and handles the resulting YouTube authentication internally. After sign-in it loads your account Home automatically; there is no second session-connect step. Optional comment authorization below is separate. Google's pages handle your login; Photon does not read password fields. WebView keeps sensitive session cookies in this app's private storage (app backup is disabled), and Photon uses these cookies only with allowlisted YouTube hosts to read Home and history controls. Confirmed Google pause/resume, likes, subscriptions and playlist changes go directly to the Google account connected to Home, never a local fallback. Separately opted-in real playback reports also make authenticated YouTube requests. Disconnect clears this app's web cookies, not Google's native authorization.\n\nThis unofficial integration can stop working. If Google blocks embedded sign-in, Photon will not disguise its login browser or ask you to paste cookies. Home shows YouTube's returned cards/messages without a generated fallback, Google watch-history controls are read separately; unknown state blocks tracking. Optional playback reports require another explicit opt-in and a confirmed active history setting. Website interactions are handled by YouTube itself.", Modifier.heightIn(max = 400.dp).verticalScroll(rememberScrollState())) },
         confirmButton = { TextButton(onClick = { disclosure = false; model.beginYouTubeWebChange(); signingIn = true }) { Text("Continue with Google") } },
         dismissButton = { TextButton(onClick = { disclosure = false }) { Text("Cancel") } })
+    if (confirmShortPlays) AlertDialog(onDismissRequest = { confirmShortPlays = false }, title = { Text("Include short plays in YouTube history?") },
+        text = { Text("This enables real-play reporting after at least one actual playing second, including Shorts and downloaded videos played while connected. It can change Google history and recommendations. Pauses, buffering and seek distance do not count. Google paused/unknown state still blocks reports. This does not backfill offline/past views. It also removes the extra local pause.") },
+        confirmButton = { TextButton(onClick = { confirmShortPlays = false; model.includeShortPlays(true) }) { Text("Enable short-play reporting") } },
+        dismissButton = { TextButton(onClick = { confirmShortPlays = false }) { Text("Cancel") } })
     if (confirmSync) AlertDialog(onDismissRequest = { confirmSync = false }, title = { Text("Add real plays to YouTube history?") },
-        text = { Text("Photon will report a video once after at least 15 seconds of real playback, for the connected website account. It checks Google's history setting before sending; paused or unknown state blocks reporting. This can change your account's history and future recommendations. Previously saved local history and downloaded/offline plays are not uploaded. Additional local pause will be turned off when you enable this; Google's pause is never overridden. Switching/reviewing web accounts disables reporting until you opt in again.") },
+        text = { Text("Photon will report a video once after at least ${if (library.includeShortPlays) 1 else 15} seconds of real playback, for the connected website account. It checks Google's history setting before sending; paused or unknown state blocks reporting. This can change your account's history and future recommendations. A downloaded video played now can be reported while online and verified; past local history and offline plays are not backfilled. Additional local pause will be turned off when you enable this; Google's pause is never overridden. Switching/reviewing web accounts disables reporting until you opt in again.") },
         confirmButton = { TextButton(onClick = { confirmSync = false; model.enableAccountHistory(true) }) { Text("Enable playback reporting") } },
         dismissButton = { TextButton(onClick = { confirmSync = false }) { Text("Cancel") } })
     changePause?.let { paused -> AlertDialog(onDismissRequest = { changePause = null }, title = { Text(if (paused) "Pause YouTube watch history?" else "Resume YouTube watch history?") },

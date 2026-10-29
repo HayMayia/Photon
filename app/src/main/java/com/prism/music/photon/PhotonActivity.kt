@@ -472,12 +472,12 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
             }
             if (googleChange.pending != null && !library.accountHistorySync) Row(verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(checked = syncRealPlays, enabled = !googleChange.busy, onCheckedChange = { syncRealPlays = it })
-                Text("Also report real native plays to YouTube history after 15 playing seconds. Google paused/unknown state blocks reporting. Enabling removes the extra local playback pause.", style = MaterialTheme.typography.bodySmall)
+                Text("Also report real native plays to YouTube history including short plays after at least 1 actual playing second. Google paused/unknown state blocks reporting. Enabling removes the extra local playback pause.", style = MaterialTheme.typography.bodySmall)
             }
             googleChange.message?.let { Text(it) }
             if (googleChange.busy) LinearProgressIndicator()
         } },
-        confirmButton = { TextButton(enabled = !googleChange.busy, onClick = { if (googleChange.pending == null) model.dismissGoogleChange() else { if (syncRealPlays) model.enableAccountHistory(true); model.confirmGoogleChange() } }) { Text(if (googleChange.pending == null) "Close" else "Confirm on YouTube") } },
+        confirmButton = { TextButton(enabled = !googleChange.busy, onClick = { if (googleChange.pending == null) model.dismissGoogleChange() else { if (syncRealPlays) model.includeShortPlays(true); model.confirmGoogleChange() } }) { Text(if (googleChange.pending == null) "Close" else "Confirm on YouTube") } },
         dismissButton = { if (googleChange.pending != null) TextButton(enabled = !googleChange.busy, onClick = model::dismissGoogleChange) { Text("Cancel") } }
     )
     if (castSheet) ModalBottomSheet(onDismissRequest = { castSheet = false; casting.stopDiscovery() }) {

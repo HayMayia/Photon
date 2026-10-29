@@ -4,11 +4,12 @@
 [Yigder's Prism](https://github.com/Yigder/Prism), retaining its real Compose theme,
 fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
 
-> **0.9.0 alpha — real Google-account actions, no local-only save fallback.**
-> **[Download 0.9 APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40889863444/artifacts/12904148038)**
+> **0.9.1 alpha — portrait Shorts and clearer comment posting; real Google-account actions retained.**
+> **[Download 0.9.1 APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40892791049/artifacts/12904963365)**
 > — GitHub sign-in required; extract and install `app-debug.apk`.
-> APK assembly, all **140 focused Photon tests** and permanent certificate matching
-> passed at revision `0621c01` ([verified build](https://github.com/HayMayia/Photon/actions/runs/40889863444), 5m31s).
+> APK assembly, all **147 focused Photon tests** and permanent certificate matching
+> passed at revision `8e9325d` ([verified build](https://github.com/HayMayia/Photon/actions/runs/40892791049), 4m55s).
+> Shorts cards use portrait 9:16 artwork; regular video cards use landscape 16:9. Valid comment drafts can authorize/review instead of silently requiring a missing comment grant; publishing still needs explicit authorization and confirmation.
 > Like/unlike, subscribe/unsubscribe and playlist actions now send confirmed same-account YouTube requests, not local saves.
 > Google is the default library; only downloads/device caches stay local. [Account writes and remaining scope](docs/ACCOUNT_WRITES.md).
 > Restores the Prism header, spectrum accents and shortcut tiles to authenticated Home.

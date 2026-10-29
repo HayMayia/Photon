@@ -111,7 +111,7 @@ class VideoRepository {
         val audio = selectedAudio?.content
         val original = selectedAudio?.audioTrackType?.toString() == "ORIGINAL"
         if (!live && audio == null && info.audioStreams.any { it.audioTrackType != null }) {
-            error("No compatible original/unlabelled soundtrack is available. Photon will not automatically substitute a dubbed language.")
+            error("No compatible original/unlabelled soundtrack is available. The app will not automatically substitute a dubbed language.")
         }
         val audioLabel = if (original) "Original audio" else "Source default (language unverified)"
         val qualities = buildList {

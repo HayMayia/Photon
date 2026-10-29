@@ -301,3 +301,10 @@ Source `bec48bcc0080b204b3d06c67d9da5a25223cac6a`, version 0.10.0-alpha/code 13:
 - **The user's strict EXACT-YouTube visual requirement remains unmet.** This is a native YouTube-style presentation, not Google's actual UI; some controls remain shared. System app identity, Google permissions, notifications and external legal/source links are not rebranded. Obtain screenshots of the desired YouTube version before claiming visual parity.
 
 See [INTERFACE_MODES.md](INTERFACE_MODES.md) for the pending Back, fullscreen, mode-switch, visual-comparison and live-account acceptance cases. All previous 0.9 account/history/public-readiness limitations still apply; a new interface does not resolve them.
+
+
+## 0.11 playlist Shorts, hold boost, screen awake, hearts and channel artwork
+
+Source `8bc8b9d8c55ea03236d93407b9d4e13ae3d49be6`, version 0.11.0-alpha/code 14: [run 40904639198](https://github.com/HayMayia/Photon/actions/runs/40904639198) **PASS**, 4m16s; APK assembly, **163 focused test methods**, permanent signing-certificate check and upload. [APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40904639198/artifacts/12911391018): 31,320,756 bytes. Six local Python signing tests and 92 main XML/SVG parses pass.
+
+Added metadata/read-only/state-isolation fixtures are synthetic. They cover ten new cases, not live gesture/speed/haptic/screen-timeout or Google account/device acceptance. See [PLAYBACK_TOUCHUPS.md](PLAYBACK_TOUCHUPS.md) for the implementation scope, metadata-dependent unknown cases, like-index limits, private/account-switch checks and required phone test matrix. No unknown Shorts classification is guessed from duration, failed like reads do not invent false state, no Google mutation happens without explicit confirmation, and no fake local fallback or history backfill is added. Exact YouTube visual parity remains unverified; native refinements do not imply every official screen/feature is replicated.

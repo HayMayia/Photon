@@ -24,7 +24,7 @@ Finishing a video details request no longer re-expands a player that the user ju
 
 ## Fullscreen sizing
 
-Fullscreen requests immersive landscape with transient system bars, restoring prior orientation/bar visibility on leaving it. The viewport respects safe drawing/cutout/navigation insets and explicitly uses Media3 FIT rather than zoom/crop. This is intended to keep the whole video and subtitles inside the visible viewport. It does not alter subtitle tracks or claim device-verified results. Gesture navigation, three-button navigation, notches, embedded captions and translated tracks must still be checked on real devices.
+Fullscreen requests immersive landscape for regular videos and portrait for known Shorts, with transient system bars, restoring prior orientation/bar visibility on leaving it. The viewport respects safe drawing/cutout/navigation insets and explicitly uses Media3 FIT rather than zoom/crop. This is intended to keep the whole video and subtitles inside the visible viewport. It does not alter subtitle tracks or claim device-verified results. Gesture navigation, three-button navigation, notches, embedded captions and translated tracks must still be checked on real devices.
 
 ## Device acceptance still required
 
@@ -39,3 +39,8 @@ Fullscreen requests immersive landscape with transient system bars, restoring pr
 ## Build verification
 
 Version 0.10.0-alpha/code 13, source `bec48bcc0080b204b3d06c67d9da5a25223cac6a`: [run 40896915371](https://github.com/HayMayia/Photon/actions/runs/40896915371) passed in 4m47s with assembly, the 153-method focused unit suite and permanent signing-certificate check. [APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40896915371/artifacts/12908630044), 31,291,479 bytes. Device/live-account/strict visual acceptance remains pending.
+
+
+## 0.11 refinements
+
+Playlist Shorts metadata/opening, explicit portrait fullscreen, hold-for-2× with haptics/restoration, visible-playback screen-awake behavior, existing Google heart state/confirmation and real channel artwork are described in [PLAYBACK_TOUCHUPS.md](PLAYBACK_TOUCHUPS.md). The native presentation now also includes creator avatars where supplied, red heart states, a conventional settings gear and the 2× indicator. These are refinements, not a claim of pixel-identical screen-by-screen parity.

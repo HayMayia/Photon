@@ -4,11 +4,13 @@
 [Yigder's Prism](https://github.com/Yigder/Prism), retaining its real Compose theme,
 fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
 
-> **0.10.0 alpha — Back navigation, fullscreen sizing and an optional native YouTube-style layout.**
-> **[Download 0.10 APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40896915371/artifacts/12908630044)**
+> **0.11.0 alpha — playlist Shorts, hold-for-2×, screen-awake playback, Google hearts and channel artwork.**
+> **[Download 0.11 APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40904639198/artifacts/12911391018)**
 > — GitHub sign-in required; extract and install `app-debug.apk`.
-> APK assembly, all **153 focused Photon tests** and permanent certificate matching
-> passed at revision `bec48bc` ([verified build](https://github.com/HayMayia/Photon/actions/runs/40896915371), 4m47s).
+> APK assembly, all **163 focused Photon tests** and permanent certificate matching
+> passed at revision `8bc8b9d` ([verified build](https://github.com/HayMayia/Photon/actions/runs/40904639198), 4m16s).
+> Playlist Shorts use resolved presentation for thumbnails/opening/portrait playback, with explicit fullscreen. Hold playing non-live video for 2× and system haptics; release restores speed. Visible playback keeps the display awake.
+> Existing Google likes are read into filled red hearts (including modern keyed controls); unlike still needs confirmation. Returned channel/playlist artwork and uploader avatars are displayed. [Scope and device checks](docs/PLAYBACK_TOUCHUPS.md).
 > Back retraces tabs/pages/player before asking to leave at the root; fullscreen uses FIT and safe insets.
 > **Settings → Switch to YouTube layout** changes native presentation; **You → Settings → Switch to Photon** returns. Same player/accounts/downloads, no website-player replacement.
 > This is **not pixel-identical or the official YouTube interface**; some controls remain shared, and Android/Google permission screens keep the real app identity. [Scope and device checks](docs/INTERFACE_MODES.md).

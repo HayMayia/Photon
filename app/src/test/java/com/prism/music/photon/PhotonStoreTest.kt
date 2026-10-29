@@ -62,4 +62,30 @@ class PhotonStoreTest {
         assertEquals("1:01:01", durationLabel(3661))
         assertEquals("LIVE", durationLabel(-1))
     }
+    @Test fun pausedHistoryDoesNotSavePlaybackOrResumePositions() {
+        store.update { it.copy(historyPaused = true) }
+        store.watched(video)
+        store.recordPlayback(video, 30_000, 120_000, 10_000)
+        assertTrue(store.state.value.history.isEmpty())
+        assertTrue(store.state.value.progress.isEmpty())
+    }
+    @Test fun pausingRetainsExistingHistoryAndExplicitUnpauseAllowsNewTracking() {
+        store.recordPlayback(video, 20_000, 120_000, 5_000)
+        val old = store.state.value.progress
+        store.update { it.copy(historyPaused = true) }
+        store.recordPlayback(video, 60_000, 120_000, 30_000)
+        assertEquals(old, store.state.value.progress)
+        store.update { it.copy(historyPaused = false) }
+        store.recordPlayback(video, 70_000, 120_000, 5_000)
+        assertEquals(70_000L, store.state.value.progress[video.id]?.positionMs)
+        assertEquals(10_000L, store.state.value.progress[video.id]?.watchedMs)
+    }
+    @Test fun homeModeAndLocalPauseSurviveRestartWithoutStoringCookiesInLibrary() {
+        store.update { it.copy(youtubeHome = true, youtubeWebUser = 2, historyPaused = true) }
+        val reopened = PhotonStore(RuntimeEnvironment.getApplication()).state.value
+        assertTrue(reopened.youtubeHome); assertTrue(reopened.historyPaused)
+        assertEquals(2, reopened.youtubeWebUser)
+        assertTrue(reopened.saved.isEmpty())
+    }
+
 }

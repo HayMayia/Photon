@@ -33,6 +33,9 @@ data class PhotonLibrary(
     val subscriptions: List<Channel> = emptyList(),
     val playlists: List<LocalPlaylist> = emptyList(),
     val progress: Map<String, WatchProgress> = emptyMap(),
+    val historyPaused: Boolean = false,
+    val youtubeHome: Boolean = false,
+    val youtubeWebUser: Int = 0,
 )
 
 /** One application-scoped store; updates from workers and UI are serialized together. */
@@ -50,7 +53,7 @@ class PhotonStore(context: Context) {
         preferences.edit().putString("library", json.encodeToString(next)).apply()
         mutable.value = next
     }
-    fun watched(video: Video) = update { it.copy(history = (listOf(video) + it.history.filterNot { v -> v.id == video.id }).take(100)) }
+    fun watched(video: Video) = update { if (it.historyPaused) it else it.copy(history = (listOf(video) + it.history.filterNot { v -> v.id == video.id }).take(100)) }
     fun toggleSaved(video: Video) = update {
         it.copy(saved = if (it.saved.any { v -> v.id == video.id }) it.saved.filterNot { v -> v.id == video.id } else listOf(video) + it.saved)
     }
@@ -71,6 +74,7 @@ class PhotonStore(context: Context) {
     }
     fun deletePlaylist(id: String) = update { it.copy(playlists = it.playlists.filterNot { list -> list.id == id }) }
     fun recordPlayback(video: Video, positionMs: Long, durationMs: Long, elapsedMs: Long) = update { library ->
+        if (library.historyPaused) return@update library
         val history = (listOf(video) + library.history.filterNot { it.id == video.id }).take(100)
         val old = library.progress[video.id] ?: WatchProgress()
         val progress = WatchProgress(positionMs.coerceAtLeast(0), durationMs.coerceAtLeast(0), old.watchedMs + elapsedMs.coerceAtLeast(0), System.currentTimeMillis())

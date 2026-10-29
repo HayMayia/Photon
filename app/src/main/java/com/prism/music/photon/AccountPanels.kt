@@ -34,6 +34,8 @@ internal fun YouTubeAccountCard(model: PhotonViewModel) {
         Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("YouTube account", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             GoogleAccountActions(model)
+            HorizontalDivider()
+            YouTubeHomeConnection(model)
         }
     }
 }

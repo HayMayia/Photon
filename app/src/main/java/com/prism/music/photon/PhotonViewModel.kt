@@ -39,6 +39,40 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     private val app = application as PhotonApplication
     val library = app.library.state
     val account = app.account.state
+    val youtubeHome = MutableStateFlow(YouTubeHomeState())
+    private var youtubeHomeJob: Job? = null
+    fun pauseHistory(paused: Boolean) {
+        app.library.update { it.copy(historyPaused = paused) }
+        if (paused) { searchJob?.cancel(); shelfJob?.cancel(); shelves.value = emptyList(); mutableBrowse.value = BrowseState() }
+        else { home(); if (!library.value.youtubeHome) refreshShelves() }
+    }
+    fun connectYouTubeHome(accountIndex: Int) = refreshYouTubeHome(accountIndex, connecting = true)
+    fun refreshYouTubeHome(accountIndex: Int = library.value.youtubeWebUser, connecting: Boolean = false) {
+        youtubeHomeJob?.cancel()
+        youtubeHomeJob = viewModelScope.launch {
+            youtubeHome.value = YouTubeHomeState(busy = true)
+            try {
+                val cookie = android.webkit.CookieManager.getInstance().getCookie("https://www.youtube.com").orEmpty()
+                val page = app.youtubeHome.home(cookie, accountIndex)
+                if (connecting) {
+                    searchJob?.cancel(); shelfJob?.cancel(); shelves.value = emptyList()
+                    app.library.update { it.copy(youtubeHome = true, youtubeWebUser = accountIndex, historyPaused = true) }
+                }
+                youtubeHome.value = YouTubeHomeState(page = page)
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { youtubeHome.value = YouTubeHomeState(error = "Could not load a verified signed-in YouTube Home. Review the web session/consent and try again. No local or search recommendations were substituted.") }
+        }
+    }
+    fun disconnectYouTubeHome() {
+        youtubeHomeJob?.cancel()
+        app.library.update { it.copy(youtubeHome = false, youtubeWebUser = 0) }
+        youtubeHome.value = YouTubeHomeState()
+        android.webkit.CookieManager.getInstance().removeAllCookies { android.webkit.CookieManager.getInstance().flush() }
+        android.webkit.WebStorage.getInstance().deleteAllData()
+        // Do not automatically replace a disconnected/paused feed with generated recommendations.
+        shelves.value = emptyList()
+        mutableBrowse.value = BrowseState()
+    }
     val commentPosting = MutableStateFlow(false)
     val commentPostError = MutableStateFlow<String?>(null)
     val lastPublished = MutableStateFlow<PublishedComment?>(null)
@@ -70,6 +104,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     private var shelfJob: Job? = null
 
     fun refreshShelves(force: Boolean = false) {
+        if (library.value.youtubeHome || library.value.historyPaused) return
         if (!force && shelves.value.isNotEmpty()) return
         shelfJob?.cancel()
         shelves.value = HomeCatalog.sections.map { HomeShelf(it) }
@@ -98,9 +133,13 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     private var searchJob: Job? = null
     private var watchJob: Job? = null
 
-    init { home(); refreshShelves() }
+    init { home(); if (!library.value.youtubeHome && !library.value.historyPaused) refreshShelves() }
 
     fun home() {
+        if (library.value.youtubeHome) { refreshYouTubeHome(); return }
+        if (library.value.historyPaused) {
+            searchJob?.cancel(); mutableBrowse.value = BrowseState(personalized = true, error = "Local history is paused. Generated recommendations are paused too; search remains available."); return
+        }
         if (library.value.history.isEmpty()) { search("science and technology"); return }
         searchJob?.cancel()
         searchJob = viewModelScope.launch {

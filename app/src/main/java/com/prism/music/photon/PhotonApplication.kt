@@ -7,6 +7,7 @@ import com.prism.music.ui.theme.IconStyle
 /** Photon deliberately does not start Prism's music jobs, account sync, or update installer. */
 class PhotonApplication : Application() {
     val account by lazy { YouTubeAccount() }
+    val youtubeHome by lazy { YouTubeHomeApi() }
     val casting by lazy { PhotonCast(this, videos) }
     val library by lazy { PhotonStore(this) }
     lateinit var videos: VideoRepository

@@ -31,6 +31,7 @@ class PhotonPlaybackService : MediaSessionService() {
     private var lastTick = android.os.SystemClock.elapsedRealtime()
     private var lastVideo: Video? = null
     private var wasPlaying = false
+    private var historyWasPaused = false
     private val json = Json { ignoreUnknownKeys = true }
 
     private fun snapshot(savePosition: Boolean = false) {
@@ -38,6 +39,10 @@ class PhotonPlaybackService : MediaSessionService() {
         val now = android.os.SystemClock.elapsedRealtime()
         val delta = now - lastTick
         lastTick = now
+        if ((application as PhotonApplication).library.state.value.historyPaused) {
+            wasPlaying = false; historyWasPaused = true; return
+        }
+        if (historyWasPaused) { wasPlaying = false; historyWasPaused = false }
         val raw = player.currentMediaItem?.mediaMetadata?.extras?.getString("photon_video")
         val video = raw?.let { runCatching { json.decodeFromString<Video>(it) }.getOrNull() }
         if (video == null) { wasPlaying = false; return }

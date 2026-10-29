@@ -185,6 +185,7 @@ class VideoRepository {
     }
 
     suspend fun recommendations(library: PhotonLibrary): List<Video> = withContext(Dispatchers.IO) {
+        if (library.historyPaused || library.youtubeHome) return@withContext emptyList()
         val seeds = library.history.sortedByDescending { (library.progress[it.id]?.watchedMs ?: 0).coerceAtMost(600_000) + (if (library.saved.any { saved -> saved.id == it.id }) 120_000 else 0) }
             .take(3)
         val candidates = mutableListOf<Video>()

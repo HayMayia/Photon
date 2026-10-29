@@ -5,9 +5,12 @@
 fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
 
 > **0.2.0 alpha — expanded native features, not complete Prism/YouTube parity.**
-> See the latest successful **Build Photon APK** run for a verified binary.
-> Physical-device results must be confirmed by a tester; a successful build is
-> not proof that a particular YouTube video, phone or TV works.
+> **[Download 0.2 APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40856646519/artifacts/12890570366)**
+> — GitHub sign-in required; extract and install `app-debug.apk`.
+> APK assembly and the 27 focused Photon tests passed at code revision `6fb5e2e`
+> ([verified build](https://github.com/HayMayia/Photon/actions/runs/40856646519)).
+> Physical-device results still require a tester; a build is not proof that a
+> particular YouTube video, phone or TV works.
 
 ## Feature status
 

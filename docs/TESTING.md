@@ -73,3 +73,11 @@ events, not cookies, stream URLs, SSID or unique device identifiers.
 **Do not mark implemented:** native Google account sync/YouTube likes, native
 comment posting, signed-in Shorts personalization, live recording or live casting.
 The official YouTube browser link is not evidence of native account integration.
+
+## Latest 0.2 build verification
+
+- **PASS:** debug APK assembly and the 27 focused Photon tests at `6fb5e2e`.
+- **PASS:** XML/SVG parse validation, 215 files; `git diff --check`.
+- [Successful 0.2 build](https://github.com/HayMayia/Photon/actions/runs/40856646519)
+- [0.2 APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40856646519/artifacts/12890570366)
+- Physical-device checks remain unverified until a tester reports them.

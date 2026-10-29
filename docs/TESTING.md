@@ -120,3 +120,22 @@ They do not prove live stream metadata accuracy or network image retrieval.
 - [0.3 APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40858409686/artifacts/12890507624)
 - XML/SVG parse check: 215 files valid; git diff whitespace check passed.
 - New physical-device cases above remain unverified pending tester feedback.
+
+
+## 0.4 native authorization/comment acceptance (unverified)
+
+See [Google Cloud registration and signing prerequisites](GOOGLE_SIGN_IN.md).
+
+- [ ] Correct registered Android package and current installed signing SHA-1; API enabled and test user allowed.
+- [ ] Missing/outdated Google Play services and wrong OAuth registration produce useful errors, not crashes.
+- [ ] Google consent cancelled/denied: no connected session or automatic post.
+- [ ] Verified channel name shown; reconnect/switch account and check confirmation names the selected channel/video.
+- [ ] Rotate/background during initial Task, Google screen and channel lookup; no stuck busy state or stale callback reconnect.
+- [ ] Draft survives rotation and sign-in failure; whitespace/overlength input cannot post.
+- [ ] Public posting requires its own confirmation, never triggered by sign-in.
+- [ ] Successful real post returns a server comment ID; check official YouTube (allow moderation delays).
+- [ ] Literal markup/plain text and Unicode are submitted correctly.
+- [ ] Disabled comments, permission/quota errors and 401 retain draft; 401 requires reconnect.
+- [ ] Ambiguous network outcome warns to check YouTube; no automatic duplicate submission.
+- [ ] Disconnect and process death clear Photon session; revoke underlying grant separately in Google account settings.
+- [ ] Existing read-only replies, signed-out playback and local library remain working.

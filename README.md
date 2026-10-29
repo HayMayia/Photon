@@ -4,7 +4,9 @@
 [Yigder's Prism](https://github.com/Yigder/Prism), retaining its real Compose theme,
 fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
 
-> **0.3.0 alpha — Prism-style shelves, original-audio selection and offline artwork.**
+> **0.4.0 alpha source adds native Google authorization and confirmed YouTube comment posting.**
+> Build verification for 0.4 is pending. Google Cloud registration and live-device authorization/posting are not yet verified; see [setup](docs/GOOGLE_SIGN_IN.md).
+> **Previous verified 0.3 build — Prism-style shelves, original audio and offline artwork:**
 > **[Download 0.3 APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40858409686/artifacts/12890507624)**
 > — GitHub sign-in required; extract and install `app-debug.apk`.
 > APK assembly and all 37 focused Photon tests passed at code revision `601c02a`
@@ -22,7 +24,7 @@ fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
 | Channel pages | Native channel details, Videos and Shorts tabs, paginated uploads |
 | Subscriptions | **Device-local** subscribe/unsubscribe and refresh uploads from up to 20 subscribed channels; not Google subscriptions |
 | Playlists | Local create/add/remove/delete, play loaded videos as a queue; browse paginated public YouTube playlists by link |
-| Comments | Native **read-only** comments, pagination and replies; posting opens the official YouTube site in the browser |
+| Comments | Read comments/replies with pagination; native top-level composer with public confirmation and official YouTube API posting, requiring Google setup/authorization; replies remain read-only |
 | Shorts | Swipeable vertical video feed using extracted Shorts and channel Shorts tabs; discovery is not YouTube's signed-in Shorts algorithm |
 | Recommendations | On-device ranking of related videos from engaged watch-history seeds, saved-video weighting, seen-video exclusion, subscription boosting and channel diversity; cold-start topic discovery remains search-based |
 | History/resume | Recorded by the playback service, including background playback; periodic positions, playing-time accumulation (not seek distance), and resume across app restarts; recently finished videos restart from the beginning |
@@ -32,15 +34,12 @@ fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
 | Offline | Play/delete downloaded MP4 files including sound; thumbnail images are real app-private files rather than only an evictable image cache; old-download artwork is repaired when an allowed network is available |
 | Player | Seeking, background session, lock-screen/headset controls, full-screen landscape, explicit PiP and mini-player |
 | Testing tools | Settings → **Share device test report**; bounded local playback events without credentials/stream URLs; [device checklist](docs/TESTING.md) and issue template |
-| Google login, YouTube likes/account sync | **Not implemented natively.** Settings provides an explicitly labelled official-YouTube browser link; this does not sign Photon in or sync its library |
+| Google authorization | Official native Google Play services account/consent flow, memory-only session and verified YouTube channel; **requires registered Android OAuth package/certificate and enabled YouTube Data API v3** ([setup](docs/GOOGLE_SIGN_IN.md)); live device flow unverified |
+| YouTube likes/account sync | Not implemented; authorization for commenting does not sync local subscriptions/playlists or turn bookmarks into likes |
 | Live | Extracted live HLS playback when available. **Live recording is not implemented**; the MP4 downloader is not misrepresented as a live recorder |
 
 Local saves are **bookmarks, not YouTube likes**. Local playlists/subscriptions do
-not modify your Google account. No account, API key or Photon server is required
-for the native features above. The browser link is a convenience, not a substitute
-for native account integration. A secure native account client and authenticated
-YouTube mutations remain separate work; no passwords or cookies should be pasted
-into issues or chat.
+not modify your Google account. No account or Photon server is required for signed-out browsing/playback. Optional native commenting needs Google authorization and an app-owner Google Cloud registration. No passwords, cookies or client secrets should be pasted into issues or chat. Native authorization uses the broad YouTube API scope disclosed before Google's consent screen; it does not implement full account synchronization.
 
 ## Get an APK
 

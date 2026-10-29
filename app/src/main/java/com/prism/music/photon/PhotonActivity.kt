@@ -627,7 +627,6 @@ private fun SettingsPage(library: PhotonLibrary, model: PhotonViewModel, notific
                 ListItem(headlineContent = { Text("Enable notifications") }, supportingContent = { Text("Playback controls and download progress") }, leadingContent = { Icon(PrismIcons.PlayCircle, null) }, modifier = Modifier.clickable(onClick = notifications))
             }
         }
-        item { YouTubeAccountCard(model) }
         item {
             SettingsGroup("YOUR DATA") {
                 ListItem(headlineContent = { Text("Clear watch history") }, supportingContent = { Text("Saved videos and downloads are not affected") }, leadingContent = { Icon(PrismIcons.History, null) }, modifier = Modifier.clickable { clear = true })

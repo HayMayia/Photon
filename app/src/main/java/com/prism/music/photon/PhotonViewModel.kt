@@ -54,7 +54,8 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     private val likeReadSlots = kotlinx.coroutines.sync.Semaphore(2)
     fun resolveVideoPresentation(video: Video) {
         val requestedRevision = library.value.youtubeSessionRevision
-        if ((video.id !in videoPresentation.value || (videoPresentation.value[video.id]?.short != true && presentationRevisions[video.id] != requestedRevision)) && presentationPending.add(video.id)) viewModelScope.launch {
+        val presentationKey = "$requestedRevision:${video.id}"
+        if ((video.id !in videoPresentation.value || (videoPresentation.value[video.id]?.short != true && presentationRevisions[video.id] != requestedRevision)) && presentationPending.add(presentationKey)) viewModelScope.launch {
             try {
                 val resolved = metadataReadSlots.withPermit {
                     var result = app.videos.presentation(video)
@@ -69,6 +70,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                     }
                     result
                 } ?: return@launch
+                if (requestedRevision != library.value.youtubeSessionRevision) return@launch
                 presentationRevisions[video.id] = requestedRevision
                 if (resolved.short && library.value.downloads.any { it.video.id == video.id && !it.video.short }) app.library.update { stored ->
                     stored.copy(downloads = stored.downloads.map { download -> if (download.video.id == video.id)
@@ -79,7 +81,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                     short = current.video.short || resolved.short, thumbnail = if (resolved.short) resolved.thumbnail else current.video.thumbnail))
                 videoPresentation.value = (videoPresentation.value + (video.id to resolved)).entries.toList().takeLast(512).associate { it.toPair() }
             } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { /* Unknown stays unknown; no duration guesses. */ }
-            finally { presentationPending.remove(video.id) }
+            finally { presentationPending.remove(presentationKey) }
         }
         val revision = library.value.youtubeSessionRevision
         val key = "$revision:${video.id}"
@@ -165,6 +167,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
         }
         googleChangeJob?.cancel(); googleChange.value = GoogleChangeState()
         likesIndexJob?.cancel(); likesIndexRevision = null
+        videoPresentation.value = emptyMap(); presentationRevisions.clear()
         googleLikes.value = emptyMap(); googleSubscriptions.value = emptyMap()
     }
     val accountLibrary = MutableStateFlow(AccountLibraryState())

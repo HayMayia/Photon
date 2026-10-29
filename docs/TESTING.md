@@ -146,3 +146,27 @@ See [Google Cloud registration and signing prerequisites](GOOGLE_SIGN_IN.md).
 - [0.4 APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40861060192/artifacts/12891223551), 31,048,708 bytes; contains `app-debug.apk`.
 - Eleven new account/API tests use synthetic interceptor responses, not a registered Cloud app or live Google comments.
 - **NOT VERIFIED**: real-device Google authorization, actual public posting, OAuth registration and signing stability. All manual checkboxes remain intentionally unchecked.
+
+
+## 0.5 subtitles, gestures and startup (build passed; device verification pending)
+
+- [ ] Captions available: CC menu lists languages/auto-generated labels; select and turn off. Confirm visible captions and synchronization in normal/fullscreen/Shorts player.
+- [ ] Separate-original-audio playback retains subtitle text tracks; audio language unchanged.
+- [ ] No-caption video: clear availability text, no invented captions. No automatic translation, subtitle downloads or offline caption persistence are claimed.
+- [ ] Switch quality, minimize/expand, rotate; CC remains usable; player is not restarted by a simple control interaction.
+- [ ] Double-tap left/right video area seeks -/+10s, clamps at start/end; paused playback stays paused.
+- [ ] Single taps, play/pause, scrubber, CC menu and other native buttons still work; PiP has no seeking gesture; unseekable live streams do not seek.
+- [ ] Cold video: measure click to first frame over Wi-Fi/mobile, then repeat within two minutes; compare same URLs/network/quality with 0.3. No measured latency improvement is claimed before this test.
+- [ ] Retry after playback error invalidates the cached signed URLs. Cache expires after two minutes and holds at most eight videos, only in memory.
+- [ ] Slower network: lower startup threshold does not produce unacceptable rebuffering; HD preference/original audio remain intact.
+- [ ] Settings → Share device test report contains extraction/cache/first-frame timing, not URLs or credentials. First-frame timing after quality switches includes time since original open, so use the initial first-frame event for startup comparisons.
+
+Implementation reduces startup buffer from Media3's default to 750 ms (rebuffer 1.5 s), retains a 15–50 s forward buffer, and caches/deduplicates stream-detail extraction. It does not bypass YouTube's required extraction, CDN connection setup or network throughput. Native gestures and real subtitle rendering remain device checks; policy unit tests do not establish these outcomes.
+
+### 0.5 build result
+
+- **PASS:** Android APK assembly and all 56 focused Photon test methods, revision `3ee28ea`, [Actions run 40864401451](https://github.com/HayMayia/Photon/actions/runs/40864401451).
+- [APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40864401451/artifacts/12893367353): 31,061,411 bytes; extract `app-debug.apk`.
+- Eight new pure policy tests cover ±10-second math, boundary/unknown-duration handling, cache TTL, LRU eviction, invalidation and video separation. They do not simulate native touch routing, caption rendering or real network startup.
+- `git diff --check` and parse validation of 92 main-source XML/SVG files passed.
+- **NOT VERIFIED:** actual speedup from the reported ~10-second startup, subtitle availability/rendering, gestures on a phone, live Google authorization or posting.

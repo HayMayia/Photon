@@ -4,15 +4,15 @@
 [Yigder's Prism](https://github.com/Yigder/Prism), retaining its real Compose theme,
 fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
 
-> **0.4.0 alpha — native Google authorization and YouTube commenting.**
-> **[Download 0.4 APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40861060192/artifacts/12891223551)**
+> **0.5.0 alpha — subtitles, double-tap seeking and startup improvements.**
+> **[Download 0.5 APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40864401451/artifacts/12893367353)**
 > — GitHub sign-in required; extract and install `app-debug.apk`.
-> APK assembly and all 48 focused Photon tests passed at code revision `07affd0`
-> ([verified build](https://github.com/HayMayia/Photon/actions/runs/40861060192)).
-> **Google Cloud registration is still required.** Sign-in and real posting have
-> not been verified on a physical device; see [setup](docs/GOOGLE_SIGN_IN.md).
-> Previous [0.3 APK](https://github.com/HayMayia/Photon/actions/runs/40858409686/artifacts/12890507624)
-> passed 37 tests; the user's 0.1 playback result does not verify later features.
+> APK assembly and all 56 focused Photon tests passed at code revision `3ee28ea`
+> ([verified build](https://github.com/HayMayia/Photon/actions/runs/40864401451)).
+> Caption rendering, native gestures and startup-speed improvement still require
+> device testing. The user reports 0.3 works very well; this does not verify 0.5.
+> **Google Cloud registration is still required** for account authorization and
+> commenting; see [step-by-step setup](docs/GOOGLE_SIGN_IN.md).
 
 
 ## Feature status
@@ -32,7 +32,8 @@ fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
 | Audio language | Original AAC audio takes priority over bitrate. Explicit dubs/descriptive/secondary tracks are not selected automatically. Missing labels are shown as unverified; source availability still limits playback |
 | Downloads | Available MP4/AVC + AAC qualities; foreground progress/cancel; separate audio/video muxed on-device with MediaMuxer |
 | Offline | Play/delete downloaded MP4 files including sound; thumbnail images are real app-private files rather than only an evictable image cache; old-download artwork is repaired when an allowed network is available |
-| Player | Seeking, background session, lock-screen/headset controls, full-screen landscape, explicit PiP and mini-player |
+| Player | Native CC subtitle language/off selector for extracted caption tracks, ±10-second side double-taps (except buttons/unseekable streams), background session, lock-screen/headset controls, fullscreen, PiP and mini-player |
+| Startup | 750 ms initial / 1.5 s rebuffer thresholds, bounded two-minute stream-detail cache and same-video extraction deduplication; retry refreshes signed URLs. Device latency reduction not yet measured |
 | Testing tools | Settings → **Share device test report**; bounded local playback events without credentials/stream URLs; [device checklist](docs/TESTING.md) and issue template |
 | Google authorization | Official native Google Play services account/consent flow, memory-only session and verified YouTube channel; **requires registered Android OAuth package/certificate and enabled YouTube Data API v3** ([setup](docs/GOOGLE_SIGN_IN.md)); live device flow unverified |
 | YouTube likes/account sync | Not implemented; authorization for commenting does not sync local subscriptions/playlists or turn bookmarks into likes |
@@ -77,7 +78,8 @@ chmod +x gradlew
 
 The focused suite exercises link validation, library persistence and migration,
 subscriptions, playlist mutation/deduplication, progress accumulation/resume,
-bounded history retention and recommendation ranking. It does not call YouTube.
+bounded history retention, recommendation ranking, OAuth/API protocol safeguards,
+seek clamping and bounded cache expiry/eviction. It does not call YouTube.
 Inherited Prism tests remain, but many exercise live music/lyric services and are
 not a Photon acceptance suite. Local compilation is unavailable in the coding
 sandbox (no JDK/SDK and restricted Maven/Google/Gradle hosts); GitHub Actions is

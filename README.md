@@ -4,15 +4,15 @@
 [Yigder's Prism](https://github.com/Yigder/Prism), retaining its real Compose theme,
 fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
 
-> **0.5.0 alpha — subtitles, double-tap seeking and startup improvements.**
-> **[Download 0.5 APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40864401451/artifacts/12893367353)**
+> **0.5.1 alpha — stable signing for native Google authorization.**
+> **[Download 0.5.1 APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40867400991/artifacts/12895050509)**
 > — GitHub sign-in required; extract and install `app-debug.apk`.
-> APK assembly and all 56 focused Photon tests passed at code revision `3ee28ea`
-> ([verified build](https://github.com/HayMayia/Photon/actions/runs/40864401451)).
-> Caption rendering, native gestures and startup-speed improvement still require
-> device testing. The user reports 0.3 works very well; this does not verify 0.5.
-> **Google Cloud registration is still required** for account authorization and
-> commenting; see [step-by-step setup](docs/GOOGLE_SIGN_IN.md).
+> APK assembly, all 56 focused Photon tests and final APK certificate matching
+> passed at revision `de4e5db` ([verified build](https://github.com/HayMayia/Photon/actions/runs/40867400991)).
+> Owner reports Android OAuth client registration complete. Actual device sign-in
+> and comment posting are not yet verified. Ordinary users do not create Cloud projects.
+> Includes 0.5 captions, double-tap seeking and startup changes; their device checks
+> remain pending. See [account setup](docs/GOOGLE_SIGN_IN.md) and [signing/migration](signing/README.md).
 
 
 ## Feature status
@@ -56,11 +56,12 @@ red, there is no verified APK for that revision. Earlier successful runs remain
 available but do not include later changes. The original 0.1 build passed at
 [revision 3a7501f](https://github.com/HayMayia/Photon/actions/runs/40852929196).
 
-**Upgrade warning:** these are debug-signed evaluation builds. Separate CI runs
-may generate different signing keys, preventing installation over an earlier APK.
-Do not uninstall a populated app casually: it deletes its local library/downloads.
-A production release needs a persistent private signing key configured outside
-Git. Never commit signing keys or post credentials.
+**Upgrade warning:** 0.5.1 is the first verified APK using the permanent Photon
+certificate. Older CI debug APKs used unrelated temporary keys and may not accept
+an in-place update. **Do not uninstall a populated app casually:** uninstalling
+deletes its private library/downloads. Future trusted CI builds reuse the permanent
+key; PR-test APKs remain temporary-debug-signed. See [signing and recovery](signing/README.md).
+Never post the signing password or private key.
 
 ## Build and test
 

@@ -10,7 +10,7 @@ After registration below, use **Photon → Settings → YouTube account → Sign
 
 ## Stable signing first (guided setup)
 
-Before registering the final Android client, complete [the owner-only permanent signing setup](../signing/README.md). The current 0.5 downloadable APK still has a temporary certificate. The owner supplied the GitHub Actions secret and bootstrap succeeded in run 40867368566; the permanent public identity is now in `signing/ANDROID_OAUTH.txt`. The first matching signed APK is building in run 40867400991. Register that permanent identity, not an old APK's fingerprint, and wait for a verified matching APK before testing sign-in. No end user needs this developer setup.
+Before registering the final Android client, complete [the owner-only permanent signing setup](../signing/README.md). The current 0.5 downloadable APK still has a temporary certificate. The owner supplied the GitHub Actions secret and bootstrap succeeded in run 40867368566; the permanent public identity is now in `signing/ANDROID_OAUTH.txt`. The first matching signed APK passed assembly, 56 tests and final certificate matching in run 40867400991 (artifact 12895050509). The owner reports creating the Google Android client; real sign-in/posting remain unverified. Register that permanent identity, not an old APK's fingerprint, and wait for a verified matching APK before testing sign-in. No end user needs this developer setup.
 
 ## One-time app-owner setup
 

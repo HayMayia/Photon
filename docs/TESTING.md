@@ -181,3 +181,10 @@ Owner must save PHOTON_SIGNING_PASSWORD directly as a GitHub Actions repository 
 - **PASS:** setup run 40867368566, six signing safety tests, key generation/encrypted backup, public certificate publication and explicit APK build dispatch. Provisioning commit `de4e5db`.
 - **PENDING:** stable-signed APK build 40867400991 and final APK-certificate match; Google Android OAuth client registration and live-device authorization/comment posting.
 - Public registration identity is `signing/ANDROID_OAUTH.txt`; do not register an older temporary-debug APK's SHA-1 for this key.
+
+### 0.5.1 stable-signed APK verification
+
+- **PASS:** revision `de4e5db`, [run 40867400991](https://github.com/HayMayia/Photon/actions/runs/40867400991), 5m18s: permanent-key restore, APK assembly, all 56 Photon Android test methods, final APK certificate match, artifact upload and plaintext signing-file cleanup.
+- [APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40867400991/artifacts/12895050509): 31,062,109 bytes; includes `app-debug.apk` and public `ANDROID_OAUTH.txt`.
+- Owner reports Google Android OAuth client creation complete with the permanent package/SHA-1. This is not an independently verified Console result or a device sign-in test.
+- **PENDING:** actual Google authorization, real comment posting, subtitle/gesture device checks and measured startup improvement. Public distribution verification/policy review remains separate from testing-mode client creation.

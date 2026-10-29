@@ -2,6 +2,8 @@ package com.prism.music.photon
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -39,7 +41,7 @@ internal fun PhotonHome(model: PhotonViewModel, library: PhotonLibrary, open: (V
                         shorts: () -> Unit, subscriptions: () -> Unit, downloads: () -> Unit, saved: () -> Unit,
                         settings: () -> Unit, search: () -> Unit) {
     if (library.youtubeHome) {
-        ActualYouTubeHome(model, open, settings, search)
+        ActualYouTubeHome(model, open, settings, search, shorts, subscriptions, downloads, saved)
         return
     }
     val shelves by model.shelves.collectAsStateWithLifecycle()
@@ -174,7 +176,8 @@ private fun HomeCover(video: Video, music: Boolean, open: () -> Unit) {
 
 /** Account Home never falls back to local ranking, quick picks or search shelves. */
 @Composable
-private fun ActualYouTubeHome(model: PhotonViewModel, open: (Video) -> Unit, settings: () -> Unit, search: () -> Unit) {
+private fun ActualYouTubeHome(model: PhotonViewModel, open: (Video) -> Unit, settings: () -> Unit, search: () -> Unit,
+                              shorts: () -> Unit, subscriptions: () -> Unit, downloads: () -> Unit, saved: () -> Unit) {
     val feed by model.youtubeHome.collectAsStateWithLifecycle()
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(22.dp)) {
         item {
@@ -185,6 +188,12 @@ private fun ActualYouTubeHome(model: PhotonViewModel, open: (Video) -> Unit, set
             }
             Text("Returned by your connected YouTube website session · not Photon's local ranking", style = MaterialTheme.typography.bodySmall)
             TextButton(onClick = { model.refreshYouTubeHome() }) { Text("Refresh YouTube Home") }
+            Row(Modifier.horizontalScroll(rememberScrollState())) {
+                TextButton(onClick = shorts) { Text("Discover Shorts") }
+                TextButton(onClick = subscriptions) { Text("Local subscriptions") }
+                TextButton(onClick = downloads) { Text("Downloads") }
+                TextButton(onClick = saved) { Text("Saved") }
+            }
             if (feed.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
             feed.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             feed.page?.message?.let { Text(it, Modifier.padding(vertical = 12.dp)) }

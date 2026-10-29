@@ -23,6 +23,22 @@ class YouTubeAccountActionsTest {
     }.build())
     private fun body(request: Request): JsonObject { val buffer = okio.Buffer(); request.body!!.writeTo(buffer); return Json.parseToJsonElement(buffer.readUtf8()).jsonObject }
 
+    @Test fun modernEntityKeysAreBoundToPrimaryVideoNotRelatedButtons() {
+        val root = Json.parseToJsonElement("""{"videoPrimaryInfoRenderer":{"likeButtonViewModel":{"likeStatusEntityKey":"current"}},"mutations":[{"likeStatusEntity":{"key":"other","likeStatus":"INDIFFERENT"}},{"likeStatusEntity":{"key":"current","likeStatus":"LIKE"}}]}""").jsonObject
+        assertEquals(true, GoogleAccountControls.liked(root, id))
+        val unrelated = Json.parseToJsonElement("""{"likeButtonViewModel":{"likeStatusEntityKey":"other"},"likeStatusEntity":{"key":"other","likeStatus":"LIKE"}}""").jsonObject
+        assertNull(GoogleAccountControls.liked(unrelated, id))
+    }
+    @Test fun modernLikeMutationIsVerifiedThroughItsLinkedEntity() = runBlocking {
+        var liked = false
+        var writes = 0
+        val service = api { request ->
+            if (request.method == "POST") { writes++; liked = true; "{}" }
+            else doc("""{"videoPrimaryInfoRenderer":{"likeButtonViewModel":{"likeStatusEntityKey":"current"}}},{"likeStatusEntity":{"key":"current","likeStatus":"${if (liked) "LIKE" else "INDIFFERENT"}"}}""")
+        }
+        assertEquals(true, service.execute(GoogleChange(GoogleChangeKind.LIKE, id, "Video", desired = true), session) { true }.liked)
+        assertEquals(1, writes)
+    }
     @Test fun authenticatedShortsMetadataUsesOnlyThePinnedReadonlyRoute() = runBlocking {
         val service = api { request ->
             assertEquals("GET", request.method)

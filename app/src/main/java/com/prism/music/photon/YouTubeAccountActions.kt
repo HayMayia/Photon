@@ -24,20 +24,29 @@ internal object GoogleAccountControls {
     }
     fun liked(root: JsonObject, id: String): Boolean? {
         val states = mutableSetOf<Boolean>()
+        val keys = mutableSetOf<String>()
+        fun boundButton(button: JsonObject) {
+            val entity = button["likeStatusEntity"] as? JsonObject
+            status(entity?.get("likeStatus"))?.let(states::add)
+            listOf(button["likeStatusEntityKey"], entity?.get("key")).forEach { key ->
+                (key as? JsonPrimitive)?.contentOrNull?.takeIf { it.length in 1..4096 }?.let(keys::add)
+            }
+        }
         for (node in objects(root)) {
             (node["likeButtonRenderer"] as? JsonObject)?.let { button ->
                 if ((button["target"] as? JsonObject)?.get("videoId")?.jsonPrimitive?.contentOrNull == id)
                     status(button["likeStatus"])?.let(states::add)
             }
             (node["likeButtonViewModel"] as? JsonObject)?.let { button ->
-                if (objects(button).any { (it["target"] as? JsonObject)?.get("videoId")?.jsonPrimitive?.contentOrNull == id })
-                    ((button["likeStatusEntity"] as? JsonObject)?.get("likeStatus"))?.let { status(it)?.let(states::add) }
+                if (objects(button).any { (it["target"] as? JsonObject)?.get("videoId")?.jsonPrimitive?.contentOrNull == id }) boundButton(button)
             }
             (node["videoPrimaryInfoRenderer"] as? JsonObject)?.let { primary ->
-                for (part in objects(primary)) (part["likeButtonViewModel"] as? JsonObject)?.let { button ->
-                    status((button["likeStatusEntity"] as? JsonObject)?.get("likeStatus"))?.let(states::add)
-                }
+                // The caller validates the watch response's video ID before accepting this primary panel.
+                for (part in objects(primary)) (part["likeButtonViewModel"] as? JsonObject)?.let(::boundButton)
             }
+        }
+        for (node in objects(root)) (node["likeStatusEntity"] as? JsonObject)?.let { entity ->
+            if ((entity["key"] as? JsonPrimitive)?.contentOrNull in keys) status(entity["likeStatus"])?.let(states::add)
         }
         return states.singleOrNull()
     }

@@ -626,7 +626,10 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
 @Composable
 @UnstableApi
 internal fun VideoSurface(controller: MediaController?, modifier: Modifier, controls: Boolean) {
-    AndroidView(factory = { context -> PhotonPlayerView(context).apply { player = controller; useController = controls; resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT; setShowSubtitleButton(true); setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING) } },
+    val youtubeLayout = LocalYouTubeLayout.current
+    AndroidView(factory = { context -> PhotonPlayerView(context).apply { player = controller; useController = controls; resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT; setShowSubtitleButton(true); setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
+        if (youtubeLayout) findViewById<androidx.media3.ui.DefaultTimeBar>(androidx.media3.ui.R.id.exo_progress)?.setPlayedColor(android.graphics.Color.rgb(255, 0, 51))
+    } },
         modifier = modifier.background(Color.Black),
         update = { it.player = controller; it.useController = controls; it.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT },
         onRelease = { it.player = null })

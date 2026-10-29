@@ -128,7 +128,7 @@ internal fun YouTubeLayoutHome(model: PhotonViewModel, library: PhotonLibrary, o
     val browse by model.browse.collectAsStateWithLifecycle()
     val list = rememberLazyListState()
     LaunchedEffect(feed.page?.continuation, feed.loadingMore, feed.autoMore, feed.error, library.youtubeHome) {
-        if (!library.youtubeHome || feed.page?.continuation == null || feed.loadingMore || !feed.autoMore || feed.error != null) return@LaunchedEffect
+        if (!library.youtubeHome || feed.page?.continuation == null || feed.loadingMore || !feed.autoMore || feed.error != null || feed.page?.videos.isNullOrEmpty()) return@LaunchedEffect
         snapshotFlow { list.layoutInfo.visibleItemsInfo.lastOrNull()?.index?.let { it >= list.layoutInfo.totalItemsCount - 4 } == true }
             .distinctUntilChanged().collect { if (it) model.moreYouTubeHome() }
     }
@@ -181,7 +181,7 @@ internal fun YouTubeLayoutSearch(model: PhotonViewModel, browse: BrowseState, qu
         }
         if (browse.busy) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
         browse.error?.let { error -> item { Text(error, Modifier.padding(16.dp), color = MaterialTheme.colorScheme.error) } }
-        items(browse.videos, key = { it.id }) { video -> YouTubeLayoutVideo(video, { open(video) }, { model.save(video) }, { channel(video.channelUrl) }) }
-        if (browse.hasMore) item { if (browse.moreBusy) CircularProgressIndicator(Modifier.padding(16.dp)) else TextButton(onClick = model::loadMore) { Text("Load more") } }
+        if (query.isNotBlank() && browse.query == query.trim()) items(browse.videos, key = { it.id }) { video -> YouTubeLayoutVideo(video, { open(video) }, { model.save(video) }, { channel(video.channelUrl) }) }
+        if (browse.hasMore && query.isNotBlank() && browse.query == query.trim()) item { if (browse.moreBusy) CircularProgressIndicator(Modifier.padding(16.dp)) else TextButton(onClick = model::loadMore) { Text("Load more") } }
     }
 }

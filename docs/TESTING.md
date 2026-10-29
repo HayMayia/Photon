@@ -287,3 +287,17 @@ Device acceptance pending:
 - [ ] From Home-only sign-in, type a valid comment: authorization/review is enabled. Cancel Google permission and keep the draft. Approve permission, review the displayed channel and confirm exactly once; verify the actual comment on YouTube.
 - [ ] Test empty, whitespace-only, exactly 10,000 and over-limit drafts; disabled comments, authorization failure, rotation and expired credentials show truthful state without automatic publication.
 - [ ] Recheck 0.9 Google account writes/history and existing playback/download features. This patch does not complete missing search-history/offline transfer or establish public readiness.
+
+
+## 0.10 Back/fullscreen and optional native YouTube-style presentation
+
+Source `bec48bcc0080b204b3d06c67d9da5a25223cac6a`, version 0.10.0-alpha/code 13: [build 40896915371](https://github.com/HayMayia/Photon/actions/runs/40896915371) **PASS**, 4m47s. APK assembly, 153 focused test methods, permanent signing-certificate check and artifact upload passed. [APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40896915371/artifacts/12908630044): 31,291,479 bytes; contains `app-debug.apk`. Install over the existing app without uninstalling. Six local signing tests, 92 main XML/SVG parses and eight new icon-path syntax checks passed.
+
+- Back navigation now retains a bounded tab history, ignores duplicate tab reselections, returns restored non-Home tabs to Home, handles the account playlist subpage and a channel opened from the player, and asks before leaving the root. This is not a complete browser-like stack of every search/filter/nested collection.
+- Fullscreen uses explicit Media3 FIT, immersive bars with restoration and safe drawing insets. This is a code-level fix for the likely viewport/inset cause; no claim of reproducing or resolving the phone's clipping without device testing.
+- A persisted `youtubeLayout=false` default keeps existing installations on Prism until they explicitly switch. Separate native Home/search/Shorts shelves/navigation, monochrome theme/standard typography and neutral app-owned text avoid using a website player or a second backend. Native You/profile exposes account library and Settings; center Create uses the real private-playlist workflow. Header/native feed controls call existing functionality, not dummy upload/inbox buttons.
+- The root/media-controller/theme content remains at stable call sites. The switch updates only the device presentation flag, not downloads, accounts, history consent or playback requests. Busy completion no longer automatically re-expands a minimized player.
+- Four new navigation policy tests and two serialization/default/round-trip tests pass. These do not instrument Android Back, rendering, orientation, captions or continuous playback across mode switches.
+- **The user's strict EXACT-YouTube visual requirement remains unmet.** This is a native YouTube-style presentation, not Google's actual UI; some controls remain shared. System app identity, Google permissions, notifications and external legal/source links are not rebranded. Obtain screenshots of the desired YouTube version before claiming visual parity.
+
+See [INTERFACE_MODES.md](INTERFACE_MODES.md) for the pending Back, fullscreen, mode-switch, visual-comparison and live-account acceptance cases. All previous 0.9 account/history/public-readiness limitations still apply; a new interface does not resolve them.

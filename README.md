@@ -4,11 +4,14 @@
 [Yigder's Prism](https://github.com/Yigder/Prism), retaining its real Compose theme,
 fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
 
-> **0.9.1 alpha — portrait Shorts and clearer comment posting; real Google-account actions retained.**
-> **[Download 0.9.1 APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40892791049/artifacts/12904963365)**
+> **0.10.0 alpha — Back navigation, fullscreen sizing and an optional native YouTube-style layout.**
+> **[Download 0.10 APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40896915371/artifacts/12908630044)**
 > — GitHub sign-in required; extract and install `app-debug.apk`.
-> APK assembly, all **147 focused Photon tests** and permanent certificate matching
-> passed at revision `8e9325d` ([verified build](https://github.com/HayMayia/Photon/actions/runs/40892791049), 4m55s).
+> APK assembly, all **153 focused Photon tests** and permanent certificate matching
+> passed at revision `bec48bc` ([verified build](https://github.com/HayMayia/Photon/actions/runs/40896915371), 4m47s).
+> Back retraces tabs/pages/player before asking to leave at the root; fullscreen uses FIT and safe insets.
+> **Settings → Switch to YouTube layout** changes native presentation; **You → Settings → Switch to Photon** returns. Same player/accounts/downloads, no website-player replacement.
+> This is **not pixel-identical or the official YouTube interface**; some controls remain shared, and Android/Google permission screens keep the real app identity. [Scope and device checks](docs/INTERFACE_MODES.md).
 > Shorts cards use portrait 9:16 artwork; regular video cards use landscape 16:9. Valid comment drafts can authorize/review instead of silently requiring a missing comment grant; publishing still needs explicit authorization and confirmation.
 > Like/unlike, subscribe/unsubscribe and playlist actions now send confirmed same-account YouTube requests, not local saves.
 > Google is the default library; only downloads/device caches stay local. [Account writes and remaining scope](docs/ACCOUNT_WRITES.md).

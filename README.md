@@ -4,20 +4,22 @@
 [Yigder's Prism](https://github.com/Yigder/Prism), retaining its real Compose theme,
 fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
 
-> **0.8.0 alpha — Prism-style account Home and Google-account library lists.**
-> **[Download 0.8 APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40884491780/artifacts/12901454220)**
+> **0.9.0 alpha — real Google-account actions, no local-only save fallback.**
+> **[Download 0.9 APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40889863444/artifacts/12904148038)**
 > — GitHub sign-in required; extract and install `app-debug.apk`.
-> APK assembly, all **122 focused Photon tests** and permanent certificate matching
-> passed at revision `a2d2717` ([verified build](https://github.com/HayMayia/Photon/actions/runs/40884491780), 6m47s).
+> APK assembly, all **140 focused Photon tests** and permanent certificate matching
+> passed at revision `0621c01` ([verified build](https://github.com/HayMayia/Photon/actions/runs/40889863444), 5m31s).
+> Like/unlike, subscribe/unsubscribe and playlist actions now send confirmed same-account YouTube requests, not local saves.
+> Google is the default library; only downloads/device caches stay local. [Account writes and remaining scope](docs/ACCOUNT_WRITES.md).
 > Restores the Prism header, spectrum accents and shortcut tiles to authenticated Home.
 > **Library → YouTube account** reads History, Playlists, Liked videos and subscribed Channels;
-> **On device** retains your separate local items. [Account library scope/testing](docs/ACCOUNT_LIBRARY.md).
+> **Downloads** retains necessary offline files; legacy device lists are no longer the account library. [Account library scope/testing](docs/ACCOUNT_LIBRARY.md).
 > The primary **Sign in with Google** now connects account Home automatically after Google's login.
 > Optional native comment permission is separately labelled **Authorize comments**; it does not connect Home.
 > No extra “Use this YouTube session” step; failed Home loads show errors rather than silently keeping the local feed.
 > Home follows authenticated YouTube continuations; native pause/resume requires confirmation and read-back.
-> Optional history registration requires 15 actual playing seconds, fresh enabled Google history and the same website account/session.
-> **User confirmed 0.7.1 login/account Home works. New 0.8 account lists, Google pause changes and saved history reports still need device verification.**
+> Optional history registration keeps its 15-second default, with separate explicit 1-second short-play consent; fresh enabled Google history and the original account/session are required. Downloaded videos played while online can qualify; no offline backfill.
+> **User confirmed 0.7.1 login/account Home works. Account lists/writes, Google pause changes and saved history reports still need device verification.**
 > HTTP acceptance is not proof of stored activity. Unknown/stale/paused state blocks tracking in connected mode;
 > [behavior, privacy and device checklist](docs/YOUTUBE_HOME.md).
 > Native comment authorization is separate; embedded sign-in may be blocked. Keep Cloud testing while validating;
@@ -31,13 +33,13 @@ fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
 | Home design | Prism section headers, typography, shape tokens and spectrum colours; shortcut tiles, Quick picks, Continue watching, Ready offline, Made for you and separate music/video discovery shelves; violet default and accent selection |
 | Videos | Standard YouTube search, topic discovery, result pagination, video/channel/public-playlist links and Android Share → Photon |
 | Channel pages | Native channel details, Videos and Shorts tabs, paginated uploads |
-| Subscriptions | **Device-local** subscribe/unsubscribe and refresh uploads from up to 20 subscribed channels; not Google subscriptions |
-| Playlists | Account-backed read-only playlist list and authenticated playlist rows with pagination; separate local create/add/remove/delete and public playlist browsing/queue playback |
+| Subscriptions | Actual Google subscribe/unsubscribe with structured state checks/read-back; account Channels lists subscriptions. Video feed reads Google's authenticated first page, not local channel aggregation |
+| Playlists | Account list/rows, private creation/initial video, Google add/remove with entry IDs and read-back; per-playlist confirmed deletion reports request acceptance, not independently verified deletion. No local fallback; multi-page editing/rename/privacy controls remain incomplete |
 | Comments | Read comments/replies with pagination; native top-level composer with public confirmation and official YouTube API posting, requiring Google setup/authorization; replies remain read-only |
 | Shorts | Swipeable vertical video feed using extracted Shorts and channel Shorts tabs; discovery is not YouTube's signed-in Shorts algorithm |
 | Recommendations | Optional native **YouTube account Home** through Prism-style Google-page sign-in, in server order; no local/search fallback in that mode. Auto continuation loading with deduplication/loop guards; unofficial; 0.7.1 login/Home user-confirmed, continuation/device cases remain pending. Original on-device related-video ranking remains a distinct local mode |
 | History pause | Reads explicit server watch-history controls; confirmed account pause/resume with read-back; connected-mode local tracking is blocked when Google state is paused/unknown/stale. Additional local pause stays independent. Device verification pending |
-| Account watch history | Separately opted-in single real-play report after 15 actual playing seconds; fresh Google enabled-state check and account-pinned item required. No offline backfill, fake watchtime stream or automatic report retry. HTTP acceptance is not proof of saved Google activity |
+| Account watch history | Separately opted-in single real-play report after 15 actual playing seconds (explicit short-play consent: 1 second); fresh Google enabled-state check and account-pinned item required. No offline backfill, fake watchtime stream or automatic report retry. HTTP acceptance is not proof of saved Google activity |
 | History/resume | Recorded by the playback service, including background playback; periodic positions, playing-time accumulation (not seek distance), and resume across app restarts; recently finished videos restart from the beginning |
 | Casting | LAN discovery/control for Google Cast and DLNA using Prism's protocols; proxies a combined MP4 or serves your downloaded merged MP4; **keep Photon open**; no live/adaptive-stream casting |
 | Audio language | Original AAC audio takes priority over bitrate. Explicit dubs/descriptive/secondary tracks are not selected automatically. Missing labels are shown as unverified; source availability still limits playback |
@@ -47,7 +49,7 @@ fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
 | Startup | 750 ms initial / 1.5 s rebuffer thresholds, bounded two-minute stream-detail cache and same-video extraction deduplication; retry refreshes signed URLs. Device latency reduction not yet measured |
 | Testing tools | Settings → **Share device test report**; bounded local playback events without credentials/stream URLs; [device checklist](docs/TESTING.md) and issue template |
 | Google authorization | Official native authorization for comments (memory-only token); separate optional app-private WebView session for account Home. These are not interchangeable. [Comment setup](docs/GOOGLE_SIGN_IN.md) · [Home/session/privacy limits](docs/YOUTUBE_HOME.md) |
-| YouTube account library | Read-only actual History, Playlists, Liked videos (LL) and subscribed Channels with load-more. Separate from On device lists; no Google library editing, local history backfill, complete activity export, owned-channel management or bookmark-to-like conversion |
+| YouTube account library | Actual History, Playlists, Liked videos (LL) and subscribed Channels with load-more. Google-bound likes/subscriptions/playlist actions replace local-only controls. No historical backfill, complete activity export or owned-channel management; not yet all-activity/search-history/offline synchronization |
 | Live | Extracted live HLS playback when available. **Live recording is not implemented**; the MP4 downloader is not misrepresented as a live recorder |
 
 Local saves are **bookmarks, not YouTube likes**. Local playlists/subscriptions do

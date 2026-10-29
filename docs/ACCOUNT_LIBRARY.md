@@ -1,5 +1,7 @@
 # Google-account library and restored Prism Home (0.8 alpha)
 
+**0.9 supersedes the read-only/local-library split described below:** account actions now send real Google mutations and the parallel local-library UI is removed. See [ACCOUNT_WRITES.md](ACCOUNT_WRITES.md) for current behavior, verification and remaining limits. The rest of this document records the 0.8 reader implementation.
+
 The user confirmed account Home works in 0.7.1, but its bare list changed the interface substantially and History/Playlists/Channels/liked videos still showed only device data. 0.8 restores Prism's branded header, spectrum divider, accent-coloured shortcut tiles and section typography while keeping authentic account recommendation order. Explicit Explore videos/music searches are separate actions, not replacement account recommendations.
 
 ## Where items appear

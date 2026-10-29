@@ -256,3 +256,18 @@ The user reports 0.7.1 Google sign-in/account Home now works. This is a user dev
 - [ ] Account switch/disconnect with a request in flight clears old rows and rejects stale responses. No history backfill or Google library mutations occur.
 
 Sixteen new synthetic parser/intercepted-HTTP tests cover account history/LL/playlist requests, legacy and modern collections, channels, IDs, order, deduplication, primary scope, continuation tokens and auth failure. [Run 40884491780](https://github.com/HayMayia/Photon/actions/runs/40884491780), source `a2d2717c06788a9885626c71eb9a860422607b93`, passed APK assembly, **122 focused Photon tests** and permanent signing-certificate verification in 6m47s. [APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40884491780/artifacts/12901454220): 31,188,399 bytes, version code 10. Six local Python signing tests and 92 main XML/SVG parses passed. Real account-library/device behavior remains unverified. See [account library behavior/limits](ACCOUNT_LIBRARY.md).
+
+
+## 0.9 Google-authoritative actions (device pending)
+
+- [ ] Like/unlike from player/search/Shorts/related cards affects the exact same account in official YouTube; pre-existing likes don't accidentally toggle off because of a cache miss.
+- [ ] Subscribe/unsubscribe on native channels/player persists on Google; unknown/modern controls fail honestly with no local substitute. Google subscriptions feed reads actual account videos, and account switch clears it.
+- [ ] Create a private playlist, create-and-add, add an existing video, remove using setVideoId, delete exactly the confirmed playlist; test editable vs saved/others' playlists and special LL/WL safety.
+- [ ] No legacy local save/subscribe/playlist path is invoked. Downloads and cached playback/device preferences remain. Old local records aren't destroyed or silently bulk-uploaded.
+- [ ] Current-account revision/consent checked before confirmation and transmission. Switch, disconnect, rotate, background/kill and ambiguous errors never replay a write or populate another account.
+- [ ] Explicit short-play consent records genuine >=1-second clips/Shorts; old default consent stays fifteen seconds. Pausing, buffering, seeks, quality changes and repeated callbacks don't fabricate/double-count.
+- [ ] Downloaded video played while online can report against its opening revision; offline/unverified/Google-paused cases don't queue/backfill.
+- [ ] Verify report appearance on official YouTube; HTTP acceptance isn't persistence proof. Deletion acceptance isn't presented as verified deletion.
+- [ ] Validate ordinary public playback, captions, seeks, original audio, downloads/muxing, background/PiP/casting, account readers and stable-key upgrade.
+
+[Run 40889863444](https://github.com/HayMayia/Photon/actions/runs/40889863444), source `0621c01213f3567e2d55a376c45dfb72be6e92ce`, passed APK assembly, **140 focused Photon tests** and permanent signing-certificate verification in 5m31s. [APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40889863444/artifacts/12904148038): 31,201,269 bytes, version code 11. Six local Python signing tests and 92 main XML/SVG parses passed. These are not live Google mutation/device tests. New synthetic fixtures test account mutations/permissions/read-back/no replay, short-play threshold consent and authenticated subscriptions source; no live Google changes occur in tests. See docs/ACCOUNT_WRITES.md for what remains incomplete before claiming all-activity synchronization or publication readiness.

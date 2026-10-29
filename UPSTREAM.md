@@ -95,3 +95,10 @@ Adopts Prism's user-facing Google-login-and-auto-completion pattern: primary Goo
 ## Photon 0.8 account library and Prism-style Home
 
 Restores Prism's existing Photon branded heading, spectrum line, theme/typography and coloured shortcut-grid treatment to authenticated Home, while retaining server-only recommendations. Adds read-only same-session account history, playlist/LL and subscribed-channel readers with native account library tabs and explicit On device separation. This does not merge cloud items into local persisted library, edit Google collections, or promise a complete Google activity export/private video playback. Sixteen synthetic parser/API tests added; docs/ACCOUNT_LIBRARY.md records scope and device acceptance. User confirmed 0.7.1 account Home works before this change; new library behavior is not yet device-verified.
+
+
+## Photon 0.9 Google-authoritative actions
+
+Replaces active local-only save/subscribe/create/edit/delete paths with same-session YouTube account mutations and removes the parallel local library UI. Explicit desired likes/subscriptions, structured preflight + bounded read-only verification, private playlist create/initial video, real edit entry IDs and per-playlist destructive confirmation. No mutation replay or local fallback; deletion only claims request acceptance, not verified deletion. Request permission/revision pinned at confirmation and transmission; account switch clears pending work/caches and Google subscription results.
+
+Protocol shapes were checked against YouTube.js LikeEndpoint/SubscribeEndpoint/UnsubscribeEndpoint/CreatePlaylistServiceEndpoint/PlaylistEditEndpoint/DeletePlaylistEndpoint and PlaylistManager. Newly written code/fixtures, no account secrets copied. Adds explicit one-second short-play consent while retaining existing fifteen-second defaults; downloaded plays can report while actively online/verified, not queued offline. Subscriptions feed reads authenticated Google first page instead of local channel aggregation. Native search-history/offline backfill/comprehensive all-activity transfer remains incomplete and is not claimed. See docs/ACCOUNT_WRITES.md.

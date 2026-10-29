@@ -224,6 +224,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
     var downloadSheet by remember { mutableStateOf(false) }
     var playerError by remember { mutableStateOf<String?>(null) }
     var isPlaying by remember { mutableStateOf(false) }
+    var playIntent by remember { mutableStateOf(false) }
     var buffering by remember { mutableStateOf(false) }
     var delete by remember { mutableStateOf<SavedDownload?>(null) }
     val collection by model.collection.collectAsStateWithLifecycle()
@@ -238,11 +239,12 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
         }
     }
     LaunchedEffect(library.youtubeSessionRevision) { syncRealPlays = false }
+    LaunchedEffect(library.youtubeHome, library.youtubeSessionRevision, library.youtubeSessionReady) { model.loadGoogleLikedIndex() }
     val context = LocalContext.current
     val activity = context as PhotonActivity
     val casting = (context.applicationContext as PhotonApplication).casting
 
-    val wantsAwake = isPlaying || (buffering && controller?.playWhenReady == true)
+    val wantsAwake = isPlaying || (buffering && playIntent)
     DisposableEffect(activity, wantsAwake) {
         fun updateAwake() {
             if (wantsAwake && activity.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED))
@@ -255,12 +257,14 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
     }
     DisposableEffect(controller) {
         val listener = object : Player.Listener {
+            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) { playIntent = playWhenReady }
             override fun onIsPlayingChanged(value: Boolean) { isPlaying = value }
             override fun onPlaybackStateChanged(state: Int) { buffering = state == Player.STATE_BUFFERING; if (state == Player.STATE_ENDED) model.next() }
             override fun onPlayerError(error: PlaybackException) { playerError = "Playback failed: ${error.errorCodeName}. Try reopening the video or choosing another quality." }
         }
         controller?.addListener(listener)
         isPlaying = controller?.isPlaying == true
+        playIntent = controller?.playWhenReady == true
         onDispose { controller?.removeListener(listener) }
     }
     LaunchedEffect(controller) {

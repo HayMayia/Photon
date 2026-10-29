@@ -43,6 +43,7 @@ internal class PhotonPlayerView(context: Context) : PlayerView(context) {
             current.addListener(boostListener)
             current.playbackParameters = PlaybackParameters(2f, current.playbackParameters.pitch)
             parent?.requestDisallowInterceptTouchEvent(true)
+            cancelNativeTouch(event)
             performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
             hideController()
             feedback?.cancel()
@@ -62,6 +63,12 @@ internal class PhotonPlayerView(context: Context) : PlayerView(context) {
         }
     })
 
+    private fun cancelNativeTouch(event: MotionEvent) {
+        val cancel = MotionEvent.obtain(event)
+        cancel.action = MotionEvent.ACTION_CANCEL
+        super.dispatchTouchEvent(cancel)
+        cancel.recycle()
+    }
     private fun hitsControl(group: ViewGroup, x: Float, y: Float): Boolean {
         for (index in 0 until group.childCount) {
             val child = group.getChildAt(index)

@@ -53,7 +53,13 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     fun resolveVideoPresentation(video: Video) {
         if (video.id !in videoPresentation.value && presentationPending.add(video.id)) viewModelScope.launch {
             try {
-                val resolved = app.videos.presentation(video)
+                var resolved = app.videos.presentation(video)
+                val revision = library.value.youtubeSessionRevision
+                if (!resolved.short && library.value.youtubeHome && library.value.youtubeSessionReady) {
+                    val metadata = app.accountActions.presentation(video.id, app.youtubeHistory.session())
+                    if (revision == library.value.youtubeSessionRevision && library.value.youtubeSessionReady && metadata?.first == true)
+                        resolved = resolved.copy(short = true, thumbnail = metadata.second.ifBlank { resolved.thumbnail })
+                }
                 val current = mutableWatch.value
                 if (current.video?.id == video.id) mutableWatch.value = current.copy(video = current.video.copy(
                     short = current.video.short || resolved.short, thumbnail = if (resolved.short) resolved.thumbnail else current.video.thumbnail))
@@ -74,6 +80,32 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                     googleLikes.value = googleLikes.value + (video.id to value)
             } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { /* No fabricated unliked state on failure. */ }
             finally { likesPending.remove(key) }
+        }
+    }
+    private var likesIndexRevision: Long? = null
+    private var likesIndexJob: Job? = null
+    fun loadGoogleLikedIndex() {
+        val current = library.value
+        if (!current.youtubeHome || !current.youtubeSessionReady || likesIndexRevision == current.youtubeSessionRevision) return
+        likesIndexRevision = current.youtubeSessionRevision
+        likesIndexJob?.cancel()
+        likesIndexJob = viewModelScope.launch {
+            val revision = current.youtubeSessionRevision
+            fun active() = library.value.youtubeHome && library.value.youtubeSessionReady && library.value.youtubeSessionRevision == revision
+            try {
+                val session = app.youtubeHistory.session()
+                var page = app.accountLibrary.load(session, AccountShelf.LIKED)
+                val tokens = mutableSetOf<String>()
+                repeat(200) {
+                    if (!active()) return@launch
+                    val known = googleLikes.value
+                    googleLikes.value = known + page.items.mapNotNull { it.video?.id }.filter { it !in known }.associateWith { true }
+                    val token = page.continuation ?: return@launch
+                    if (!tokens.add(token)) return@launch
+                    page = app.accountLibrary.more(session, page, AccountEntryKind.VIDEO)
+                }
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { if (active()) likesIndexRevision = null /* Retry explicitly or when reconnecting; never infer false. */ }
         }
     }
     val googleLikes = MutableStateFlow<Map<String, Boolean>>(emptyMap())
@@ -118,6 +150,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
             mutableBrowse.value = BrowseState(query = "Google subscriptions", error = "Account changed. Reload the Google subscriptions feed for the current account.")
         }
         googleChangeJob?.cancel(); googleChange.value = GoogleChangeState()
+        likesIndexJob?.cancel(); likesIndexRevision = null
         googleLikes.value = emptyMap(); googleSubscriptions.value = emptyMap()
     }
     val accountLibrary = MutableStateFlow(AccountLibraryState())
@@ -138,7 +171,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 val kind = if (playlist != null || shelf in listOf(AccountShelf.HISTORY, AccountShelf.LIKED)) AccountEntryKind.VIDEO else if (shelf == AccountShelf.CHANNELS) AccountEntryKind.CHANNEL else AccountEntryKind.PLAYLIST
                 val page = if (more) app.accountLibrary.more(session, oldPage!!, kind) else app.accountLibrary.load(session, shelf, playlist)
                 if (revision != library.value.youtubeSessionRevision || !library.value.youtubeSessionReady) return@launch
-                if (shelf == AccountShelf.LIKED && playlist == null) googleLikes.value = googleLikes.value + page.items.mapNotNull { it.video?.id }.associateWith { true }
+                if (shelf == AccountShelf.LIKED && playlist == null) googleLikes.value = googleLikes.value + page.items.mapNotNull { it.video?.id }.filter { googleLikes.value[it] != false }.associateWith { true }
                 if (more) accountLibraryTokens += oldPage!!.continuation!!
                 val items = ((if (more) oldPage!!.items else emptyList()) + page.items).distinctBy { it.kind to it.id }
                 accountLibrary.value = AccountLibraryState(shelf, playlist, title, page.copy(items = items, continuation = page.continuation?.takeUnless { it in accountLibraryTokens }))
@@ -420,7 +453,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
             mutableWatch.value = WatchState(video = download.video, error = "The downloaded file is missing. Remove this entry and download it again.")
             return
         }
-        mutableWatch.value = WatchState(video = download.video, localPath = download.path, request = System.nanoTime(), startPositionMs = library.value.progress[download.video.id]?.resumeMs() ?: 0,
+        mutableWatch.value = WatchState(video = videoPresentation.value[download.video.id]?.let { download.video.copy(short = download.video.short || it.short, thumbnail = it.thumbnail.ifBlank { download.video.thumbnail }) } ?: download.video, localPath = download.path, request = System.nanoTime(), startPositionMs = library.value.progress[download.video.id]?.resumeMs() ?: 0,
             openedAtMs = android.os.SystemClock.elapsedRealtime(), webRevision = library.value.youtubeSessionRevision)
     }
 

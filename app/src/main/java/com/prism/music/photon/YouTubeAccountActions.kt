@@ -73,6 +73,10 @@ internal class YouTubeAccountActionsApi(client: OkHttpClient = OkHttpClient()) {
         val context = YouTubeWebBootstrap.context(html) ?: throw IOException("Missing account context")
         return Document(root, context, html)
     }
+    suspend fun presentation(id: String, session: YouTubeWebSession): Pair<Boolean, String>? = withContext(Dispatchers.IO) {
+        require(id.matches(Regex("[A-Za-z0-9_-]{11}")))
+        ShortsPresentation.fromHtml(id, transport.html("/shorts/$id", session))
+    }
     suspend fun likeState(id: String, session: YouTubeWebSession): Boolean? = withContext(Dispatchers.IO) {
         require(id.matches(Regex("[A-Za-z0-9_-]{11}")))
         GoogleAccountControls.liked(read("/watch?v=$id", session).root, id)

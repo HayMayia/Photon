@@ -23,6 +23,17 @@ class YouTubeAccountActionsTest {
     }.build())
     private fun body(request: Request): JsonObject { val buffer = okio.Buffer(); request.body!!.writeTo(buffer); return Json.parseToJsonElement(buffer.readUtf8()).jsonObject }
 
+    @Test fun readingExistingLikeStateNeverSendsAMutation() = runBlocking {
+        var reads = 0
+        val service = api { request ->
+            reads++
+            assertEquals("GET", request.method)
+            assertEquals("/watch", request.url.encodedPath)
+            like(true)
+        }
+        assertEquals(true, service.likeState(id, session))
+        assertEquals(1, reads)
+    }
     @Test fun likeWritesGoogleAndVerifiesFreshState() = runBlocking {
         var liked = false; var writes = 0
         val api = api { req -> if (req.method == "POST") {

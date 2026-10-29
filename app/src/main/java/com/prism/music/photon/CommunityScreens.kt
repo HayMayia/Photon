@@ -10,6 +10,7 @@ import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -122,6 +123,19 @@ internal fun CommentsPanel(model: PhotonViewModel, video: Video) {
     val busy by model.commentsBusy.collectAsStateWithLifecycle()
     val error by model.commentsError.collectAsStateWithLifecycle()
     var replies by remember(video.id) { mutableStateOf(false) }
+    val account by model.account.collectAsStateWithLifecycle()
+    val posting by model.commentPosting.collectAsStateWithLifecycle()
+    val postError by model.commentPostError.collectAsStateWithLifecycle()
+    val published by model.lastPublished.collectAsStateWithLifecycle()
+    var draft by rememberSaveable(video.id) { mutableStateOf("") }
+    var confirming by remember { mutableStateOf(false) }
+    var seenId by remember(video.id) { mutableStateOf(model.lastPublished.value?.comment?.id) }
+    LaunchedEffect(published) {
+        if (published?.videoId == video.id && published?.comment?.id != seenId) {
+            seenId = published?.comment?.id
+            draft = ""
+        }
+    }
     val context = LocalContext.current
     Column(Modifier.fillMaxWidth().fillMaxHeight(0.85f).padding(horizontal = 22.dp)) {
         Text(if (replies) "Replies" else "Comments", style = MaterialTheme.typography.headlineSmall)
@@ -129,13 +143,27 @@ internal fun CommentsPanel(model: PhotonViewModel, video: Video) {
             TextButton(onClick = { replies = false; model.loadComments(video) }) { Text(if (replies) "Back to comments" else "Refresh") }
             TextButton(onClick = { context.startActivity(browserIntent(video.url)) }) { Text("Post on YouTube") }
         }
-        Text("Read-only in Photon. Posting opens YouTube.", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(vertical = 16.dp)) {
+            item {
+                GoogleAccountActions(model)
+                OutlinedTextField(value = draft, onValueChange = { draft = it.take(10_001) }, enabled = !posting,
+                    label = { Text("Public comment") }, modifier = Modifier.fillMaxWidth(), minLines = 2, maxLines = 5,
+                    supportingText = { Text("${draft.length}/10000 · Top-level comments only; replies remain read-only.") })
+                Button(onClick = { confirming = true }, enabled = !posting && !account.busy && account.identity != null && draft.isNotBlank() && draft.trim().length <= 10_000 && page?.disabled != true) { Text(if (posting) "Posting…" else "Review and post") }
+                if (posting) LinearProgressIndicator(Modifier.fillMaxWidth())
+                postError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                published?.takeIf { it.videoId == video.id }?.let { result ->
+                    Text("YouTube confirmed your comment · ${result.comment.id}", color = MaterialTheme.colorScheme.primary)
+                    Text(result.comment.author, fontWeight = FontWeight.Bold)
+                    Text(if (result.comment.html) android.text.Html.fromHtml(result.comment.text, android.text.Html.FROM_HTML_MODE_COMPACT).toString() else result.comment.text)
+                    Text("YouTube may moderate or delay its appearance in the public feed.", style = MaterialTheme.typography.bodySmall)
+                }
+            }
             if (page?.disabled == true) item { Text("Comments are disabled for this video.") }
             items(page?.comments.orEmpty(), key = { it.id }) { comment ->
                 Column(Modifier.fillMaxWidth().padding(vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(comment.author, fontWeight = FontWeight.Bold)
-                    Text(android.text.Html.fromHtml(comment.text, android.text.Html.FROM_HTML_MODE_COMPACT).toString())
+                    Text(if (comment.html) android.text.Html.fromHtml(comment.text, android.text.Html.FROM_HTML_MODE_COMPACT).toString() else comment.text)
                     if (comment.likes >= 0) Text("${comment.likes} likes", style = MaterialTheme.typography.labelSmall)
                     comment.replyPage?.let { next -> TextButton(onClick = { replies = true; model.loadComments(video, replies = next) }) { Text("View replies (${comment.replies.coerceAtLeast(0)})") } }
                 }
@@ -149,6 +177,15 @@ internal fun CommentsPanel(model: PhotonViewModel, video: Video) {
             }
         }
     }
+    if (confirming) AlertDialog(onDismissRequest = { confirming = false }, title = { Text("Post publicly on YouTube?") },
+        text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Channel: ${account.identity?.name.orEmpty()}")
+            Text("Video: ${video.title} (${video.id})")
+            Text(draft.take(1000) + if (draft.length > 1000) "…" else "", maxLines = 12, overflow = TextOverflow.Ellipsis)
+            Text("This submits your full draft to YouTube, not a local note. Check for an existing comment before retrying after a network error.", style = MaterialTheme.typography.bodySmall)
+        } },
+        confirmButton = { TextButton(enabled = !posting && account.identity != null && !account.busy, onClick = { confirming = false; model.postComment(video, draft) }) { Text("Post publicly") } },
+        dismissButton = { TextButton(onClick = { confirming = false }) { Text("Cancel") } })
 }
 
 @Composable

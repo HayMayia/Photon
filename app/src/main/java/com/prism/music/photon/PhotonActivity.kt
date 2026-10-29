@@ -13,6 +13,16 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.IntentSenderRequest
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+import com.google.android.gms.auth.api.identity.Identity
+import com.google.android.gms.auth.api.identity.AuthorizationRequest
+import com.google.android.gms.auth.api.identity.AuthorizationResult
+import com.google.android.gms.common.api.Scope
+import com.google.android.gms.common.api.ApiException
+import com.google.android.gms.common.GoogleApiAvailability
+import com.google.android.gms.common.ConnectionResult
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -60,6 +70,51 @@ import java.util.UUID
 
 @UnstableApi
 class PhotonActivity : ComponentActivity() {
+    private val account get() = (application as PhotonApplication).account
+    private var authGeneration = -1L
+    private val googleAuthorization = registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
+        val generation = authGeneration
+        if (!account.current(generation)) return@registerForActivityResult
+        val data = result.data
+        if (result.resultCode != RESULT_OK || data == null) account.fail(generation, "Google sign-in was canceled. No comment was submitted.")
+        else try { acceptGoogle(generation, Identity.getAuthorizationClient(this).getAuthorizationResultFromIntent(data)) }
+        catch (error: Exception) { account.fail(generation, googleError(error)) }
+    }
+    fun signInToYouTube() {
+        val generation = account.begin() ?: return
+        authGeneration = generation
+        if (GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(this) != ConnectionResult.SUCCESS) {
+            account.fail(generation, "Native Google sign-in requires current Google Play services. Signed-out Photon features still work.")
+            return
+        }
+        val request = AuthorizationRequest.builder().setRequestedScopes(listOf(Scope(YOUTUBE_COMMENT_SCOPE))).build()
+        Identity.getAuthorizationClient(this).authorize(request)
+            .addOnSuccessListener { result ->
+                if (!account.current(generation)) return@addOnSuccessListener
+                if (!lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) {
+                    account.fail(generation, "Sign-in was interrupted. Open Photon and try again.")
+                    return@addOnSuccessListener
+                }
+                if (result.hasResolution()) {
+                    val pending = result.pendingIntent
+                    if (pending == null) account.fail(generation, "Google did not provide an authorization screen. Try again.")
+                    else try { googleAuthorization.launch(IntentSenderRequest.Builder(pending).build()) }
+                    catch (_: Exception) { account.fail(generation, "Could not open Google's authorization screen.") }
+                } else acceptGoogle(generation, result)
+            }
+            .addOnFailureListener { error -> account.fail(generation, googleError(error)) }
+    }
+    private fun acceptGoogle(generation: Long, result: AuthorizationResult) {
+        lifecycleScope.launch {
+            account.accept(generation, result.accessToken.orEmpty(), result.grantedScopes.map { it.toString() })
+        }
+    }
+    private fun googleError(error: Exception): String = when ((error as? ApiException)?.statusCode) {
+        10, 12500 -> "Google rejected this build's OAuth setup. Register Photon's package and signing SHA-1 in Google Cloud and enable YouTube Data API v3. See Google sign-in setup."
+        7 -> "Google authorization needs a network connection. Your comment draft has been kept."
+        16, 12501 -> "Google authorization was canceled. No comment was submitted."
+        else -> "Google authorization failed. Check Google Play services and the OAuth setup, then retry."
+    }
     private var incoming by mutableStateOf<String?>(null)
     private var pip by mutableStateOf(false)
     private var lanAction: (() -> Unit)? = null
@@ -77,6 +132,8 @@ class PhotonActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        authGeneration = savedInstanceState?.getLong("photon_auth_generation", -1L) ?: -1L
+        if (authGeneration >= 0 && !account.current(authGeneration)) authGeneration = -1L
         enableEdgeToEdge()
         accept(intent)
         setContent {
@@ -93,6 +150,10 @@ class PhotonActivity : ComponentActivity() {
         }
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putLong("photon_auth_generation", authGeneration)
+        super.onSaveInstanceState(outState)
+    }
     override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); accept(intent) }
     private fun accept(intent: Intent?) {
         val text = if (intent?.action == Intent.ACTION_SEND) intent.getStringExtra(Intent.EXTRA_TEXT) else intent?.dataString
@@ -540,6 +601,7 @@ private fun SettingsPage(library: PhotonLibrary, model: PhotonViewModel, notific
     fun link(url: String) { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
         item { PageHeading("Make it yours", "Prism's design. A new window into YouTube.") }
+        item { YouTubeAccountCard(model) }
         item {
             SettingsGroup("APPEARANCE") {
                 Row(Modifier.padding(16.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -565,6 +627,7 @@ private fun SettingsPage(library: PhotonLibrary, model: PhotonViewModel, notific
                 ListItem(headlineContent = { Text("Enable notifications") }, supportingContent = { Text("Playback controls and download progress") }, leadingContent = { Icon(PrismIcons.PlayCircle, null) }, modifier = Modifier.clickable(onClick = notifications))
             }
         }
+        item { YouTubeAccountCard(model) }
         item {
             SettingsGroup("YOUR DATA") {
                 ListItem(headlineContent = { Text("Clear watch history") }, supportingContent = { Text("Saved videos and downloads are not affected") }, leadingContent = { Icon(PrismIcons.History, null) }, modifier = Modifier.clickable { clear = true })
@@ -581,7 +644,7 @@ private fun SettingsPage(library: PhotonLibrary, model: PhotonViewModel, notific
                 ListItem(headlineContent = { Text("Source code & issues") }, supportingContent = { Text("HayMayia/Photon · GPL-3.0-or-later") }, trailingContent = { Icon(PrismIcons.ArrowForward, null) }, modifier = Modifier.clickable { link("https://github.com/HayMayia/Photon") })
                 ListItem(headlineContent = { Text("Built on Prism by Yigder") }, supportingContent = { Text("Original design, icons, typography and Android foundation · GPL-3.0-or-later") }, trailingContent = { Icon(PrismIcons.ArrowForward, null) }, modifier = Modifier.clickable { link("https://github.com/Yigder/Prism") })
                 ListItem(headlineContent = { Text("NewPipe Extractor") }, supportingContent = { Text("YouTube extraction · GPL-3.0-or-later") }, trailingContent = { Icon(PrismIcons.ArrowForward, null) }, modifier = Modifier.clickable { link("https://github.com/TeamNewPipe/NewPipeExtractor") })
-                Text("Download only when you have permission. No DRM, paid-access, age-check or sign-in bypass. YouTube changes may temporarily break extraction. Channel subscriptions and playlists in Photon are local; comments are read-only. Google account sync is not implemented.", Modifier.padding(16.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Download only when you have permission. No DRM, paid-access, age-check or sign-in bypass. YouTube changes may temporarily break extraction. Channel subscriptions and playlists remain local. Google authorization enables real YouTube comment posting; full account-library sync is not implemented.", Modifier.padding(16.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

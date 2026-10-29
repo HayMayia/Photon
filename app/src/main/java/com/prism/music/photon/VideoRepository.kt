@@ -179,7 +179,7 @@ class VideoRepository {
 
 /** Explicit host allowlist: a pasted arbitrary URL must never become a download request. */
 data class CollectionPage(val title: String, val description: String, val videos: List<Video>, val next: Page?, val channel: Channel? = null)
-data class VideoComment(val id: String, val author: String, val text: String, val likes: Int, val replies: Int, val replyPage: Page?)
+data class VideoComment(val id: String, val author: String, val text: String, val likes: Int, val replies: Int, val replyPage: Page?, val html: Boolean = true)
 data class CommentPage(val comments: List<VideoComment>, val next: Page?, val disabled: Boolean = false)
 
 object RecommendationRank {

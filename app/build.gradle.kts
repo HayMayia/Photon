@@ -27,8 +27,8 @@ android {
         applicationId = "io.github.haymayia.photon"
         minSdk = 26
         targetSdk = 36
-        versionCode = 3
-        versionName = "0.3.0-alpha"
+        versionCode = 4
+        versionName = "0.4.0-alpha"
         vectorDrawables { useSupportLibrary = true }
         // The name under the launcher icon; a side-by-side build (below) is called "Photon Dev" so it can't be mistaken for Prism.
         manifestPlaceholders["appLabel"] = "@string/app_name"
@@ -139,6 +139,8 @@ androidComponents {
 }
 
 dependencies {
+    // Official Google system authorization UI; no embedded password page or client secret.
+    implementation("com.google.android.gms:play-services-auth:21.4.0")
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs_nio:2.1.5")
 
     val composeBom = platform("androidx.compose:compose-bom:2026.09.00")

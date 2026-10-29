@@ -37,6 +37,22 @@ data class WatchState(
 class PhotonViewModel(application: Application) : AndroidViewModel(application) {
     private val app = application as PhotonApplication
     val library = app.library.state
+    val account = app.account.state
+    val commentPosting = MutableStateFlow(false)
+    val commentPostError = MutableStateFlow<String?>(null)
+    val lastPublished = MutableStateFlow<PublishedComment?>(null)
+    fun disconnectAccount() { if (!commentPosting.value) app.account.disconnect() }
+    fun postComment(video: Video, text: String) {
+        if (commentPosting.value) return
+        commentPosting.value = true
+        commentPostError.value = null
+        viewModelScope.launch {
+            try { lastPublished.value = app.account.post(video.id, text) }
+            catch (cancelled: CancellationException) { commentPostError.value = "Posting was interrupted. Check YouTube before retrying to avoid a duplicate."; throw cancelled }
+            catch (error: Exception) { commentPostError.value = error.message ?: "Posting could not be confirmed. Check YouTube before retrying." }
+            finally { commentPosting.value = false }
+        }
+    }
     val work = WorkManager.getInstance(app).getWorkInfosByTagFlow(VideoDownloadWorker.TAG)
     private val mutableBrowse = MutableStateFlow(BrowseState())
     val browse = mutableBrowse.asStateFlow()

@@ -4,20 +4,21 @@
 [Yigder's Prism](https://github.com/Yigder/Prism), retaining its real Compose theme,
 fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
 
-> **0.11.0 alpha — playlist Shorts, hold-for-2×, screen-awake playback, Google hearts and channel artwork.**
-> **[Download 0.11 APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40904639198/artifacts/12911391018)**
-> — GitHub sign-in required; extract and install `app-debug.apk`.
-> APK assembly, all **163 focused Photon tests** and permanent certificate matching
-> passed at revision `8bc8b9d` ([verified build](https://github.com/HayMayia/Photon/actions/runs/40904639198), 4m16s).
-> Playlist Shorts use resolved presentation for thumbnails/opening/portrait playback, with explicit fullscreen. Hold playing non-live video for 2× and system haptics; release restores speed. Visible playback keeps the display awake.
-> Existing Google likes are read into filled red hearts (including modern keyed controls); unlike still needs confirmation. Returned channel/playlist artwork and uploader avatars are displayed. [Scope and device checks](docs/PLAYBACK_TOUCHUPS.md).
+> **0.12.0 alpha — auto-rotate fullscreen, Shorts metadata, channel pictures and a simpler interface.**
+> **[Download 0.12 APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40908141737/artifacts/12913061133)**
+> — GitHub sign-in required; extract and install `app-debug.apk` over the existing installation. Do not uninstall.
+> APK assembly, the **170-method focused Photon test suite**, and permanent certificate matching
+> passed at revision `6bed3df` ([verified build](https://github.com/HayMayia/Photon/actions/runs/40908141737), 5m4s).
+> Physical landscape rotation now uses the same inset-safe FIT layout as explicit fullscreen. Matching reel commands/player flags can identify Shorts even with a watch canonical URL. Missing/failed channel pictures use a bounded public lookup and visible initial fallback. Daily screens have fewer explanations, compact Home shortcuts, expandable privacy/help and a refreshed launcher icon.
+> **0.11 did not resolve the user's channel-picture, playlist-Shorts or auto-rotate issues. This follow-up is build/unit verified, not phone-verified.** [Scope and checks](docs/PLAYBACK_TOUCHUPS.md#012-follow-up-auto-rotate-metadata-pictures-and-simpler-ui).
+> Hold-for-2×, visible screen-awake behavior, real Google hearts/unlike confirmation and existing playback/account features remain in place.
 > Back retraces tabs/pages/player before asking to leave at the root; fullscreen uses FIT and safe insets.
 > **Settings → Switch to YouTube layout** changes native presentation; **You → Settings → Switch to Photon** returns. Same player/accounts/downloads, no website-player replacement.
 > This is **not pixel-identical or the official YouTube interface**; some controls remain shared, and Android/Google permission screens keep the real app identity. [Scope and device checks](docs/INTERFACE_MODES.md).
 > Shorts cards use portrait 9:16 artwork; regular video cards use landscape 16:9. Valid comment drafts can authorize/review instead of silently requiring a missing comment grant; publishing still needs explicit authorization and confirmation.
 > Like/unlike, subscribe/unsubscribe and playlist actions now send confirmed same-account YouTube requests, not local saves.
 > Google is the default library; only downloads/device caches stay local. [Account writes and remaining scope](docs/ACCOUNT_WRITES.md).
-> Restores the Prism header, spectrum accents and shortcut tiles to authenticated Home.
+> Authenticated Home retains the Prism header and spectrum accents with compact shortcut chips.
 > **Library → YouTube account** reads History, Playlists, Liked videos and subscribed Channels;
 > **Downloads** retains necessary offline files; legacy device lists are no longer the account library. [Account library scope/testing](docs/ACCOUNT_LIBRARY.md).
 > The primary **Sign in with Google** now connects account Home automatically after Google's login.

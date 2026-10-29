@@ -238,7 +238,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
         val position = if (watch.preservePosition) controller.currentPosition else watch.startPositionMs
         val play = if (watch.preservePosition) controller.playWhenReady else true
         playerError = null
-        controller.setMediaItem(playbackItem(video, watch.quality, watch.localPath), position)
+        controller.setMediaItem(playbackItem(video, watch.quality, watch.localPath, watch.details?.subtitles.orEmpty(), watch.openedAtMs), position)
         controller.prepare()
         controller.playWhenReady = play
     }
@@ -289,8 +289,12 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                             Box(Modifier.fillMaxWidth().height(2.dp).background(PrismTokens.spectrum))
                             Text(video.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                             Text(listOf(video.channel, viewLabel(video.views), video.published).filter { it.isNotBlank() }.joinToString(" · "), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+                            if (watch.details != null) Text(
+                                if (watch.details!!.subtitles.isEmpty()) "No compatible subtitles were provided by YouTube for this video."
+                                else "Subtitles: tap the video controls, then CC to select a language or turn captions off.",
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             (watch.error ?: playerError)?.let { message ->
-                                ErrorCard(message) { model.open(video) }
+                                ErrorCard(message) { model.retryPlayback(video) }
                             }
                             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 ActionChip(if (library.saved.any { it.id == video.id }) "Saved" else "Save", PrismIcons.Heart) { model.save(video) }
@@ -499,7 +503,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
 @Composable
 @UnstableApi
 internal fun VideoSurface(controller: MediaController?, modifier: Modifier, controls: Boolean) {
-    AndroidView(factory = { context -> PlayerView(context).apply { player = controller; useController = controls; setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING) } },
+    AndroidView(factory = { context -> PhotonPlayerView(context).apply { player = controller; useController = controls; setShowSubtitleButton(true); setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING) } },
         modifier = modifier.background(Color.Black),
         update = { it.player = controller; it.useController = controls },
         onRelease = { it.player = null })

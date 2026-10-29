@@ -32,6 +32,7 @@ data class WatchState(
     val request: Long = 0,
     val preservePosition: Boolean = false,
     val startPositionMs: Long = 0,
+    val openedAtMs: Long = 0,
 )
 
 class PhotonViewModel(application: Application) : AndroidViewModel(application) {
@@ -188,7 +189,11 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
 
     fun openId(id: String) = open(Video(id, "Opening video…", "YouTube"))
 
+    fun retryPlayback(video: Video) { app.videos.invalidateDetails(video.id); open(video) }
+
     fun open(video: Video, fromQueue: Boolean = false) {
+        val opened = android.os.SystemClock.elapsedRealtime()
+        PhotonDiagnostics.event("Open video requested")
         if (!fromQueue) queue.value = emptyList()
         watchJob?.cancel()
         watchJob = viewModelScope.launch {
@@ -197,7 +202,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 val details = app.videos.details(video.id)
                 val max = library.value.defaultHeight
                 val quality = details.qualities.firstOrNull { it.height <= max } ?: details.qualities.last()
-                mutableWatch.value = WatchState(details.video, details, quality, request = System.nanoTime(), startPositionMs = library.value.progress[video.id]?.resumeMs() ?: 0)
+                mutableWatch.value = WatchState(details.video, details, quality, request = System.nanoTime(), startPositionMs = library.value.progress[video.id]?.resumeMs() ?: 0, openedAtMs = opened)
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (error: Exception) { mutableWatch.value = WatchState(video = video, error = error.message ?: "This video could not be played") }
         }

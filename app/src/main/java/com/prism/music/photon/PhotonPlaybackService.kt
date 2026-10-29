@@ -59,7 +59,7 @@ class PhotonPlaybackService : MediaSessionService() {
                 val video = delegate.createMediaSource(item)
                 val audioUrl = item.mediaMetadata.extras?.getString("photon_audio") ?: return video
                 val audio = delegate.createMediaSource(MediaItem.fromUri(audioUrl))
-                return MergingMediaSource(true, FilteringMediaSource(video, C.TRACK_TYPE_VIDEO), audio)
+                return MergingMediaSource(true, FilteringMediaSource(video, setOf(C.TRACK_TYPE_VIDEO, C.TRACK_TYPE_TEXT)), audio)
             }
             override fun getSupportedTypes(): IntArray = delegate.supportedTypes
             override fun setDrmSessionManagerProvider(provider: DrmSessionManagerProvider): MediaSource.Factory {
@@ -71,7 +71,12 @@ class PhotonPlaybackService : MediaSessionService() {
                 return this
             }
         }
-        val player = ExoPlayer.Builder(this).setMediaSourceFactory(sources).build().apply {
+        val player = ExoPlayer.Builder(this).setMediaSourceFactory(sources)
+            .setSeekBackIncrementMs(10_000).setSeekForwardIncrementMs(10_000)
+            .setLoadControl(androidx.media3.exoplayer.DefaultLoadControl.Builder()
+                .setBufferDurationsMs(15_000, 50_000, 750, 1_500)
+                .setPrioritizeTimeOverSizeThresholds(true).build())
+            .build().apply {
             setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(), true)
             setHandleAudioBecomingNoisy(true)
         }
@@ -81,6 +86,10 @@ class PhotonPlaybackService : MediaSessionService() {
         player.addListener(object : androidx.media3.common.Player.Listener {
             override fun onPositionDiscontinuity(oldPosition: androidx.media3.common.Player.PositionInfo, newPosition: androidx.media3.common.Player.PositionInfo, reason: Int) {
                 if (reason == androidx.media3.common.Player.DISCONTINUITY_REASON_SEEK) snapshot(true)
+            }
+            override fun onRenderedFirstFrame() {
+                val opened = player.currentMediaItem?.mediaMetadata?.extras?.getLong("photon_open_elapsed", 0) ?: 0
+                if (opened > 0) PhotonDiagnostics.event("First frame after open: ${android.os.SystemClock.elapsedRealtime() - opened} ms")
             }
             override fun onPlaybackStateChanged(state: Int) { PhotonDiagnostics.event("Playback state=$state") }
             override fun onPlayerError(error: androidx.media3.common.PlaybackException) { PhotonDiagnostics.event("Playback error=${error.errorCodeName}") }
@@ -111,16 +120,21 @@ class PhotonPlaybackService : MediaSessionService() {
     }
 }
 
-fun playbackItem(video: Video, quality: VideoQuality? = null, localPath: String? = null): MediaItem =
+fun playbackItem(video: Video, quality: VideoQuality? = null, localPath: String? = null, subtitles: List<VideoSubtitle> = emptyList(), openedAtMs: Long = 0): MediaItem =
     MediaItem.Builder()
         .setMediaId(video.id)
         .setUri(localPath?.let { Uri.fromFile(java.io.File(it)).toString() } ?: requireNotNull(quality).url)
         .apply { quality?.let { setMimeType(it.mime) } }
+        .setSubtitleConfigurations(if (localPath != null) emptyList() else subtitles.map { subtitle ->
+            MediaItem.SubtitleConfiguration.Builder(Uri.parse(subtitle.url)).setMimeType(subtitle.mime)
+                .setLanguage(subtitle.language).setLabel(subtitle.label).build()
+        })
         .setMediaMetadata(MediaMetadata.Builder()
             .setTitle(video.title).setArtist(video.channel)
             .setArtworkUri(video.thumbnail.takeIf { it.isNotBlank() }?.let(Uri::parse))
             .setExtras(android.os.Bundle().apply {
                 putString("photon_video", Json.encodeToString(video))
+                putLong("photon_open_elapsed", openedAtMs)
                 quality?.audioUrl?.let { putString("photon_audio", it) }
             })
             .build())

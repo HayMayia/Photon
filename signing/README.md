@@ -1,6 +1,6 @@
 # Stable Photon signing: owner-only bootstrap
 
-Status: automation prepared; **no permanent key/fingerprint exists until the owner saves the secret and bootstrap succeeds**. This does not register Google OAuth or establish working sign-in.
+Status: **permanent identity provisioned successfully** in [setup run 40867368566](https://github.com/HayMayia/Photon/actions/runs/40867368566), commit `de4e5db`. Public package/SHA-1 are in `ANDROID_OAUTH.txt`. The first stable-signed APK is building in [run 40867400991](https://github.com/HayMayia/Photon/actions/runs/40867400991); signing/build verification is pending. Google OAuth client registration and live sign-in/posting are not established by key generation.
 
 ## Owner action (one time)
 
@@ -29,4 +29,4 @@ External pull requests do not receive or restore the key. PR-test APKs remain te
 - Only trusted repository maintainers should be able to alter signing workflows or trigger trusted builds. Repository write access can modify a workflow to misuse signing secrets. Review third-party actions and future workflow changes accordingly.
 - Plaintext key/keystore.properties exist only under RUNNER_TEMP/the ephemeral checkout during a trusted job, are excluded from artifacts/Git, and are removed by an always-run cleanup step. They are never intentionally cached. Forced runner shutdown relies on the hosted runner's ephemeral teardown.
 - Secrets are passed through environment variables, not embedded in scripts, command-line password arguments or public logs. The public certificate and SHA-1 are not secrets.
-- First stable APK build, bootstrap and actual OAuth/device tests remain pending owner setup. Local checks cover Python safety gates, YAML syntax and shell syntax; they are not a real signing/build test.
+- Bootstrap passed, including six safety-gate tests and encrypted-backup/public-certificate publication. First stable APK build and actual OAuth/device tests remain pending. Local YAML/shell syntax checks are not a real signing/build test.

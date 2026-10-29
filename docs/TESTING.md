@@ -175,3 +175,9 @@ Implementation reduces startup buffer from Media3's default to 750 ms (rebuffer 
 ## Stable signing setup (0.5.1 source; provisioning/build pending)
 
 Owner must save PHOTON_SIGNING_PASSWORD directly as a GitHub Actions repository secret; this session cannot manage Actions secrets (403). See signing/README.md. Bootstrap must refuse an existing identity, publish only encrypted backup/public certificate, dispatch a trusted APK build, and restore the same identity in later trusted builds. Final APK certificate must match ANDROID_OAUTH.txt. PR jobs must never decrypt the private key. Local Python safety-gate and workflow syntax checks are not proof of a completed key generation, Android signing build or successful Google OAuth registration.
+
+### Permanent identity provisioned
+
+- **PASS:** setup run 40867368566, six signing safety tests, key generation/encrypted backup, public certificate publication and explicit APK build dispatch. Provisioning commit `de4e5db`.
+- **PENDING:** stable-signed APK build 40867400991 and final APK-certificate match; Google Android OAuth client registration and live-device authorization/comment posting.
+- Public registration identity is `signing/ANDROID_OAUTH.txt`; do not register an older temporary-debug APK's SHA-1 for this key.

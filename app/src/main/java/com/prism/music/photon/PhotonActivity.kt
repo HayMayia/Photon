@@ -61,6 +61,17 @@ import java.util.UUID
 class PhotonActivity : ComponentActivity() {
     private var incoming by mutableStateOf<String?>(null)
     private var pip by mutableStateOf(false)
+    private var lanAction: (() -> Unit)? = null
+    private val lanPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) lanAction?.invoke()
+        lanAction = null
+    }
+    fun withLanPermission(action: () -> Unit) {
+        if (android.os.Build.VERSION.SDK_INT >= 37 && ContextCompat.checkSelfPermission(this, "android.permission.ACCESS_LOCAL_NETWORK") != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            lanAction = action
+            lanPermission.launch("android.permission.ACCESS_LOCAL_NETWORK")
+        } else action()
+    }
     private val notificationPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -72,7 +83,7 @@ class PhotonActivity : ComponentActivity() {
             val library by model.library.collectAsStateWithLifecycle()
             val controller = rememberController()
             LaunchedEffect(incoming) {
-                incoming?.let { model.openId(it) }
+                incoming?.let { model.search(it) }
                 incoming = null
             }
             PrismTheme(AppSettings(themeMode = if (library.dark) ThemeMode.DARK else ThemeMode.LIGHT), null) {
@@ -84,7 +95,7 @@ class PhotonActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); accept(intent) }
     private fun accept(intent: Intent?) {
         val text = if (intent?.action == Intent.ACTION_SEND) intent.getStringExtra(Intent.EXTRA_TEXT) else intent?.dataString
-        incoming = text?.let(YouTubeLinks::videoId)
+        incoming = text
     }
     private fun requestNotifications() {
         if (android.os.Build.VERSION.SDK_INT >= 33) notificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
@@ -132,13 +143,19 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
     var isPlaying by remember { mutableStateOf(false) }
     var buffering by remember { mutableStateOf(false) }
     var delete by remember { mutableStateOf<SavedDownload?>(null) }
+    val collection by model.collection.collectAsStateWithLifecycle()
+    var commentsSheet by remember { mutableStateOf(false) }
+    var playlistSheet by remember { mutableStateOf(false) }
+    var shortsMode by rememberSaveable { mutableStateOf(false) }
+    var castSheet by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val activity = context as PhotonActivity
+    val casting = (context.applicationContext as PhotonApplication).casting
 
     DisposableEffect(controller) {
         val listener = object : Player.Listener {
             override fun onIsPlayingChanged(value: Boolean) { isPlaying = value }
-            override fun onPlaybackStateChanged(state: Int) { buffering = state == Player.STATE_BUFFERING }
+            override fun onPlaybackStateChanged(state: Int) { buffering = state == Player.STATE_BUFFERING; if (state == Player.STATE_ENDED) model.next() }
             override fun onPlayerError(error: PlaybackException) { playerError = "Playback failed: ${error.errorCodeName}. Try reopening the video or choosing another quality." }
         }
         controller?.addListener(listener)
@@ -156,7 +173,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
     LaunchedEffect(watch.request, controller) {
         if (watch.request == 0L || controller == null) return@LaunchedEffect
         val video = watch.video ?: return@LaunchedEffect
-        val position = if (watch.preservePosition) controller.currentPosition else 0L
+        val position = if (watch.preservePosition) controller.currentPosition else watch.startPositionMs
         val play = if (watch.preservePosition) controller.playWhenReady else true
         playerError = null
         controller.setMediaItem(playbackItem(video, watch.quality, watch.localPath), position)
@@ -173,7 +190,9 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
         activity.requestedOrientation = if (fullscreen) ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE else ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         onDispose { activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED }
     }
-    BackHandler(expanded && !pip) { if (fullscreen) fullscreen = false else expanded = false }
+    BackHandler(shortsMode && !pip) { shortsMode = false; expanded = false }
+    BackHandler(collection != null && !expanded && !pip && !shortsMode) { model.closeCollection() }
+    BackHandler(expanded && !pip && !shortsMode) { if (fullscreen) fullscreen = false else expanded = false }
 
     fun open(video: Video) { fullscreen = false; expanded = true; model.open(video) }
     fun share(video: Video) {
@@ -183,6 +202,10 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         if (pip) {
             VideoSurface(controller, Modifier.fillMaxSize(), controls = false)
+        } else if (shortsMode) {
+            ShortsScreen(browse, watch, controller, model) { shortsMode = false; expanded = false }
+        } else if (collection != null && !expanded) {
+            CollectionScreen(model, library, { open(it) }, model::closeCollection)
         } else if (expanded && watch.video != null) {
             val video = watch.video!!
             Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).then(if (fullscreen) Modifier else Modifier.statusBarsPadding())) {
@@ -214,6 +237,14 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                                     if (!watch.details!!.live) ActionChip("Download", PrismIcons.Download) { downloadSheet = true }
                                 }
                                 if (watch.details == null && watch.localPath == null && !watch.busy) ActionChip("Reload details", PrismIcons.Refresh) { model.open(video) }
+                                watch.details?.channel?.let { channel ->
+                                    ActionChip("Channel", PrismIcons.Person) { expanded = false; model.openCollection(channel.url, true) }
+                                    ActionChip(if (library.subscriptions.any { it.url == channel.url }) "Subscribed locally" else "Subscribe locally", PrismIcons.PersonAdd) { model.subscribe(channel) }
+                                }
+                                ActionChip("Comments", PrismIcons.Info) { model.loadComments(video); commentsSheet = true }
+                                ActionChip("Cast", PrismIcons.Cast) { activity.withLanPermission { casting.discover(); castSheet = true } }
+                                ActionChip("Add to playlist", PrismIcons.PlaylistAdd) { playlistSheet = true }
+                                if (model.queue.value.isNotEmpty()) ActionChip("Next in playlist", PrismIcons.Next) { model.next() }
                                 ActionChip("Share", PrismIcons.Share) { share(video) }
                                 ActionChip("Full screen", PrismIcons.Fullscreen) { fullscreen = true }
                                 ActionChip("Pop out", PrismIcons.PlayCircle) { enterPip() }
@@ -256,7 +287,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                         }
                         NavigationBar(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f), tonalElevation = 0.dp) {
                             listOf("Home" to PrismIcons.Home, "Search" to PrismIcons.Search, "Library" to PrismIcons.Library, "Settings" to PrismIcons.Settings).forEachIndexed { index, (label, icon) ->
-                                NavigationBarItem(selected = tab == index, onClick = { tab = index }, icon = { Icon(icon, label) }, label = { Text(label) })
+                                NavigationBarItem(selected = tab == index, onClick = { tab = index; if (index == 0) model.home() }, icon = { Icon(icon, label) }, label = { Text(label) })
                             }
                         }
                     }
@@ -279,19 +310,24 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                                     Box(Modifier.width(64.dp).height(3.dp).clip(CircleShape).background(PrismTokens.spectrum))
                                     OutlinedTextField(
                                         value = search, onValueChange = { search = it }, modifier = Modifier.fillMaxWidth(),
-                                        placeholder = { Text("Search YouTube or paste a link") }, singleLine = true, shape = RoundedCornerShape(22.dp),
+                                        placeholder = { Text("Search or paste video/channel/playlist link") }, singleLine = true, shape = RoundedCornerShape(22.dp),
                                         leadingIcon = { Icon(PrismIcons.Search, null) },
                                         trailingIcon = { IconButton(onClick = { model.search(search); tab = 1 }) { Icon(PrismIcons.ArrowForward, "Search") } },
                                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Search),
                                         keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSearch = { model.search(search); tab = 1 })
                                     )
                                     if (tab == 0) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        AssistChip(onClick = model::home, label = { Text("For you") })
+                                        AssistChip(onClick = model::subscriptionsFeed, label = { Text("Subscriptions") })
+                                        AssistChip(onClick = { model.shorts(); shortsMode = true }, label = { Text("Shorts") })
+                                    }
+                                    if (tab == 0) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                         listOf("Explore" to "science and technology", "Technology" to "technology", "Gaming" to "gaming", "Learning" to "educational documentaries", "Travel" to "travel films", "Cooking" to "cooking recipes").forEach { (label, query) ->
                                             FilterChip(selected = browse.query == query, onClick = { model.search(query) }, label = { Text(label) })
                                         }
                                     }
                                     Text(if (tab == 0) "A little curiosity goes a long way." else "Videos, creators, and new rabbit holes.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
-                                    Text(if (tab == 0) "Discover something new" else "Results for “${browse.query}”", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                                    Text(if (tab == 0) (if (browse.personalized) "For you · based on your watching" else browse.query.replaceFirstChar { it.uppercase() }) else "Results for “${browse.query}”", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                                 }
                             }
                             if (browse.busy) item { Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() } }
@@ -311,10 +347,12 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                             item {
                                 PageHeading("Library", "Your corner of YouTube. Kept on this device.")
                                 Row(Modifier.padding(horizontal = 22.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    listOf("Saved", "History", "Downloads").forEachIndexed { index, name -> FilterChip(selected = libraryTab == index, onClick = { libraryTab = index }, label = { Text(name) }) }
+                                    listOf("Saved", "History", "Downloads", "Channels", "Playlists").forEachIndexed { index, name -> FilterChip(selected = libraryTab == index, onClick = { libraryTab = index }, label = { Text(name) }) }
                                 }
                             }
-                            if (libraryTab == 2) {
+                            if (libraryTab >= 3) {
+                                item { LibraryCollections(library, model, libraryTab == 3, { open(it) }, { tab = 0; model.subscriptionsFeed() }) }
+                            } else if (libraryTab == 2) {
                                 item { Text("Downloads stay in Photon's app storage. Uninstalling removes them.", Modifier.padding(horizontal = 22.dp, vertical = 12.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                                 items(work.filter { !it.state.isFinished || it.state == WorkInfo.State.FAILED }, key = { it.id.toString() }) { info ->
                                     DownloadJob(info, { if (info.state.isFinished) model.dismissFinishedDownloads() else model.cancel(info.id) })
@@ -328,8 +366,15 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                                 }
                             } else {
                                 val videos = if (libraryTab == 0) library.saved else library.history
-                                if (videos.isEmpty()) item { EmptyState(if (libraryTab == 0) "Keep the good ones" else "A fresh start", if (libraryTab == 0) "Tap the heart on any video to save it here." else "Videos you open appear here. Your history stays on your phone.", if (libraryTab == 0) PrismIcons.Heart else PrismIcons.History) }
-                                items(videos, key = { it.id }) { video -> VideoRow(video, { open(video) }, { model.save(video) }, library.saved.any { it.id == video.id }) }
+                                if (videos.isEmpty()) item { EmptyState(if (libraryTab == 0) "Keep the good ones" else "A fresh start", if (libraryTab == 0) "Tap the heart on any video to save it here." else "Videos you open appear here. Your history and playback resume positions stay on your phone.", if (libraryTab == 0) PrismIcons.Heart else PrismIcons.History) }
+                                items(videos, key = { it.id }) { video ->
+                                    Column {
+                                        VideoRow(video, { open(video) }, { model.save(video) }, library.saved.any { it.id == video.id })
+                                        if (libraryTab == 1) library.progress[video.id]?.let { progress ->
+                                            Text("${durationLabel(progress.watchedMs / 1000)} watched · resume at ${durationLabel(progress.resumeMs() / 1000)}", Modifier.padding(start = 22.dp, bottom = 8.dp), style = MaterialTheme.typography.labelSmall)
+                                        }
+                                    }
+                                }
                             }
                         }
                         3 -> SettingsPage(library, model, notifications)
@@ -337,6 +382,16 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                 }
             }
         }
+    }
+    if (castSheet) ModalBottomSheet(onDismissRequest = { castSheet = false; casting.stopDiscovery() }) {
+        DisposableEffect(Unit) { onDispose { casting.stopDiscovery() } }
+        CastPanel(casting, watch) { controller?.pause() }
+    }
+    if (commentsSheet && watch.video != null) ModalBottomSheet(onDismissRequest = { commentsSheet = false }) {
+        CommentsPanel(model, watch.video!!)
+    }
+    if (playlistSheet && watch.video != null) ModalBottomSheet(onDismissRequest = { playlistSheet = false }) {
+        PlaylistPicker(library, watch.video!!, model) { playlistSheet = false }
     }
     if (qualitySheet || downloadSheet) {
         ModalBottomSheet(onDismissRequest = { qualitySheet = false; downloadSheet = false }) {
@@ -370,7 +425,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
 
 @Composable
 @UnstableApi
-private fun VideoSurface(controller: MediaController?, modifier: Modifier, controls: Boolean) {
+internal fun VideoSurface(controller: MediaController?, modifier: Modifier, controls: Boolean) {
     AndroidView(factory = { context -> PlayerView(context).apply { player = controller; useController = controls; setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING) } },
         modifier = modifier.background(Color.Black),
         update = { it.player = controller; it.useController = controls },
@@ -501,7 +556,7 @@ private fun SettingsPage(library: PhotonLibrary, model: PhotonViewModel, notific
                 ListItem(headlineContent = { Text("Source code & issues") }, supportingContent = { Text("HayMayia/Photon · GPL-3.0-or-later") }, trailingContent = { Icon(PrismIcons.ArrowForward, null) }, modifier = Modifier.clickable { link("https://github.com/HayMayia/Photon") })
                 ListItem(headlineContent = { Text("Built on Prism by Yigder") }, supportingContent = { Text("Original design, icons, typography and Android foundation · GPL-3.0-or-later") }, trailingContent = { Icon(PrismIcons.ArrowForward, null) }, modifier = Modifier.clickable { link("https://github.com/Yigder/Prism") })
                 ListItem(headlineContent = { Text("NewPipe Extractor") }, supportingContent = { Text("YouTube extraction · GPL-3.0-or-later") }, trailingContent = { Icon(PrismIcons.ArrowForward, null) }, modifier = Modifier.clickable { link("https://github.com/TeamNewPipe/NewPipeExtractor") })
-                Text("Download only when you have permission. No DRM, paid-access, age-check or sign-in bypass. YouTube changes may temporarily break extraction. This preview does not support account sync, comments, subscriptions, casting or playlists.", Modifier.padding(16.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Download only when you have permission. No DRM, paid-access, age-check or sign-in bypass. YouTube changes may temporarily break extraction. Channel subscriptions and playlists in Photon are local; comments are read-only. Google account sync is not implemented.", Modifier.padding(16.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

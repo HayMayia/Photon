@@ -5,6 +5,7 @@ import com.prism.music.data.stream.NewPipeDownloader
 import com.prism.music.data.stream.YouTubeStreamInterceptor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.serialization.Serializable
 import okhttp3.OkHttpClient
 import org.schabi.newpipe.extractor.NewPipe
@@ -29,6 +30,8 @@ data class Video(
     val duration: Long = 0,
     val views: Long = 0,
     val published: String = "",
+    val channelUrl: String = "",
+    val short: Boolean = false,
 ) {
     val url get() = "https://www.youtube.com/watch?v=$id"
 }
@@ -49,6 +52,7 @@ data class VideoDetails(
     val qualities: List<VideoQuality>,
     val related: List<Video>,
     val live: Boolean,
+    val channel: Channel? = null,
 )
 
 data class VideoPage(val videos: List<Video>, val next: Page?, val query: String)
@@ -75,10 +79,10 @@ class VideoRepository {
         val handler = ServiceList.YouTube.searchQHFactory.fromQuery(query, listOf("videos"), "")
         if (next == null) {
             val result = SearchInfo.getInfo(ServiceList.YouTube, handler)
-            VideoPage(result.relatedItems.filterIsInstance<StreamInfoItem>().mapNotNull(::preview), result.nextPage, query)
+            VideoPage(result.relatedItems.filterIsInstance<StreamInfoItem>().mapNotNull(::preview), result.nextPage?.takeIf { Page.isValid(it) }, query)
         } else {
             val result = SearchInfo.getMoreItems(ServiceList.YouTube, handler, next)
-            VideoPage(result.items.filterIsInstance<StreamInfoItem>().mapNotNull(::preview), result.nextPage, query)
+            VideoPage(result.items.filterIsInstance<StreamInfoItem>().mapNotNull(::preview), result.nextPage?.takeIf { Page.isValid(it) }, query)
         }
     }
 
@@ -101,21 +105,104 @@ class VideoRepository {
         }.sortedBy { it.audioUrl != null }.distinctBy { it.height }.sortedByDescending { it.height }
         check(qualities.isNotEmpty()) { "YouTube did not provide a compatible stream. It may require sign-in, be restricted, or be temporarily unavailable." }
         VideoDetails(
-            Video(id, info.name, info.uploaderName, info.thumbnails.maxByOrNull { it.height }?.url.orEmpty(), info.duration, info.viewCount, info.textualUploadDate.orEmpty()),
+            Video(id, info.name, info.uploaderName, info.thumbnails.maxByOrNull { it.height }?.url.orEmpty(), info.duration, info.viewCount, info.textualUploadDate.orEmpty(), info.uploaderUrl.orEmpty()),
             info.description?.content.orEmpty(), qualities,
-            info.relatedItems.filterIsInstance<StreamInfoItem>().mapNotNull(::preview), live,
+            info.relatedItems.filterIsInstance<StreamInfoItem>().mapNotNull(::preview).distinctBy { it.id }, live,
+            info.uploaderUrl?.takeIf { it.isNotBlank() }?.let { Channel(it, info.uploaderName, info.uploaderAvatars.maxByOrNull { image -> image.height }?.url.orEmpty()) },
         )
+    }
+
+    suspend fun channel(url: String, next: Page? = null, shorts: Boolean = false): CollectionPage = withContext(Dispatchers.IO) {
+        require(YouTubeLinks.channelUrl(url) != null) { "Invalid YouTube channel link" }
+        val info = org.schabi.newpipe.extractor.channel.ChannelInfo.getInfo(ServiceList.YouTube, url)
+        val tab = info.tabs.firstOrNull { it.contentFilters.contains(if (shorts) "shorts" else "videos") }
+            ?: error(if (shorts) "This channel has no Shorts tab" else "This channel has no Videos tab")
+        val channel = Channel(info.url, info.name, info.avatars.maxByOrNull { it.height }?.url.orEmpty(), info.subscriberCount)
+        if (next == null) {
+            val result = org.schabi.newpipe.extractor.channel.tabs.ChannelTabInfo.getInfo(ServiceList.YouTube, tab)
+            CollectionPage(info.name, info.description.orEmpty(), result.relatedItems.filterIsInstance<StreamInfoItem>().mapNotNull(::preview).distinctBy { it.id }, result.nextPage?.takeIf { Page.isValid(it) }, channel)
+        } else {
+            val result = org.schabi.newpipe.extractor.channel.tabs.ChannelTabInfo.getMoreItems(ServiceList.YouTube, tab, next)
+            CollectionPage(info.name, info.description.orEmpty(), result.items.filterIsInstance<StreamInfoItem>().mapNotNull(::preview).distinctBy { it.id }, result.nextPage?.takeIf { Page.isValid(it) }, channel)
+        }
+    }
+
+    suspend fun playlist(url: String, next: Page? = null): CollectionPage = withContext(Dispatchers.IO) {
+        val link = YouTubeLinks.playlistUrl(url) ?: error("Invalid YouTube playlist link")
+        if (next == null) {
+            val result = org.schabi.newpipe.extractor.playlist.PlaylistInfo.getInfo(ServiceList.YouTube, link)
+            CollectionPage(result.name, result.uploaderName.orEmpty(), result.relatedItems.mapNotNull(::preview).distinctBy { it.id }, result.nextPage?.takeIf { Page.isValid(it) })
+        } else {
+            val result = org.schabi.newpipe.extractor.playlist.PlaylistInfo.getMoreItems(ServiceList.YouTube, link, next)
+            CollectionPage("Playlist", "", result.items.mapNotNull(::preview).distinctBy { it.id }, result.nextPage?.takeIf { Page.isValid(it) })
+        }
+    }
+
+    suspend fun comments(video: Video, next: Page? = null): CommentPage = withContext(Dispatchers.IO) {
+        fun convert(item: org.schabi.newpipe.extractor.comments.CommentsInfoItem) = VideoComment(item.commentId.orEmpty(), item.uploaderName.orEmpty(), item.commentText.content.orEmpty(), item.likeCount, item.replyCount, item.replies)
+        if (next == null) {
+            val result = org.schabi.newpipe.extractor.comments.CommentsInfo.getInfo(ServiceList.YouTube, video.url) ?: error("Comments unavailable")
+            CommentPage(result.relatedItems.map(::convert), result.nextPage?.takeIf { Page.isValid(it) }, result.isCommentsDisabled)
+        } else {
+            val result = org.schabi.newpipe.extractor.comments.CommentsInfo.getMoreItems(ServiceList.YouTube, video.url, next)
+            CommentPage(result.items.map(::convert), result.nextPage?.takeIf { Page.isValid(it) })
+        }
+    }
+
+    suspend fun recommendations(library: PhotonLibrary): List<Video> = withContext(Dispatchers.IO) {
+        val seeds = library.history.sortedByDescending { (library.progress[it.id]?.watchedMs ?: 0).coerceAtMost(600_000) + (if (library.saved.any { saved -> saved.id == it.id }) 120_000 else 0) }
+            .take(3)
+        val candidates = mutableListOf<Video>()
+        for (seed in seeds) {
+            kotlinx.coroutines.currentCoroutineContext().ensureActive()
+            try { candidates += details(seed.id).related } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { /* Another seed can still provide recommendations. */ }
+        }
+        RecommendationRank.rank(candidates, library)
     }
 
     private fun preview(item: StreamInfoItem): Video? {
         val id = YouTubeLinks.videoId(item.url) ?: return null
         return Video(id, item.name, item.uploaderName.orEmpty(), item.thumbnails.maxByOrNull { it.height }?.url.orEmpty(),
-            item.duration, item.viewCount, item.textualUploadDate.orEmpty())
+            item.duration, item.viewCount, item.textualUploadDate.orEmpty(), item.uploaderUrl.orEmpty(), item.isShortFormContent)
     }
 }
 
 /** Explicit host allowlist: a pasted arbitrary URL must never become a download request. */
+data class CollectionPage(val title: String, val description: String, val videos: List<Video>, val next: Page?, val channel: Channel? = null)
+data class VideoComment(val id: String, val author: String, val text: String, val likes: Int, val replies: Int, val replyPage: Page?)
+data class CommentPage(val comments: List<VideoComment>, val next: Page?, val disabled: Boolean = false)
+
+object RecommendationRank {
+    fun rank(candidates: List<Video>, library: PhotonLibrary): List<Video> {
+        val frequencies = candidates.groupingBy { it.id }.eachCount()
+        val seen = library.history.map { it.id }.toSet()
+        val subscriptions = library.subscriptions.map { it.url }.toSet()
+        val channels = mutableMapOf<String, Int>()
+        return candidates.distinctBy { it.id }.filterNot { it.id in seen }
+            .sortedByDescending { frequencies.getValue(it.id) * 10 + if (it.channelUrl in subscriptions) 5 else 0 }
+            .filter { video ->
+                val key = video.channelUrl.ifBlank { video.channel }
+                val count = channels.getOrDefault(key, 0)
+                channels[key] = count + 1
+                count < 3
+            }.take(40)
+    }
+}
+
 object YouTubeLinks {
+    private fun trusted(text: String): Uri? = Uri.parse(text.trim()).takeIf { it.scheme in listOf("https", "http") && it.host?.lowercase() in listOf("youtube.com", "www.youtube.com", "m.youtube.com") }
+    fun channelUrl(text: String): String? {
+        val uri = trusted(text) ?: return null
+        val parts = uri.pathSegments
+        return if ((parts.firstOrNull()?.startsWith("@") == true && parts.first().length > 1) || (parts.firstOrNull() in listOf("channel", "c", "user") && parts.size >= 2))
+            "https://www.youtube.com/" + parts.take(if (parts.first().startsWith("@")) 1 else 2).joinToString("/") else null
+    }
+    fun playlistUrl(text: String): String? {
+        val uri = trusted(text) ?: return null
+        val id = uri.getQueryParameter("list")?.takeIf { Regex("[A-Za-z0-9_-]{2,200}").matches(it) } ?: return null
+        return "https://www.youtube.com/playlist?list=$id"
+    }
+
     fun videoId(text: String): String? {
         val candidate = Regex("https?://[^\\s<>]+").find(text.trim())?.value ?: text.trim()
         val uri = Uri.parse(candidate)

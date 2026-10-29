@@ -385,7 +385,7 @@ class GoogleCastLink(
                 put("contentType", media.mime.substringBefore(';'))
                 if (media.durationMs > 0) put("duration", media.durationMs / 1000.0)
                 putJsonObject("metadata") {
-                    put("metadataType", 3) // MusicTrackMediaMetadata
+                    put("metadataType", if (media.mime.startsWith("video/")) 0 else 3) // Generic video or music metadata
                     put("title", media.title)
                     if (media.artist.isNotBlank()) put("artist", media.artist)
                     media.album?.let { put("albumName", it) }

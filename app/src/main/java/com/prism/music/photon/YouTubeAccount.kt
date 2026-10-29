@@ -26,7 +26,7 @@ object YouTubeErrors {
         status == 401 -> "Your Google authorization expired. Reconnect your account; your draft has been kept."
         reason == "commentsDisabled" -> "The creator has disabled comments on this video."
         reason == "youtubeSignupRequired" || reason == "channelNotFound" -> "Create a YouTube channel for this Google account on YouTube, then reconnect."
-        reason == "accessNotConfigured" || reason == "SERVICE_DISABLED" -> "Enable YouTube Data API v3 in the Google Cloud project used for Photon. See Google sign-in setup."
+        reason == "accessNotConfigured" || reason == "SERVICE_DISABLED" -> "Enable YouTube Data API v3 in the Google Cloud project used for this app. See Google sign-in setup."
         reason == "quotaExceeded" || reason == "dailyLimitExceeded" -> "The Google Cloud project's YouTube API quota is exhausted. Your draft has been kept."
         reason == "insufficientPermissions" -> "YouTube commenting permission was not granted. Reconnect and review Google's consent screen."
         reason == "forbidden" -> "YouTube refused this action for the selected account or video. Your draft has been kept."
@@ -137,7 +137,7 @@ class YouTubeAccount(private val api: YouTubeCommentApi = YouTubeCommentApi(), p
             }
         } catch (cancelled: CancellationException) { fail(id, "Sign-in was interrupted. Please reconnect."); throw cancelled }
         catch (error: YouTubeApiFailure) { fail(id, error.message ?: "YouTube authorization failed") }
-        catch (_: Exception) { fail(id, "Google authorized the request, but Photon could not verify your YouTube channel. Check your connection/API setup and reconnect.") }
+        catch (_: Exception) { fail(id, "Google authorized the request, but the app could not verify your YouTube channel. Check your connection/API setup and reconnect.") }
     }
     @Synchronized fun disconnect() {
         generation++; token = null; authorizedAt = 0

@@ -142,7 +142,7 @@ object YouTubeHomeParser {
         }
         visit(primary)
         return YouTubeHomePage(videos.values.toList(), messages.distinct().joinToString("\n").takeIf { it.isNotBlank() }
-            ?: if (videos.isEmpty()) "YouTube returned no supported Home video cards. Your history/recommendation settings have not been changed, and Photon has not filled this with search results." else null, continuation = next)
+            ?: if (videos.isEmpty()) "YouTube returned no supported Home video cards. Your history/recommendation settings have not been changed, and the app has not filled this with search results." else null, continuation = next)
     }
 
     fun extractInitialData(html: String): String {

@@ -413,6 +413,12 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
     fun repairArtwork() = OfflineArtwork.schedule(app, library.value.wifiOnly)
+    fun youtubeLayout(value: Boolean) = app.library.update { it.copy(youtubeLayout = value) }
+    fun presentShort(video: Video) {
+        searchJob?.cancel()
+        mutableBrowse.value = BrowseState(videos = (listOf(video) + mutableBrowse.value.videos.filter { it.short }).distinctBy { it.id }, query = "Shorts")
+        open(video)
+    }
     fun accent(value: Int) = app.library.update { it.copy(accent = value) }
     fun dark(value: Boolean) = app.library.update { it.copy(dark = value) }
     fun wifi(value: Boolean) = app.library.update { it.copy(wifiOnly = value) }

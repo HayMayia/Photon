@@ -159,7 +159,7 @@ internal fun CommentsPanel(model: PhotonViewModel, video: Video) {
         }
     }
     if (authorizeComment) AlertDialog(onDismissRequest = { authorizeComment = false }, title = { Text("Authorize YouTube commenting?") },
-        text = { Text("Google's own screen will request youtube.force-ssl permission to identify your channel and post comments you explicitly confirm. Photon does not read your password. Your draft is kept; authorization alone will not publish it. Return here to review and post after authorization.") },
+        text = { Text("Google's own screen will request youtube.force-ssl permission to identify your channel and post comments you explicitly confirm. The app does not read your password. Your draft is kept; authorization alone will not publish it. Return here to review and post after authorization.") },
         confirmButton = { TextButton(onClick = { authorizeComment = false; (context as? PhotonActivity)?.signInToYouTube() }) { Text("Continue to Google") } },
         dismissButton = { TextButton(onClick = { authorizeComment = false }) { Text("Cancel") } })
     if (confirming) AlertDialog(onDismissRequest = { confirming = false }, title = { Text("Post publicly on YouTube?") },
@@ -228,7 +228,7 @@ internal fun CastPanel(casting: PhotonCast, watch: WatchState, pausePhone: () ->
     val scope = rememberCoroutineScope()
     Column(Modifier.fillMaxWidth().padding(24.dp).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Watch on your TV", style = MaterialTheme.typography.headlineSmall)
-        Text("Google Cast and DLNA on the same Wi-Fi. Keep Photon open. Uses a combined MP4 source, or your merged download. Live casting is not supported.")
+        Text("Google Cast and DLNA on the same Wi-Fi. Keep the app open. Uses a combined MP4 source, or your merged download. Live casting is not supported.")
         Text(status, color = MaterialTheme.colorScheme.primary)
         if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

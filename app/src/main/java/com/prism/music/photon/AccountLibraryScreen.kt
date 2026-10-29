@@ -22,13 +22,14 @@ internal fun AccountLibraryScreen(model: PhotonViewModel, revision: Long, ready:
     LaunchedEffect(revision, ready) {
         if (ready && state.page == null && !state.busy && state.error == null) model.openAccountShelf(state.shelf, state.playlist, state.title)
     }
+    androidx.activity.compose.BackHandler(state.playlist != null) { model.openAccountShelf(AccountShelf.PLAYLISTS) }
     if (creating) AlertDialog(onDismissRequest = { creating = false }, title = { Text("Create private YouTube playlist") },
         text = { OutlinedTextField(name, { name = it }, label = { Text("Playlist name") }, singleLine = true) },
         confirmButton = { TextButton(enabled = name.isNotBlank(), onClick = { model.createGooglePlaylist(name); name = ""; creating = false }) { Text("Continue") } },
         dismissButton = { TextButton(onClick = { creating = false }) { Text("Cancel") } })
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
         item {
-            SectionHeader("Your YouTube library", strapline = "FROM YOUR CONNECTED GOOGLE ACCOUNT")
+            if (!LocalYouTubeLayout.current) SectionHeader("Your YouTube library", strapline = "FROM YOUR CONNECTED GOOGLE ACCOUNT")
             Row(Modifier.padding(horizontal = 22.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 AccountShelf.entries.forEach { shelf ->
                     FilterChip(selected = state.shelf == shelf && state.playlist == null, onClick = { model.openAccountShelf(shelf) }, label = { Text(shelf.label) })

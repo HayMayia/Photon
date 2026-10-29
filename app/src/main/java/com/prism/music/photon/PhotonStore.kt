@@ -40,6 +40,7 @@ data class PhotonLibrary(
     val youtubeSessionReady: Boolean = true,
     val accountHistorySync: Boolean = false,
     val includeShortPlays: Boolean = false,
+    val youtubeLayout: Boolean = false,
 )
 
 /** One application-scoped store; updates from workers and UI are serialized together. */

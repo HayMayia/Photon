@@ -24,7 +24,7 @@ object GoogleSignInSetup {
             else context.packageManager.getPackageInfo(context.packageName, PackageManager.GET_SIGNATURES).signatures?.firstOrNull()
             signature?.let { MessageDigest.getInstance("SHA-1").digest(it.toByteArray()).joinToString(":") { byte -> "%02X".format(byte.toInt() and 255) } }
         }.getOrNull() ?: "Unavailable on this device"
-        return "Package: ${context.packageName}\nSigning certificate SHA-1: $sha1\nScope: $YOUTUBE_COMMENT_SCOPE\nAPI: YouTube Data API v3\nOAuth client type: Android\nNo client secret is needed or accepted in Photon."
+        return "Package: ${context.packageName}\nSigning certificate SHA-1: $sha1\nScope: $YOUTUBE_COMMENT_SCOPE\nAPI: YouTube Data API v3\nOAuth client type: Android\nNo client secret is needed or accepted in this app."
     }
 }
 
@@ -49,7 +49,7 @@ internal fun GoogleAccountActions(model: PhotonViewModel) {
     var consent by remember { mutableStateOf(false) }
     var setup by remember { mutableStateOf(false) }
     state.identity?.let { Text("Comments authorized as ${it.name}", fontWeight = FontWeight.SemiBold) }
-        ?: Text("Connect Google to post real YouTube comments from Photon.", style = MaterialTheme.typography.bodyMedium)
+        ?: Text("Connect Google to post real YouTube comments.", style = MaterialTheme.typography.bodyMedium)
     if (state.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
     state.error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -59,7 +59,7 @@ internal fun GoogleAccountActions(model: PhotonViewModel) {
     TextButton(onClick = { setup = true }) { Text("Google sign-in setup / troubleshooting") }
     if (consent) AlertDialog(onDismissRequest = { consent = false },
         title = { Text("Authorize YouTube commenting?") },
-        text = { Text("Google will show its own account and permission screen. The YouTube API requires the broad youtube.force-ssl scope for commenting; Photon currently uses it to identify your channel and submit comments you explicitly confirm. Photon does not collect your password, store access tokens on disk, or automatically post after sign-in. Local subscriptions and playlists are not synced by this step.") },
+        text = { Text("Google will show its own account and permission screen. The YouTube API requires the broad youtube.force-ssl scope for commenting; This app currently uses it to identify your channel and submit comments you explicitly confirm. The app does not collect your password, store access tokens on disk, or automatically post after sign-in. This permission is separate from the Google account connected to Home.") },
         confirmButton = { TextButton(onClick = { consent = false; (context as? PhotonActivity)?.signInToYouTube() }) { Text("Continue to Google") } },
         dismissButton = { TextButton(onClick = { consent = false }) { Text("Cancel") } })
     if (setup) AlertDialog(onDismissRequest = { setup = false },

@@ -21,3 +21,10 @@ internal object CommentComposerPolicy {
         else -> null
     }
 }
+
+/** Navigation history, separate from public YouTube watch history. */
+internal object PhotonNavigation {
+    fun record(history: List<Int>, current: Int, target: Int): List<Int> =
+        if (current == target) history else (history + current).takeLast(32)
+    fun previous(history: List<Int>, current: Int): Int? = history.lastOrNull() ?: 0.takeIf { current != 0 }
+}

@@ -16,15 +16,15 @@ data class YouTubeHomeState(val busy: Boolean = false, val page: YouTubeHomePage
 class YouTubeHomeApi(client: OkHttpClient = OkHttpClient()) {
     private val transport = YouTubeWebTransport(client)
     suspend fun home(cookie: String, accountIndex: Int = 0): YouTubeHomePage = home(YouTubeWebSession(accountIndex, 0, cookie, ""))
-    suspend fun home(session: YouTubeWebSession): YouTubeHomePage {
+    suspend fun home(session: YouTubeWebSession): YouTubeHomePage = withContext(Dispatchers.IO) {
         val html = transport.html("/", session)
-        return YouTubeHomeParser.parse(html).copy(context = YouTubeWebBootstrap.context(html))
+        YouTubeHomeParser.parse(html).copy(context = YouTubeWebBootstrap.context(html))
     }
-    suspend fun more(session: YouTubeWebSession, page: YouTubeHomePage): YouTubeHomePage {
+    suspend fun more(session: YouTubeWebSession, page: YouTubeHomePage): YouTubeHomePage = withContext(Dispatchers.IO) {
         val token = page.continuation?.takeIf { it.length in 1..32768 } ?: throw IOException("No further Home page")
         val context = page.context ?: throw IOException("Refresh Home to obtain a web context")
         val response = transport.post("browse", context, buildJsonObject { put("continuation", token) }, session)
-        return YouTubeHomeParser.continuation(response).copy(context = context)
+        YouTubeHomeParser.continuation(response).copy(context = context)
     }
 }
 
@@ -51,7 +51,8 @@ object YouTubeHomeParser {
     fun continuation(root: JsonObject): YouTubeHomePage {
         val loggedOut = ((root["responseContext"] as? JsonObject)?.get("mainAppWebResponseContext") as? JsonObject)?.get("loggedOut")?.jsonPrimitive?.booleanOrNull
         if (loggedOut == true || root.containsKey("error")) throw IOException("YouTube session expired")
-        val actions = root["onResponseReceivedActions"] ?: root["onResponseReceivedEndpoints"] ?: throw IOException("Home continuation format changed")
+        val actions = JsonArray(listOfNotNull(root["onResponseReceivedActions"], root["onResponseReceivedEndpoints"]))
+        if (actions.isEmpty()) throw IOException("Home continuation format changed")
         val batches = mutableListOf<JsonElement>()
         fun find(node: JsonElement) {
             when (node) {

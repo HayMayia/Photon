@@ -145,7 +145,7 @@ class YouTubeHistoryCoordinator(private val store: PhotonStore, client: OkHttpCl
         it.youtubeHome && it.youtubeSessionReady && it.youtubeSessionRevision == session.revision && it.youtubeWebUser == session.account
     }
     private suspend fun read(session: YouTubeWebSession): HistoryPage {
-        val page = YouTubeHistoryParser.parse(transport.html("/feed/history", session))
+        val page = withContext(Dispatchers.IO) { YouTubeHistoryParser.parse(transport.html("/feed/history", session)) }
         if (same(session)) mutable.value = GoogleHistoryState(page.status, checkedAtMs = now(), revision = session.revision,
             message = if (page.status == GoogleHistoryStatus.UNKNOWN) "History controls were not recognized. Local/account tracking is blocked." else null)
         return page
@@ -191,7 +191,7 @@ class YouTubeHistoryCoordinator(private val store: PhotonStore, client: OkHttpCl
             val before = read(session) // No stale assumption before an account mutation.
             if (before.status != GoogleHistoryStatus.ENABLED || !permitted()) return@withLock
             val watch = transport.html("/watch?v=$videoId", session)
-            val (url, context) = YouTubePlaybackUrls.forVideo(watch, videoId, watchedMs)
+            val (url, context) = withContext(Dispatchers.IO) { YouTubePlaybackUrls.forVideo(watch, videoId, watchedMs) }
             if (!permitted() || !AccountHistoryPolicy.active(state.value, revision, now())) return@withLock
             transport.playback(url, session, context) // One real-play registration, never a watchtime/engagement fabrication.
             if (same(session)) mutable.value = state.value.copy(message = "Playback report accepted by YouTube. History/recommendation updates may take time; verify on YouTube.")

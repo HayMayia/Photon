@@ -19,7 +19,9 @@ room {
 
 android {
     namespace = "com.prism.music"
-    compileSdk = 37
+    compileSdk {
+        version = release(37) { minorApiLevel = 2 }
+    }
 
     defaultConfig {
         applicationId = "io.github.haymayia.photon"

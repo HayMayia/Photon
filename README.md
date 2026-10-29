@@ -49,7 +49,7 @@ key (never commit it) and build a signed release.
 
 ## Build locally
 
-Use JDK 17+, Android SDK platform 36, and internet access to Google Maven, Maven
+Use JDK 17+, Android SDK platform 37.2, and internet access to Google Maven, Maven
 Central, Gradle and JitPack. The inherited upstream dependency versions are pinned
 in the Gradle scripts.
 

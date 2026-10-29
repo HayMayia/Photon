@@ -18,6 +18,8 @@ jobs:
           distribution: temurin
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
       - name: Install Android SDK
         shell: bash
         run: |
@@ -34,8 +36,7 @@ jobs:
             echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
             echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
             yes | "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --licenses >/dev/null || true
-            "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --channel=3 --list | grep 'platforms;android-'
-            "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --channel=3 'platforms;android-37' 'build-tools;36.0.0'
+            "$SDKMANAGER" --sdk_root="$ANDROID_HOME" 'platforms;android-37.2' 'build-tools;36.0.0'
           } 2>&1 | tee sdk.log
       - name: Build installable debug APK
         shell: bash

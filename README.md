@@ -4,9 +4,14 @@
 [Yigder's Prism](https://github.com/Yigder/Prism), retaining its real Compose theme,
 fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
 
-> **0.1.0 alpha — work in progress, not a finished Prism-equivalent release.**
-> Source has been implemented; a successful APK build and device testing must be
-> confirmed before calling this release usable. See [testing](#testing).
+> **0.1.0 alpha — not a finished Prism-equivalent release.**
+> Android APK compilation and the focused Photon unit suite **passed** on
+> [GitHub Actions](https://github.com/HayMayia/Photon/actions/runs/40852929196)
+> for source revision `3a7501f`. Physical-device playback/download testing remains
+> unverified. See [testing](#testing).
+>
+> **[Download the verified-build APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40852929196/artifacts/12888497023)**
+> (GitHub sign-in required). Extract it and install `app-debug.apk` on Android 8+.
 
 ## Implemented in this preview
 
@@ -37,7 +42,8 @@ terms and laws.
 5. Allow installation from that browser/file manager if Android asks.
 
 Artifacts expire after 90 days. Keep a local copy of the APK and source ZIP.
-A workflow can also be started using **Run workflow**. If the workflow is red,
+After the workflow is on the default branch, it can also be started using
+**Run workflow**. If a later workflow is red,
 there is no verified APK yet: inspect its build log rather than installing an
 unrelated Prism release. The sandbox cannot compile locally: it has no JDK/SDK
 and Maven/Google/Gradle download hosts are network-restricted.
@@ -49,7 +55,7 @@ key (never commit it) and build a signed release.
 
 ## Build locally
 
-Use JDK 17+, Android SDK platform 37.2, and internet access to Google Maven, Maven
+Use JDK 21 (as verified in CI), Android SDK platform 37.2, and internet access to Google Maven, Maven
 Central, Gradle and JitPack. The inherited upstream dependency versions are pinned
 in the Gradle scripts.
 

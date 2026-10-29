@@ -27,9 +27,18 @@ and current Android foreground-service restrictions as well.
 - [ ] Clear history; saved videos/downloads remain.
 - [ ] Dark/light screens and controls have legible contrast and TalkBack labels.
 
+## Build verification
+
+- **PASS**: Android debug APK assembly, revision `3a7501f`.
+- **PASS**: focused `com.prism.music.photon.*` unit suite (link parsing, library
+  persistence/deduplication, history cap, preference persistence, duration labels).
+- **PASS**: XML/SVG parse validation (214 files) and `git diff --check`.
+- [Verified GitHub Actions run](https://github.com/HayMayia/Photon/actions/runs/40852929196)
+- [APK artifact](https://github.com/HayMayia/Photon/actions/runs/40852929196/artifacts/12888497023)
+
 ## Still unverified
 
-All device checks above are initially unverified. Local Android compilation cannot
+All device checks above remain unverified. Local Android compilation cannot
 run in the coding sandbox (no JDK/SDK; Maven/Google/Gradle hosts restricted).
-GitHub Actions is the external build check; see its actual run result. A failed
-run is not an APK delivery.
+GitHub Actions supplied the successful external build check above. A successful
+build is not a claim that streaming or download muxing passed on a real phone.

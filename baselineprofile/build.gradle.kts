@@ -12,7 +12,7 @@ plugins {
 
 android {
     namespace = "com.prism.music.baselineprofile"
-    compileSdk = 37
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 28

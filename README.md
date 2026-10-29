@@ -4,17 +4,18 @@
 [Yigder's Prism](https://github.com/Yigder/Prism), retaining its real Compose theme,
 fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
 
-> **0.6.0 alpha — experimental native YouTube account Home and local history pause.**
-> **[Download 0.6 APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40871610491/artifacts/12896153246)**
+> **0.7.0 alpha — account Home pagination, Google history controls and opt-in native play reporting.**
+> **[Download 0.7 APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40877422966/artifacts/12899720911)**
 > — GitHub sign-in required; extract and install `app-debug.apk`.
-> APK assembly, all 71 focused Photon tests and permanent certificate matching
-> passed at revision `2852d9b` ([verified build](https://github.com/HayMayia/Photon/actions/runs/40871610491)).
-> **Real web-session sign-in/Home rendering remain unverified on a device.**
-> Google may block embedded sign-in. No automatic Google history-setting sync or
-> native watch-history upload is implemented; [precise limits](docs/YOUTUBE_HOME.md).
-> Native comment authorization remains separate; live posting is still unverified.
-> Keep Cloud testing enabled while checking account flows; production verification
-> is a separate process. Existing stable-signed 0.5.1 should update without uninstalling.
+> APK assembly, all **99 focused Photon tests** and permanent certificate matching
+> passed at revision `a6bb93d` ([verified build](https://github.com/HayMayia/Photon/actions/runs/40877422966), 7m31s).
+> Home follows authenticated YouTube continuations; native pause/resume requires confirmation and read-back.
+> Optional history registration requires 15 actual playing seconds, fresh enabled Google history and the same website account/session.
+> **Live web-session sign-in, Google pause changes and saved history still need device verification.**
+> HTTP acceptance is not proof of stored activity. Unknown/stale/paused state blocks tracking in connected mode;
+> [behavior, privacy and device checklist](docs/YOUTUBE_HOME.md).
+> Native comment authorization is separate; embedded sign-in may be blocked. Keep Cloud testing while validating;
+> public Google verification is separate. Stable-signed 0.5.1/0.6 should update without uninstalling.
 
 
 ## Feature status
@@ -28,8 +29,9 @@ fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
 | Playlists | Local create/add/remove/delete, play loaded videos as a queue; browse paginated public YouTube playlists by link |
 | Comments | Read comments/replies with pagination; native top-level composer with public confirmation and official YouTube API posting, requiring Google setup/authorization; replies remain read-only |
 | Shorts | Swipeable vertical video feed using extracted Shorts and channel Shorts tabs; discovery is not YouTube's signed-in Shorts algorithm |
-| Recommendations | Optional native **YouTube account Home** from a separately connected website session, in server order; no local/search fallback in that mode. One page plus refresh; unofficial and device-unverified. Original on-device related-video ranking remains a distinct local mode |
-| History pause | Local history/progress pause, enabled by default on connecting account Home; cancels generated local feeds. Google pause controls are **not read/synced**; native playback is not uploaded to YouTube history. Returned empty/feed messages are preserved |
+| Recommendations | Optional native **YouTube account Home** from a separately connected website session, in server order; no local/search fallback in that mode. Auto continuation loading with deduplication/loop guards; unofficial and device-unverified. Original on-device related-video ranking remains a distinct local mode |
+| History pause | Reads explicit server watch-history controls; confirmed account pause/resume with read-back; connected-mode local tracking is blocked when Google state is paused/unknown/stale. Additional local pause stays independent. Device verification pending |
+| Account watch history | Separately opted-in single real-play report after 15 actual playing seconds; fresh Google enabled-state check and account-pinned item required. No offline backfill, fake watchtime stream or automatic report retry. HTTP acceptance is not proof of saved Google activity |
 | History/resume | Recorded by the playback service, including background playback; periodic positions, playing-time accumulation (not seek distance), and resume across app restarts; recently finished videos restart from the beginning |
 | Casting | LAN discovery/control for Google Cast and DLNA using Prism's protocols; proxies a combined MP4 or serves your downloaded merged MP4; **keep Photon open**; no live/adaptive-stream casting |
 | Audio language | Original AAC audio takes priority over bitrate. Explicit dubs/descriptive/secondary tracks are not selected automatically. Missing labels are shown as unverified; source availability still limits playback |

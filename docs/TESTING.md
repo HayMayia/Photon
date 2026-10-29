@@ -212,3 +212,21 @@ New automated fixtures/protocol tests cover server order/deduplication, empty/hi
 - Fifteen new focused tests: twelve Home/parser/protocol/navigation checks and three history-pause/persistence checks. XML/SVG main-source parse (92 files) and `git diff --check` passed.
 - Earlier core implementation `42e40b8` also passed run 40870748774 (7m51s). Final build adds explicit Shorts/library navigation to account Home.
 - **NOT VERIFIED:** live embedded Google/YouTube sign-in, actual account Home response, same-account/brand-channel matching, physical history-pause behavior, comments, latency or public-release approval. Google history flags/sync, history uploads and feed continuations are not implemented, not merely untested.
+
+
+## 0.7 account Home pagination and history reporting (automated PASS; device pending)
+
+See docs/YOUTUBE_HOME.md for implementation limits, privacy and device acceptance.
+
+- [ ] Scroll authenticated Home over several pages; server order, deduplication, near-end trigger, retry-on-error and repeated-token/empty-page guards work. Refresh and account changes cannot append an old response.
+- [ ] Compare detected Google history enabled/paused with official YouTube. Unknown/missing/contradictory controls fail closed; stale state (>30s) blocks tracking.
+- [ ] Explicitly confirmed native Pause/Resume modifies the correct account and verifies the requested state with a fresh read; failures don't pretend success or retry mutation. No history-deletion endpoint is called.
+- [ ] Local tracking mirrors last verified Google pause in connected mode (not instant remote-change notification); additional local pause retains independent control and prior data.
+- [ ] Reporting opt-in explains account effects and removes only extra local pause. No uploads before opt-in or when Google state is paused/unknown/stale.
+- [ ] A remote video played for >=15 actual isPlaying seconds is reported once; inspect official YouTube history. Pauses, buffering, seeks, short/offline plays, quality changes and duplicate callbacks cannot inflate or duplicate reports.
+- [ ] Account review/switch/disconnect revokes pending permission, disables reporting consent and invalidates old view revisions. An old playing video cannot become the new account's report.
+- [ ] Redirects, 503/follow-up behavior, failed/ambiguous report, offline/background/process death: no automatic report replay or queued history backfill. Already in-flight requests cannot be recalled.
+- [ ] Native reports use host-scoped cookies and verified matching player ID/tracking docid; never arbitrary URLs. No credentials/tokens/URLs in diagnostic output.
+- [ ] Native comments, captions, ±10s seek, original audio, cast/downloads and stable-key update remain intact.
+
+New source adds 28 focused test methods: 19 continuation/pause-policy/playback-gate/URL/session checks and nine synthetic account-mutation/read-back/report/scoped-cookie/concurrency protocol checks. All use synthetic data/local interceptors; no live account writes occur in tests. All 99 focused tests, APK assembly and permanent certificate verification passed in run [40877422966](https://github.com/HayMayia/Photon/actions/runs/40877422966), source `a6bb93d`, 7m31s. Locally, all six signing Python tests and parsing of 92 main XML/SVG files passed. These checks do not replace the unticked live-device checks above.

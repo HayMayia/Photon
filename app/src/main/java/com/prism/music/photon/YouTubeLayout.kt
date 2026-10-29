@@ -106,7 +106,9 @@ internal fun YouTubeLayoutVideo(source: Video, open: () -> Unit, like: () -> Uni
         }
         Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.Top) {
             if (!video.short) Box(Modifier.padding(end = 12.dp).size(34.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh).clickable(onClick = channel), contentAlignment = Alignment.Center) {
-                Text(video.channel.take(1).uppercase(), fontWeight = FontWeight.Bold)
+                if (video.channelAvatar.isNotBlank()) coil3.compose.AsyncImage(video.channelAvatar, video.channel,
+                    Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+                else Text(video.channel.take(1).uppercase(), fontWeight = FontWeight.Bold)
             }
             Column(Modifier.weight(1f).clickable(onClick = open)) {
                 Text(video.title, maxLines = 2, overflow = TextOverflow.Ellipsis, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)

@@ -49,16 +49,22 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     val videoPresentation = MutableStateFlow<Map<String, Video>>(emptyMap())
     private val presentationPending = mutableSetOf<String>()
     private val likesPending = mutableSetOf<String>()
+    private val metadataReadSlots = kotlinx.coroutines.sync.Semaphore(2)
     private val likeReadSlots = kotlinx.coroutines.sync.Semaphore(2)
     fun resolveVideoPresentation(video: Video) {
+        val requestedRevision = library.value.youtubeSessionRevision
         if (video.id !in videoPresentation.value && presentationPending.add(video.id)) viewModelScope.launch {
             try {
-                var resolved = app.videos.presentation(video)
-                val revision = library.value.youtubeSessionRevision
-                if (!resolved.short && library.value.youtubeHome && library.value.youtubeSessionReady) {
-                    val metadata = app.accountActions.presentation(video.id, app.youtubeHistory.session())
-                    if (revision == library.value.youtubeSessionRevision && library.value.youtubeSessionReady && metadata?.first == true)
-                        resolved = resolved.copy(short = true, thumbnail = metadata.second.ifBlank { resolved.thumbnail })
+                val resolved = metadataReadSlots.withPermit {
+                    var result = app.videos.presentation(video)
+                    if (!result.short && requestedRevision == library.value.youtubeSessionRevision && library.value.youtubeHome && library.value.youtubeSessionReady) {
+                        try {
+                            val metadata = app.accountActions.presentation(video.id, app.youtubeHistory.session())
+                            if (requestedRevision == library.value.youtubeSessionRevision && library.value.youtubeSessionReady && metadata?.first == true)
+                                result = result.copy(short = true, thumbnail = metadata.second.ifBlank { result.thumbnail })
+                        } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { /* Keep any public proof when the authenticated route is unavailable. */ }
+                    }
+                    result
                 }
                 val current = mutableWatch.value
                 if (current.video?.id == video.id) mutableWatch.value = current.copy(video = current.video.copy(
@@ -84,9 +90,9 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     }
     private var likesIndexRevision: Long? = null
     private var likesIndexJob: Job? = null
-    fun loadGoogleLikedIndex() {
+    fun loadGoogleLikedIndex(force: Boolean = false) {
         val current = library.value
-        if (!current.youtubeHome || !current.youtubeSessionReady || likesIndexRevision == current.youtubeSessionRevision) return
+        if (!current.youtubeHome || !current.youtubeSessionReady || (!force && likesIndexRevision == current.youtubeSessionRevision)) return
         likesIndexRevision = current.youtubeSessionRevision
         likesIndexJob?.cancel()
         likesIndexJob = viewModelScope.launch {

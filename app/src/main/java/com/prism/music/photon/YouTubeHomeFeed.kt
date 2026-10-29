@@ -100,6 +100,8 @@ object YouTubeHomeParser {
                         if (!Regex("[A-Za-z0-9_-]{11}").matches(id) || title.isBlank()) continue
                         val short = key == "reelItemRenderer" || (item["navigationEndpoint"] as? JsonObject)?.containsKey("reelWatchEndpoint") == true ||
                             (item["thumbnailOverlays"] as? JsonArray)?.any { ((it as? JsonObject)?.get("thumbnailOverlayTimeStatusRenderer") as? JsonObject)?.get("style")?.jsonPrimitive?.contentOrNull == "SHORTS" } == true
+                        val avatar = GoogleAccountControls.objects(item).mapNotNull { (it["url"] as? JsonPrimitive)?.contentOrNull }
+                            .firstOrNull { candidate -> ShortsPresentation.safeArtwork(candidate).isNotBlank() && runCatching { java.net.URI(candidate).host in setOf("yt3.ggpht.com", "yt3.googleusercontent.com") }.getOrDefault(false) }.orEmpty()
                         val byline = item["ownerText"] ?: item["shortBylineText"] ?: item["longBylineText"]
                         val channel = text(byline)
                         val channelId = runCatching { byline?.jsonObject?.get("runs")?.jsonArray?.firstOrNull()?.jsonObject
@@ -112,7 +114,7 @@ object YouTubeHomeParser {
                         val parts = text(item["lengthText"]).split(":").mapNotNull { it.toLongOrNull() }
                         val duration = parts.takeIf { it.isNotEmpty() && it.size <= 3 }?.fold(0L) { total, part -> total * 60 + part } ?: 0L
                         videos.putIfAbsent(id, Video(id, title, channel, safeThumbnail, duration,
-                            channelUrl = channelId?.takeIf { it.startsWith("UC") }?.let { "https://www.youtube.com/channel/$it" }.orEmpty(), short = short))
+                            channelUrl = channelId?.takeIf { it.startsWith("UC") }?.let { "https://www.youtube.com/channel/$it" }.orEmpty(), short = short, channelAvatar = avatar))
                     }
                     (node["shortsLockupViewModel"] as? JsonObject)?.let { short ->
                         val command = ((short["onTap"] as? JsonObject)?.get("innertubeCommand") as? JsonObject)?.get("reelWatchEndpoint") as? JsonObject

@@ -46,7 +46,7 @@ internal fun AccountLibraryScreen(model: PhotonViewModel, revision: Long, ready:
             if (state.playlist != null) TextButton(onClick = { model.openAccountShelf(AccountShelf.PLAYLISTS) }, modifier = Modifier.padding(horizontal = 16.dp)) { Text("Back to playlists") }
             Text(state.title, Modifier.padding(horizontal = 22.dp, vertical = 12.dp), style = MaterialTheme.typography.titleLarge)
             Text("Your Google account is the library. Likes, subscriptions and playlist edits are sent to YouTube after confirmation, never saved locally instead. Downloads and playback caches still need device storage. Unsupported states fail rather than inventing success.", Modifier.padding(horizontal = 22.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            TextButton(enabled = ready && !state.busy && !state.moreBusy, onClick = { model.loadGoogleLikedIndex(); model.openAccountShelf(state.shelf, state.playlist, state.title) }, modifier = Modifier.padding(horizontal = 16.dp)) { Text("Refresh account list") }
+            TextButton(enabled = ready && !state.busy && !state.moreBusy, onClick = { model.loadGoogleLikedIndex(force = true); model.openAccountShelf(state.shelf, state.playlist, state.title) }, modifier = Modifier.padding(horizontal = 16.dp)) { Text("Refresh account list") }
             if (!ready) Text("Finish Google sign-in to read account lists.", Modifier.padding(22.dp))
             if (state.busy) LinearProgressIndicator(Modifier.fillMaxWidth().padding(horizontal = 22.dp))
             state.error?.let { Text(it, Modifier.padding(22.dp), color = MaterialTheme.colorScheme.error) }

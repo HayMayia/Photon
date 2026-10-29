@@ -35,6 +35,7 @@ data class Video(
     val published: String = "",
     val channelUrl: String = "",
     val short: Boolean = false,
+    val channelAvatar: String = "",
 ) {
     val url get() = "https://www.youtube.com/watch?v=$id"
 }
@@ -147,7 +148,7 @@ class VideoRepository {
         }.distinctBy { it.height }.sortedByDescending { it.height }
         check(qualities.isNotEmpty()) { "YouTube did not provide a compatible stream. It may require sign-in, be restricted, or be temporarily unavailable." }
         val result = VideoDetails(
-            Video(id, info.name, info.uploaderName, info.thumbnails.maxByOrNull { it.height }?.url.orEmpty(), info.duration, info.viewCount, info.textualUploadDate.orEmpty(), info.uploaderUrl.orEmpty(), info.isShortFormContent),
+            Video(id, info.name, info.uploaderName, info.thumbnails.maxByOrNull { it.height }?.url.orEmpty(), info.duration, info.viewCount, info.textualUploadDate.orEmpty(), info.uploaderUrl.orEmpty(), info.isShortFormContent, info.uploaderAvatars.maxByOrNull { it.height }?.url.orEmpty()),
             info.description?.content.orEmpty(), qualities,
             info.relatedItems.filterIsInstance<StreamInfoItem>().mapNotNull(::preview).distinctBy { it.id }, live,
             info.uploaderUrl?.takeIf { it.isNotBlank() }?.let { Channel(it, info.uploaderName, info.uploaderAvatars.maxByOrNull { image -> image.height }?.url.orEmpty()) },

@@ -16,6 +16,18 @@ import androidx.media3.ui.PlayerView
 /** Observe native touch routing rather than covering PlayerView with a gesture-stealing overlay. */
 @UnstableApi
 internal class PhotonPlayerView(context: Context) : PlayerView(context) {
+    private val boostBadge = android.widget.TextView(context).apply {
+        text = "2× speed"; textSize = 14f; setTextColor(android.graphics.Color.WHITE)
+        val density = resources.displayMetrics.density
+        setPadding((14 * density).toInt(), (6 * density).toInt(), (14 * density).toInt(), (6 * density).toInt())
+        background = android.graphics.drawable.GradientDrawable().apply { setColor(0xCC000000.toInt()); cornerRadius = 18 * density }
+        visibility = View.GONE
+    }
+    init {
+        addView(boostBadge, android.widget.FrameLayout.LayoutParams(android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
+            android.view.ViewGroup.LayoutParams.WRAP_CONTENT, android.view.Gravity.TOP or android.view.Gravity.CENTER_HORIZONTAL)
+            .apply { topMargin = (16 * resources.displayMetrics.density).toInt() })
+    }
     private var boostPlayer: Player? = null
     private var priorParameters: PlaybackParameters? = null
     private val boostListener = object : Player.Listener {
@@ -26,6 +38,7 @@ internal class PhotonPlayerView(context: Context) : PlayerView(context) {
         val current = boostPlayer ?: return
         val previous = priorParameters
         boostPlayer = null; priorParameters = null
+        boostBadge.visibility = View.GONE
         current.removeListener(boostListener)
         if (previous != null && current.isCommandAvailable(Player.COMMAND_SET_SPEED_AND_PITCH)) current.playbackParameters = previous
         parent?.requestDisallowInterceptTouchEvent(false)
@@ -47,7 +60,7 @@ internal class PhotonPlayerView(context: Context) : PlayerView(context) {
             performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
             hideController()
             feedback?.cancel()
-            feedback = Toast.makeText(context, "2× speed · release to restore", Toast.LENGTH_SHORT).also { it.show() }
+            boostBadge.visibility = View.VISIBLE
         }
         override fun onDoubleTap(event: MotionEvent): Boolean {
             val current = player ?: return false

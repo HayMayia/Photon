@@ -139,3 +139,10 @@ See [Google Cloud registration and signing prerequisites](GOOGLE_SIGN_IN.md).
 - [ ] Ambiguous network outcome warns to check YouTube; no automatic duplicate submission.
 - [ ] Disconnect and process death clear Photon session; revoke underlying grant separately in Google account settings.
 - [ ] Existing read-only replies, signed-out playback and local library remain working.
+
+### 0.4 build result
+
+- **PASS**: APK assembly and all 48 focused Photon test methods at `07affd0` ([run 40861060192](https://github.com/HayMayia/Photon/actions/runs/40861060192), 8m54s).
+- [0.4 APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40861060192/artifacts/12891223551), 31,048,708 bytes; contains `app-debug.apk`.
+- Eleven new account/API tests use synthetic interceptor responses, not a registered Cloud app or live Google comments.
+- **NOT VERIFIED**: real-device Google authorization, actual public posting, OAuth registration and signing stability. All manual checkboxes remain intentionally unchecked.

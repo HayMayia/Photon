@@ -4,15 +4,15 @@
 [Yigder's Prism](https://github.com/Yigder/Prism), retaining its real Compose theme,
 fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
 
-> **0.4.0 alpha source adds native Google authorization and confirmed YouTube comment posting.**
-> Build verification for 0.4 is pending. Google Cloud registration and live-device authorization/posting are not yet verified; see [setup](docs/GOOGLE_SIGN_IN.md).
-> **Previous verified 0.3 build — Prism-style shelves, original audio and offline artwork:**
-> **[Download 0.3 APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40858409686/artifacts/12890507624)**
+> **0.4.0 alpha — native Google authorization and YouTube commenting.**
+> **[Download 0.4 APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40861060192/artifacts/12891223551)**
 > — GitHub sign-in required; extract and install `app-debug.apk`.
-> APK assembly and all 37 focused Photon tests passed at code revision `601c02a`
-> ([verified build](https://github.com/HayMayia/Photon/actions/runs/40858409686)).
-> Physical-device results still require testing; the user's 0.1 playback result
-> is not evidence for the new 0.3 UI, audio selection or artwork I/O.
+> APK assembly and all 48 focused Photon tests passed at code revision `07affd0`
+> ([verified build](https://github.com/HayMayia/Photon/actions/runs/40861060192)).
+> **Google Cloud registration is still required.** Sign-in and real posting have
+> not been verified on a physical device; see [setup](docs/GOOGLE_SIGN_IN.md).
+> Previous [0.3 APK](https://github.com/HayMayia/Photon/actions/runs/40858409686/artifacts/12890507624)
+> passed 37 tests; the user's 0.1 playback result does not verify later features.
 
 
 ## Feature status

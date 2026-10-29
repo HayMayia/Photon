@@ -15,5 +15,6 @@ class PhotonApplication : Application() {
         IconStyle.load(this)
         AppFonts.init(this)
         videos = VideoRepository()
+        if (library.state.value.downloads.isNotEmpty()) OfflineArtwork.schedule(this, library.state.value.wifiOnly)
     }
 }

@@ -18,6 +18,7 @@ import androidx.media3.exoplayer.drm.DrmSessionManagerProvider
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.source.MergingMediaSource
+import androidx.media3.exoplayer.source.FilteringMediaSource
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
@@ -58,7 +59,7 @@ class PhotonPlaybackService : MediaSessionService() {
                 val video = delegate.createMediaSource(item)
                 val audioUrl = item.mediaMetadata.extras?.getString("photon_audio") ?: return video
                 val audio = delegate.createMediaSource(MediaItem.fromUri(audioUrl))
-                return MergingMediaSource(true, video, audio)
+                return MergingMediaSource(true, FilteringMediaSource(video, C.TRACK_TYPE_VIDEO), audio)
             }
             override fun getSupportedTypes(): IntArray = delegate.supportedTypes
             override fun setDrmSessionManagerProvider(provider: DrmSessionManagerProvider): MediaSource.Factory {

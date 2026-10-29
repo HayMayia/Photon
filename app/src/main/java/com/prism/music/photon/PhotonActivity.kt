@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -86,8 +87,8 @@ class PhotonActivity : ComponentActivity() {
                 incoming?.let { model.search(it) }
                 incoming = null
             }
-            PrismTheme(AppSettings(themeMode = if (library.dark) ThemeMode.DARK else ThemeMode.LIGHT), null) {
-                PhotonRoot(model, controller, pip, ::requestNotifications, ::enterPip)
+            PrismTheme(AppSettings(themeMode = if (library.dark) ThemeMode.DARK else ThemeMode.LIGHT, accent = library.accent), null) {
+                OfflineArtworkProvider(library.downloads) { PhotonRoot(model, controller, pip, ::requestNotifications, ::enterPip) }
             }
         }
     }
@@ -238,7 +239,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                                 }
                                 if (watch.details == null && watch.localPath == null && !watch.busy) ActionChip("Reload details", PrismIcons.Refresh) { model.open(video) }
                                 watch.details?.channel?.let { channel ->
-                                    ActionChip("Channel", PrismIcons.Person) { expanded = false; model.openCollection(channel.url, true) }
+                                    ActionChip("View Channel", PrismIcons.Person) { expanded = false; model.openCollection(channel.url, true) }
                                     ActionChip(if (library.subscriptions.any { it.url == channel.url }) "Subscribed locally" else "Subscribe locally", PrismIcons.PersonAdd) { model.subscribe(channel) }
                                 }
                                 ActionChip("Comments", PrismIcons.Info) { model.loadComments(video); commentsSheet = true }
@@ -249,6 +250,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                                 ActionChip("Full screen", PrismIcons.Fullscreen) { fullscreen = true }
                                 ActionChip("Pop out", PrismIcons.PlayCircle) { enterPip() }
                             }
+                            watch.quality?.let { Text(it.audioLabel, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                             if (watch.localPath != null) Text("Playing your downloaded copy · offline", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
                             if (watch.details?.description?.isNotBlank() == true) {
                                 var description by remember(video.id) { mutableStateOf(false) }
@@ -275,7 +277,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                         watch.video?.let { video ->
                             Surface(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh, tonalElevation = 4.dp) {
                                 Row(Modifier.fillMaxWidth().clickable { expanded = true }.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    AsyncImage(video.thumbnail, null, Modifier.size(48.dp).clip(RoundedCornerShape(13.dp)), contentScale = ContentScale.Crop)
+                                    VideoThumbnail(video, null, Modifier.size(48.dp).clip(RoundedCornerShape(13.dp)), contentScale = ContentScale.Crop)
                                     Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
                                         Text(video.title, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
                                         Text(if (watch.busy) "Opening…" else video.channel, maxLines = 1, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -295,7 +297,17 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
             ) { padding ->
                 Box(Modifier.fillMaxSize().padding(padding).background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.055f), Color.Transparent)))) {
                     when (tab) {
-                        0, 1 -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 20.dp)) {
+                        0 -> PhotonHome(model, library,
+                            open = { open(it) },
+                            offline = { expanded = true; model.offline(it) },
+                            discover = { model.search(it); tab = 1 },
+                            forYou = { model.home(); tab = 1 },
+                            shorts = { model.shorts(); shortsMode = true },
+                            subscriptions = { model.subscriptionsFeed(); tab = 1 },
+                            downloads = { tab = 2; libraryTab = 2 },
+                            saved = { tab = 2; libraryTab = 0 },
+                            settings = { tab = 3 }, search = { tab = 1 })
+                        1 -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 20.dp)) {
                             item {
                                 Column(Modifier.padding(start = 24.dp, end = 24.dp, top = 22.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -450,7 +462,7 @@ private fun PageHeading(title: String, subtitle: String) {
 private fun VideoCard(video: Video, open: () -> Unit, save: () -> Unit, saved: Boolean) {
     Column(Modifier.padding(horizontal = 22.dp, vertical = 12.dp)) {
         Box(Modifier.fillMaxWidth().aspectRatio(16f / 9).clip(RoundedCornerShape(22.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh).clickable(onClick = open)) {
-            AsyncImage(video.thumbnail, video.title, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            VideoThumbnail(video, video.title, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             Surface(Modifier.align(Alignment.BottomEnd).padding(10.dp), shape = RoundedCornerShape(7.dp), color = Color.Black.copy(alpha = 0.8f)) {
                 Text(durationLabel(video.duration), Modifier.padding(horizontal = 7.dp, vertical = 3.dp), color = Color.White, style = MaterialTheme.typography.labelSmall)
             }
@@ -469,7 +481,7 @@ private fun VideoCard(video: Video, open: () -> Unit, save: () -> Unit, saved: B
 private fun VideoRow(video: Video, open: () -> Unit, save: () -> Unit, saved: Boolean, actionIcon: ImageVector? = null) {
     Row(Modifier.fillMaxWidth().clickable(onClick = open).padding(horizontal = 22.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.width(128.dp).aspectRatio(16f / 9).clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh)) {
-            AsyncImage(video.thumbnail, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            VideoThumbnail(video, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             Text(durationLabel(video.duration), Modifier.align(Alignment.BottomEnd).background(Color.Black.copy(alpha = 0.8f)).padding(3.dp), color = Color.White, style = MaterialTheme.typography.labelSmall)
         }
         Column(Modifier.weight(1f).padding(start = 13.dp)) {
@@ -530,6 +542,14 @@ private fun SettingsPage(library: PhotonLibrary, model: PhotonViewModel, notific
         item { PageHeading("Make it yours", "Prism's design. A new window into YouTube.") }
         item {
             SettingsGroup("APPEARANCE") {
+                Row(Modifier.padding(16.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    com.prism.music.ui.theme.AccentSwatches.take(8).forEach { color ->
+                        val argb = color.toArgb()
+                        Surface(onClick = { model.accent(argb) }, shape = CircleShape, color = color, modifier = Modifier.size(34.dp)) {
+                            if (library.accent == argb) Icon(PrismIcons.Check, "Selected accent", Modifier.padding(8.dp), tint = Color.White)
+                        }
+                    }
+                }
                 ListItem(headlineContent = { Text("Dark appearance") }, supportingContent = { Text("Soft surfaces and Prism's spectrum accents") }, leadingContent = { Icon(PrismIcons.Moon, null) }, trailingContent = { Switch(library.dark, model::dark) })
             }
         }
@@ -541,6 +561,7 @@ private fun SettingsPage(library: PhotonLibrary, model: PhotonViewModel, notific
                     listOf(360, 720, 1080, 2160).forEach { height -> FilterChip(selected = library.defaultHeight == height, onClick = { model.maxHeight(height) }, label = { Text("${height}p") }) }
                 }
                 Text("Falls back to an available lower quality. Download qualities are selected per video.", Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                ListItem(headlineContent = { Text("Save offline thumbnails") }, supportingContent = { Text("Repair thumbnails for existing downloads; follows the Wi-Fi-only setting") }, leadingContent = { Icon(PrismIcons.Download, null) }, modifier = Modifier.clickable(onClick = model::repairArtwork))
                 ListItem(headlineContent = { Text("Enable notifications") }, supportingContent = { Text("Playback controls and download progress") }, leadingContent = { Icon(PrismIcons.PlayCircle, null) }, modifier = Modifier.clickable(onClick = notifications))
             }
         }

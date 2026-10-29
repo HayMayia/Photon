@@ -78,11 +78,14 @@ class VideoDownloadWorker(context: Context, parameters: WorkerParameters) : Coro
             } else {
                 check(videoFile.renameTo(output)) { "Could not finalize downloaded video" }
             }
+            val thumbnail = OfflineArtwork.save(app, details.video, File(temp, "thumbnail"))
             currentCoroutineContext().ensureActive()
             val target = File(root, "$videoId-${quality.height}p.mp4")
             check(output.length() > 0) { "The download was empty" }
             check(output.renameTo(target)) { "Could not save video; check free storage" }
-            app.library.downloaded(SavedDownload(details.video, target.absolutePath, quality.height, target.length()))
+            val thumbTarget = File(root, "${videoId}-${quality.height}p.thumbnail")
+            val thumbnailPath = thumbnail?.let { if (File(it).renameTo(thumbTarget)) thumbTarget.absolutePath else null }
+            app.library.downloaded(SavedDownload(details.video, target.absolutePath, quality.height, target.length(), thumbnailPath))
             Result.success(workDataOf("path" to target.absolutePath, "height" to quality.height))
         } catch (cancelled: CancellationException) {
             throw cancelled

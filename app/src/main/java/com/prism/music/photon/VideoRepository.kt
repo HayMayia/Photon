@@ -42,6 +42,7 @@ data class VideoQuality(
     val audioUrl: String? = null,
     val mime: String = "video/mp4",
     val downloadable: Boolean = true,
+    val audioLabel: String = "Source default (language unverified)",
 ) {
     val label get() = if (height == 0) "Live" else "${height}p"
 }
@@ -64,6 +65,7 @@ class VideoRepository {
         .readTimeout(35, TimeUnit.SECONDS)
         .callTimeout(90, TimeUnit.SECONDS)
         .build()
+    val artworkHttp: OkHttpClient = http.newBuilder().callTimeout(15, TimeUnit.SECONDS).build()
     // Prism's range/POST transport also handles current YouTube video streams.
     val streamHttp: OkHttpClient = http.newBuilder()
         .callTimeout(0, TimeUnit.SECONDS)
@@ -90,19 +92,27 @@ class VideoRepository {
         require(Regex("[A-Za-z0-9_-]{11}").matches(id)) { "Invalid YouTube video link" }
         val info = StreamInfo.getInfo(ServiceList.YouTube, "https://www.youtube.com/watch?v=$id")
         val live = info.streamType == StreamType.LIVE_STREAM || info.streamType == StreamType.AUDIO_LIVE_STREAM
-        val audio = info.audioStreams
-            .filter { it.isUrl && it.deliveryMethod == DeliveryMethod.PROGRESSIVE_HTTP && it.format?.mimeType == "audio/mp4" }
-            .maxByOrNull { it.averageBitrate }?.content
+        val compatibleAudio = info.audioStreams.filter {
+            it.isUrl && it.deliveryMethod == DeliveryMethod.PROGRESSIVE_HTTP && it.format?.mimeType == "audio/mp4"
+        }
+        val index = OriginalAudioPolicy.pick(compatibleAudio.map { OriginalAudioPolicy.Track(it.audioTrackType?.toString(), it.averageBitrate) })
+        val selectedAudio = index?.let { compatibleAudio[it] }
+        val audio = selectedAudio?.content
+        val original = selectedAudio?.audioTrackType?.toString() == "ORIGINAL"
+        if (!live && audio == null && info.audioStreams.any { it.audioTrackType != null }) {
+            error("No compatible original/unlabelled soundtrack is available. Photon will not automatically substitute a dubbed language.")
+        }
+        val audioLabel = if (original) "Original audio" else "Source default (language unverified)"
         val qualities = buildList {
             if (live && !info.hlsUrl.isNullOrBlank()) {
                 add(VideoQuality(0, info.hlsUrl, mime = "application/x-mpegURL", downloadable = false))
             }
             info.videoStreams.filter { it.isUrl && it.deliveryMethod == DeliveryMethod.PROGRESSIVE_HTTP && it.format?.mimeType == "video/mp4" }
-                .forEach { add(VideoQuality(it.height, it.content)) }
+                .forEach { add(VideoQuality(it.height, it.content, audio, audioLabel = audioLabel)) }
             if (audio != null) info.videoOnlyStreams
                 .filter { it.isUrl && it.deliveryMethod == DeliveryMethod.PROGRESSIVE_HTTP && it.format?.mimeType == "video/mp4" && (it.codec?.startsWith("avc") != false) }
-                .forEach { add(VideoQuality(it.height, it.content, audio)) }
-        }.sortedBy { it.audioUrl != null }.distinctBy { it.height }.sortedByDescending { it.height }
+                .forEach { add(VideoQuality(it.height, it.content, audio, audioLabel = audioLabel)) }
+        }.distinctBy { it.height }.sortedByDescending { it.height }
         check(qualities.isNotEmpty()) { "YouTube did not provide a compatible stream. It may require sign-in, be restricted, or be temporarily unavailable." }
         VideoDetails(
             Video(id, info.name, info.uploaderName, info.thumbnails.maxByOrNull { it.height }?.url.orEmpty(), info.duration, info.viewCount, info.textualUploadDate.orEmpty(), info.uploaderUrl.orEmpty()),
@@ -233,4 +243,15 @@ fun viewLabel(views: Long): String = when {
     views >= 1_000_000 -> "%.1fM views".format(views / 1_000_000.0)
     views >= 1000 -> "%.1fK views".format(views / 1000.0)
     else -> "$views views"
+}
+
+
+/** Language identity takes priority over bitrate. Never choose an explicitly dubbed/descriptive track automatically. */
+object OriginalAudioPolicy {
+    data class Track(val type: String?, val bitrate: Int)
+    fun pick(tracks: List<Track>): Int? {
+        val original = tracks.indices.filter { tracks[it].type == "ORIGINAL" }
+        val unlabelled = tracks.indices.filter { tracks[it].type == null }
+        return original.ifEmpty { unlabelled }.maxByOrNull { tracks[it].bitrate }
+    }
 }

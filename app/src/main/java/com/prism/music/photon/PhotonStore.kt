@@ -8,7 +8,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 @Serializable
-data class SavedDownload(val video: Video, val path: String, val height: Int, val bytes: Long)
+data class SavedDownload(val video: Video, val path: String, val height: Int, val bytes: Long, val thumbnailPath: String? = null)
 
 @Serializable
 data class Channel(val url: String, val name: String, val avatar: String = "", val subscribers: Long = -1)
@@ -29,6 +29,7 @@ data class PhotonLibrary(
     val dark: Boolean = true,
     val defaultHeight: Int = 1080,
     val wifiOnly: Boolean = true,
+    val accent: Int = 0xFF7C5CFF.toInt(),
     val subscriptions: List<Channel> = emptyList(),
     val playlists: List<LocalPlaylist> = emptyList(),
     val progress: Map<String, WatchProgress> = emptyMap(),

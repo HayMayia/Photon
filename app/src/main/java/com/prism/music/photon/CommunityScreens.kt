@@ -168,7 +168,7 @@ internal fun ShortsScreen(browse: BrowseState, watch: WatchState, controller: Me
             val video = browse.videos[index]
             Column(Modifier.fillMaxSize()) {
                 if (index == pager.currentPage) VideoSurface(controller, Modifier.weight(1f).fillMaxWidth(), true)
-                else AsyncImage(video.thumbnail, video.title, Modifier.weight(1f).fillMaxWidth())
+                else VideoThumbnail(video, video.title, Modifier.weight(1f).fillMaxWidth())
                 Text(video.title, Modifier.padding(horizontal = 20.dp), fontWeight = FontWeight.Bold, maxLines = 2)
                 Row(Modifier.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(video.channel, Modifier.weight(1f), maxLines = 1)
@@ -186,7 +186,7 @@ internal fun ShortsScreen(browse: BrowseState, watch: WatchState, controller: Me
 @Composable
 private fun CommunityVideoRow(video: Video, open: () -> Unit) {
     Row(Modifier.fillMaxWidth().clickable(onClick = open).padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-        AsyncImage(video.thumbnail, null, Modifier.width(120.dp).aspectRatio(16f / 9))
+        VideoThumbnail(video, null, Modifier.width(120.dp).aspectRatio(16f / 9))
         Column(Modifier.weight(1f).padding(start = 12.dp)) {
             Text(video.title, maxLines = 2, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold)
             Text(video.channel, style = MaterialTheme.typography.labelMedium)

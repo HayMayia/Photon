@@ -49,6 +49,28 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     val commentsBusy = MutableStateFlow(false)
     val commentsError = MutableStateFlow<String?>(null)
     val queue = MutableStateFlow<List<Video>>(emptyList())
+    val shelves = MutableStateFlow<List<HomeShelf>>(emptyList())
+    private var shelfJob: Job? = null
+
+    fun refreshShelves(force: Boolean = false) {
+        if (!force && shelves.value.isNotEmpty()) return
+        shelfJob?.cancel()
+        shelves.value = HomeCatalog.sections.map { HomeShelf(it) }
+        shelfJob = viewModelScope.launch {
+            val semaphore = kotlinx.coroutines.sync.Semaphore(3)
+            kotlinx.coroutines.coroutineScope {
+                HomeCatalog.sections.forEach { section -> launch {
+                    semaphore.acquire()
+                    try {
+                        val videos = app.videos.search(section.query).videos.take(12)
+                        shelves.value = shelves.value.map { if (it.section.id == section.id) it.copy(videos = videos, busy = false) else it }
+                    } catch (cancelled: CancellationException) { throw cancelled }
+                    catch (error: Exception) { shelves.value = shelves.value.map { if (it.section.id == section.id) it.copy(busy = false, error = error.message ?: "Could not load YouTube") else it } }
+                    finally { semaphore.release() }
+                } }
+            }
+        }
+    }
     private var collectionUrl = ""
     private var collectionIsChannel = false
     private var collectionShorts = false
@@ -59,7 +81,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     private var searchJob: Job? = null
     private var watchJob: Job? = null
 
-    init { home() }
+    init { home(); refreshShelves() }
 
     fun home() {
         if (library.value.history.isEmpty()) { search("science and technology"); return }
@@ -190,9 +212,14 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     fun remove(download: SavedDownload) {
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             val file = File(download.path)
-            if (!file.exists() || file.delete()) app.library.update { it.copy(downloads = it.downloads.filterNot { d -> d.path == download.path }) }
+            if (!file.exists() || file.delete()) {
+                download.thumbnailPath?.let { File(it).delete() }
+                app.library.update { it.copy(downloads = it.downloads.filterNot { d -> d.path == download.path }) }
+            }
         }
     }
+    fun repairArtwork() = OfflineArtwork.schedule(app, library.value.wifiOnly)
+    fun accent(value: Int) = app.library.update { it.copy(accent = value) }
     fun dark(value: Boolean) = app.library.update { it.copy(dark = value) }
     fun wifi(value: Boolean) = app.library.update { it.copy(wifiOnly = value) }
     fun maxHeight(value: Int) = app.library.update { it.copy(defaultHeight = value) }

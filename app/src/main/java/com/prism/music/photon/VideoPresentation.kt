@@ -12,17 +12,26 @@ internal object ShortsPresentation {
         short = source.short || metadata.short,
         thumbnail = if (metadata.short) metadata.thumbnail.ifBlank { source.thumbnail } else source.thumbnail,
         channelAvatar = source.channelAvatar.ifBlank { metadata.channelAvatar })
+    private fun shortsRoute(url: String, id: String): Boolean = runCatching {
+        val uri = java.net.URI(url)
+        uri.path == "/shorts/$id" && (url.startsWith("/") && !url.startsWith("//") ||
+            uri.scheme == "https" && uri.host in setOf("www.youtube.com", "youtube.com") && uri.userInfo == null)
+    }.getOrDefault(false)
     fun fromHtml(id: String, html: String): Pair<Boolean, String>? {
         val doc = Jsoup.parse(html.substringBefore("</head>") + "</head>")
         // Shorts often canonicalize to /watch. The matching reel command is stronger evidence.
         val initial = runCatching { YouTubeWebBootstrap.assigned(html, "ytInitialData") }.getOrNull()
         val reel = initial?.let { data -> GoogleAccountControls.objects(data).any { node ->
             ((node["reelWatchEndpoint"] as? JsonObject)?.get("videoId") as? JsonPrimitive)?.contentOrNull == id ||
-                ((node["webCommandMetadata"] as? JsonObject)?.get("url") as? JsonPrimitive)?.contentOrNull?.substringBefore('?') == "/shorts/$id"
+                shortsRoute(((node["webCommandMetadata"] as? JsonObject)?.get("url") as? JsonPrimitive)?.contentOrNull.orEmpty(), id)
         } } == true
+        val player = runCatching { YouTubeWebBootstrap.assigned(html, "ytInitialPlayerResponse") }.getOrNull()
+        val details = player?.get("videoDetails") as? JsonObject
+        val explicit = (details?.get("videoId") as? JsonPrimitive)?.contentOrNull == id &&
+            listOf("isShort", "isShorts").any { (details?.get(it) as? JsonPrimitive)?.booleanOrNull == true }
         val canonical = doc.selectFirst("link[rel=canonical]")?.attr("href").orEmpty()
         val image = safeArtwork(doc.selectFirst("meta[property=og:image]")?.attr("content").orEmpty())
-        if (reel) return true to image
+        if (reel || explicit) return true to image
         val uri = runCatching { java.net.URI(canonical) }.getOrNull() ?: return null
         if (uri.scheme != "https" || uri.host !in setOf("www.youtube.com", "youtube.com") || uri.userInfo != null) return null
         val short = when {
@@ -32,11 +41,14 @@ internal object ShortsPresentation {
         }
         return short to image
     }
-    fun safeArtwork(url: String): String = url.takeIf { runCatching {
-        val uri = java.net.URI(it)
-        uri.scheme == "https" && uri.port in setOf(-1, 443) && uri.userInfo == null &&
-            (uri.host in setOf("i.ytimg.com", "img.youtube.com", "yt3.ggpht.com", "yt3.googleusercontent.com"))
-    }.getOrDefault(false) }.orEmpty()
+    fun safeArtwork(url: String): String {
+        val normalized = if (url.startsWith("//")) "https:$url" else url
+        return normalized.takeIf { runCatching {
+            val uri = java.net.URI(it)
+            uri.scheme == "https" && uri.port in setOf(-1, 443) && uri.userInfo == null &&
+                uri.host in setOf("i.ytimg.com", "img.youtube.com", "yt3.ggpht.com", "yt3.googleusercontent.com")
+        }.getOrDefault(false) }.orEmpty()
+    }
 }
 
 @Composable

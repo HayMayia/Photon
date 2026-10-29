@@ -27,4 +27,16 @@ class RotationPresentationTest {
         val html = """<script>var ytInitialData={"commandMetadata":{"webCommandMetadata":{"url":"/shorts/abcdefghijk?feature=share"}}};</script>"""
         assertEquals(true, ShortsPresentation.fromHtml("abcdefghijk", html)?.first)
     }
+    @Test fun absoluteShortCommandAndExplicitPlayerFlagsAreBoundToTheVideo() {
+        val command = """<script>var ytInitialData={"commandMetadata":{"webCommandMetadata":{"url":"https://www.youtube.com/shorts/abcdefghijk"}}};</script>"""
+        assertEquals(true, ShortsPresentation.fromHtml("abcdefghijk", command)?.first)
+        val player = """<script>var ytInitialPlayerResponse={"videoDetails":{"videoId":"abcdefghijk","isShorts":true}};</script>"""
+        assertEquals(true, ShortsPresentation.fromHtml("abcdefghijk", player)?.first)
+        assertNull(ShortsPresentation.fromHtml("zzzzzzzzzzz", player))
+    }
+    @Test fun protocolRelativeAvatarsBecomeTrustedHttpsUrls() {
+        assertEquals("https://yt3.ggpht.com/photo", ShortsPresentation.safeArtwork("//yt3.ggpht.com/photo"))
+        assertEquals("", ShortsPresentation.safeArtwork("//evil.example/photo"))
+    }
+
 }

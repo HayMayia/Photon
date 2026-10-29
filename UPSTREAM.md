@@ -90,3 +90,8 @@ Optional native history reporting is gated on 15 seconds actual playback, fresh 
 ### 0.7.1 login-to-Home correction
 
 Adopts Prism's user-facing Google-login-and-auto-completion pattern: primary Google account chooser for Home, trusted-page signed-in/index proof, automatic account Home selection and no extra manual session-connect step. Native comment OAuth is separately labelled as optional comment authorization. Google rejection is not bypassed: unlike the upstream login source, Photon retains the real WebView user-agent and provides no cookie-paste flow. A failed account Home fetch is visible rather than leaving local recommendations silently unchanged. Seven synthetic completion-proof tests added; device acceptance remains required.
+
+
+## Photon 0.8 account library and Prism-style Home
+
+Restores Prism's existing Photon branded heading, spectrum line, theme/typography and coloured shortcut-grid treatment to authenticated Home, while retaining server-only recommendations. Adds read-only same-session account history, playlist/LL and subscribed-channel readers with native account library tabs and explicit On device separation. This does not merge cloud items into local persisted library, edit Google collections, or promise a complete Google activity export/private video playback. Sixteen synthetic parser/API tests added; docs/ACCOUNT_LIBRARY.md records scope and device acceptance. User confirmed 0.7.1 account Home works before this change; new library behavior is not yet device-verified.

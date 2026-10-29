@@ -241,3 +241,18 @@ New source adds 28 focused test methods: 19 continuation/pause-policy/playback-g
 - [ ] Cancel, unsupported Google login, failed TLS, navigation away and delayed JavaScript callbacks cannot complete login or switch accounts incorrectly.
 
 Seven new synthetic completion-proof tests cover default/non-default account index, signed-out null, missing configuration, malformed/unsupported values and result type. APK assembly, all **106 focused tests** and permanent signing-certificate verification passed in [run 40881293556](https://github.com/HayMayia/Photon/actions/runs/40881293556), source `09f81c1`, 8m1s. All six local Python signing tests and 92 main XML/SVG parses passed again. Live-device checks above are not claimed as complete.
+
+
+## 0.8 account library and Prism layout
+
+The user reports 0.7.1 Google sign-in/account Home now works. This is a user device observation, not an assistant device test. The new 0.8 library/layout checks below remain pending:
+
+- [ ] Home restores Prism brand/header, spectrum accents, shortcut tile layout and light/dark/accent styling; authentic recommendation order remains unchanged.
+- [ ] History, Playlists, Liked videos and Channels shortcuts open account lists, not device lists. Explore videos/music remain explicit search actions, never fallback account recommendations.
+- [ ] Compare each account list against official YouTube for the same Google account; history includes previously watched videos where returned, Liked videos uses LL, Channels lists subscribed channels.
+- [ ] Open private/public account playlists and further pages; open a subscribed channel and a public playable video. Unavailable/private playback remains an honest extractor limitation.
+- [ ] Library source selector retains On device saved/history/progress/downloads/channels/playlists unchanged; download shortcuts choose On device.
+- [ ] Empty, signed-out, unknown-layout and network-error cases do not falsely show local rows as Google data.
+- [ ] Account switch/disconnect with a request in flight clears old rows and rejects stale responses. No history backfill or Google library mutations occur.
+
+Sixteen new synthetic parser/intercepted-HTTP tests cover account history/LL/playlist requests, legacy and modern collections, channels, IDs, order, deduplication, primary scope, continuation tokens and auth failure. [Run 40884491780](https://github.com/HayMayia/Photon/actions/runs/40884491780), source `a2d2717c06788a9885626c71eb9a860422607b93`, passed APK assembly, **122 focused Photon tests** and permanent signing-certificate verification in 6m47s. [APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40884491780/artifacts/12901454220): 31,188,399 bytes, version code 10. Six local Python signing tests and 92 main XML/SVG parses passed. Real account-library/device behavior remains unverified. See [account library behavior/limits](ACCOUNT_LIBRARY.md).

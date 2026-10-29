@@ -81,3 +81,6 @@ Previous 0.7 APK assembly, all **99 focused Photon tests**, and permanent signin
 
 
 **0.7.1 automated verification:** [run 40881293556](https://github.com/HayMayia/Photon/actions/runs/40881293556), source `09f81c14ad4d0e07d71a1777d0e186d4fde8e338`, passed APK assembly, **106 focused Photon tests** and permanent signing-certificate verification in 8m1s. [APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40881293556/artifacts/12900029482): 31,154,580 bytes. Version code 9; update without uninstalling. Real-device Google login and account Home behavior still require acceptance; synthetic completion proofs are not live sign-in tests.
+
+
+The user subsequently confirmed 0.7.1 login/account Home works on their device. 0.8 restores Prism-style account Home shortcuts and adds a separate account-backed library; see [ACCOUNT_LIBRARY.md](ACCOUNT_LIBRARY.md). This report does not verify native history upload, global pause mutations or the new library readers.

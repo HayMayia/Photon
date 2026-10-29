@@ -289,14 +289,14 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
     LaunchedEffect(watch.video?.id, watch.busy, controller) {
         if (watch.video != null && watch.busy) { controller?.stop(); controller?.clearMediaItems() }
     }
-    DisposableEffect(fullscreen) {
+    DisposableEffect(fullscreen, watch.video?.short) {
         val oldOrientation = activity.requestedOrientation
         val decor = activity.window.decorView
         val bars = WindowCompat.getInsetsController(activity.window, decor)
         val before = ViewCompat.getRootWindowInsets(decor)
         val oldBehavior = bars.systemBarsBehavior
         if (fullscreen) {
-            activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            activity.requestedOrientation = if (watch.video?.short == true) ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT else ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
             bars.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             bars.hide(WindowInsetsCompat.Type.systemBars())
         }

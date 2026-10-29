@@ -177,7 +177,7 @@ internal fun CommentsPanel(model: PhotonViewModel, video: Video) {
 
 @Composable
 @UnstableApi
-internal fun ShortsScreen(browse: BrowseState, watch: WatchState, controller: MediaController?, model: PhotonViewModel, close: () -> Unit) {
+internal fun ShortsScreen(browse: BrowseState, watch: WatchState, controller: MediaController?, model: PhotonViewModel, fullscreen: () -> Unit, close: () -> Unit) {
     val googleLikes by model.googleLikes.collectAsStateWithLifecycle()
     val pager = rememberPagerState(pageCount = { browse.videos.size })
     LaunchedEffect(browse.videos) {
@@ -197,7 +197,9 @@ internal fun ShortsScreen(browse: BrowseState, watch: WatchState, controller: Me
                 Text(video.title, Modifier.padding(horizontal = 20.dp), fontWeight = FontWeight.Bold, maxLines = 2)
                 Row(Modifier.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(video.channel, Modifier.weight(1f), maxLines = 1)
-                    TextButton(onClick = { model.save(video) }) { Text(if (googleLikes[video.id] == true) "Unlike on YouTube" else "Like on YouTube") }
+                    IconButton(onClick = { model.save(video) }) { Icon(if (googleLikes[video.id] == true) PrismIcons.HeartFilled else PrismIcons.Heart,
+                        if (googleLikes[video.id] == true) "Unlike on YouTube" else "Like on YouTube", tint = if (googleLikes[video.id] == true) androidx.compose.ui.graphics.Color(0xFFFF3355) else MaterialTheme.colorScheme.onSurface) }
+                    IconButton(onClick = fullscreen) { Icon(PrismIcons.Fullscreen, "Full screen") }
                 }
                 if (index == pager.currentPage && watch.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
                 if (index == browse.videos.lastIndex && browse.hasMore) TextButton(onClick = model::loadMore) { Text("Load more Shorts") }
@@ -209,7 +211,8 @@ internal fun ShortsScreen(browse: BrowseState, watch: WatchState, controller: Me
 }
 
 @Composable
-private fun CommunityVideoRow(video: Video, open: () -> Unit) {
+private fun CommunityVideoRow(source: Video, open: () -> Unit) {
+    val video = resolvedVideo(source)
     Row(Modifier.fillMaxWidth().clickable(onClick = open).padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
         VideoThumbnail(video, null, Modifier.width(VideoArtworkShape.rowWidth(video.short).dp).aspectRatio(VideoArtworkShape.ratio(video.short)))
         Column(Modifier.weight(1f).padding(start = 12.dp)) {

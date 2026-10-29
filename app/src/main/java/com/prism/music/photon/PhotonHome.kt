@@ -155,13 +155,14 @@ private fun HomeVideoShelf(title: String?, subtitle: String?, videos: List<Video
     Column {
         if (title != null) SectionHeader(title, strapline = subtitle)
         LazyRow(contentPadding = PaddingValues(horizontal = 22.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            items(videos, key = { it.id }) { video -> HomeCover(video, music) { open(video) } }
+            items(videos, key = { it.id }) { source -> val video = resolvedVideo(source); HomeCover(video, music) { open(video) } }
         }
     }
 }
 
 @Composable
-private fun HomeCover(video: Video, music: Boolean, open: () -> Unit) {
+private fun HomeCover(source: Video, music: Boolean, open: () -> Unit) {
+    val video = resolvedVideo(source)
     val ui = LocalUi.current
     Column(Modifier.width(if (video.short) 144.dp else 240.dp).clickable(onClick = open)) {
         Box(Modifier.fillMaxWidth().aspectRatio(VideoArtworkShape.ratio(video.short)).clip(ui.art).background(MaterialTheme.colorScheme.surfaceContainerHigh)) {
@@ -172,6 +173,7 @@ private fun HomeCover(video: Video, music: Boolean, open: () -> Unit) {
         }
         Text(video.title, Modifier.padding(top = 10.dp), maxLines = 2, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
         Text(video.channel, maxLines = 1, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
+        VideoHeart(video)
     }
 }
 
@@ -233,11 +235,13 @@ private fun ActualYouTubeHome(model: PhotonViewModel, open: (Video) -> Unit, set
             feed.page?.message?.let { Text(it, Modifier.padding(vertical = 12.dp)) }
             if (feed.error != null) YouTubeHomeConnection(model)
         }
-        items(feed.page?.videos.orEmpty(), key = { it.id }) { video ->
+        items(feed.page?.videos.orEmpty(), key = { it.id }) { source ->
+            val video = resolvedVideo(source)
             Column(Modifier.fillMaxWidth().clickable { open(video) }.padding(vertical = 14.dp)) {
                 VideoThumbnail(video, video.title, (if (video.short) Modifier.width(160.dp) else Modifier.fillMaxWidth()).aspectRatio(VideoArtworkShape.ratio(video.short)))
                 Text(video.title, Modifier.padding(top = 10.dp), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text(video.channel, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                VideoHeart(video)
             }
         }
         item {

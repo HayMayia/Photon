@@ -242,6 +242,17 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
     val activity = context as PhotonActivity
     val casting = (context.applicationContext as PhotonApplication).casting
 
+    val wantsAwake = isPlaying || (buffering && controller?.playWhenReady == true)
+    DisposableEffect(activity, wantsAwake) {
+        fun updateAwake() {
+            if (wantsAwake && activity.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED))
+                activity.window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            else activity.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, _ -> updateAwake() }
+        activity.lifecycle.addObserver(observer); updateAwake()
+        onDispose { activity.lifecycle.removeObserver(observer); activity.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
+    }
     DisposableEffect(controller) {
         val listener = object : Player.Listener {
             override fun onIsPlayingChanged(value: Boolean) { isPlaying = value }
@@ -315,7 +326,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
 
     fun open(video: Video) {
         fullscreen = false
-        if (library.youtubeLayout && video.short) { shortsMode = true; model.presentShort(video) }
+        if (video.short) { shortsMode = true; model.presentShort(video) }
         else { expanded = true; model.open(video) }
     }
     fun openChannel(url: String) {
@@ -343,7 +354,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
             VideoSurface(controller, Modifier.fillMaxSize(), controls = false)
         } else if (shortsMode) {
             Column(Modifier.fillMaxSize()) {
-                Box(Modifier.weight(1f)) { ShortsScreen(browse, watch, controller, model) { shortsMode = false; expanded = false } }
+                Box(Modifier.weight(1f)) { ShortsScreen(browse, watch, controller, model, fullscreen = { shortsMode = false; expanded = true; fullscreen = true }) { shortsMode = false; expanded = false } }
                 if (library.youtubeLayout) nativeNavigation(5)
             }
         } else if (collection != null && !expanded) {
@@ -357,9 +368,12 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                     Text("NOW WATCHING", Modifier.weight(1f), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = 2.sp)
                     IconButton(onClick = { controller?.stop(); controller?.clearMediaItems(); model.close(); expanded = false }) { Icon(PrismIcons.Close, "Close video") }
                 }
-                Box(if (fullscreen) Modifier.weight(1f).fillMaxWidth() else Modifier.fillMaxWidth().aspectRatio(16f / 9)) {
+                Box(if (fullscreen) Modifier.weight(1f).fillMaxWidth() else Modifier.fillMaxWidth().aspectRatio(VideoArtworkShape.ratio(video.short))) {
                     VideoSurface(controller, Modifier.fillMaxSize(), true)
                     if (watch.busy || buffering || controller == null) CircularProgressIndicator(Modifier.align(Alignment.Center))
+                    if (!fullscreen) IconButton(onClick = { fullscreen = true }, modifier = Modifier.align(Alignment.BottomEnd).background(Color.Black.copy(alpha = 0.6f), CircleShape)) {
+                        Icon(PrismIcons.Fullscreen, "Full screen", tint = Color.White)
+                    }
                     if (fullscreen) IconButton(onClick = { fullscreen = false }, modifier = Modifier.align(Alignment.TopEnd).background(Color.Black.copy(alpha = 0.5f), CircleShape)) {
                         Icon(PrismIcons.FullscreenExit, "Exit full screen", tint = Color.White)
                     }
@@ -378,7 +392,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                                 ErrorCard(message) { model.retryPlayback(video) }
                             }
                             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                ActionChip(if ((googleLikes[video.id] == true)) "Unlike on YouTube" else "Like on YouTube", PrismIcons.Heart) { model.save(video) }
+                                ActionChip(if ((googleLikes[video.id] == true)) "Unlike on YouTube" else "Like on YouTube", if (googleLikes[video.id] == true) PrismIcons.HeartFilled else PrismIcons.Heart) { model.save(video) }
                                 if (watch.details != null) {
                                     ActionChip(watch.quality?.label ?: "Quality", PrismIcons.Settings) { qualitySheet = true }
                                     if (!watch.details!!.live) ActionChip("Download", PrismIcons.Download) { downloadSheet = true }
@@ -560,6 +574,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                     else -> change.kind.name.lowercase().replace('_', ' ')
                 }
                 Text("$verb: ${change.title}")
+                if (change.kind == GoogleChangeKind.LIKE && change.desired == false) Text("This removes the video from your YouTube Liked videos. Nothing changes until you confirm.")
                 if (change.kind == GoogleChangeKind.DELETE_PLAYLIST) Text("Permanently deletes this selected YouTube playlist. The videos themselves are not deleted. This cannot be undone.", color = MaterialTheme.colorScheme.error)
                 if (change.id.isNotBlank()) Text("Target: ${change.id}", style = MaterialTheme.typography.bodySmall)
                 Text("This changes the Google account connected to Home, not a local list or the separate comment account. Likes/subscriptions are read before changing and verified afterward. New playlists are private. A failed/ambiguous request is not automatically retried.")
@@ -637,7 +652,7 @@ internal fun VideoSurface(controller: MediaController?, modifier: Modifier, cont
 
 @Composable
 private fun ActionChip(label: String, icon: ImageVector, onClick: () -> Unit) {
-    AssistChip(onClick = onClick, label = { Text(label) }, leadingIcon = { Icon(icon, null, Modifier.size(18.dp)) }, shape = CircleShape)
+    AssistChip(onClick = onClick, label = { Text(label) }, leadingIcon = { Icon(icon, null, Modifier.size(18.dp), tint = if (icon == PrismIcons.HeartFilled) Color(0xFFFF3355) else MaterialTheme.colorScheme.onSurface) }, shape = CircleShape)
 }
 
 @Composable
@@ -650,7 +665,8 @@ private fun PageHeading(title: String, subtitle: String) {
 }
 
 @Composable
-private fun VideoCard(video: Video, open: () -> Unit, save: () -> Unit, saved: Boolean) {
+private fun VideoCard(source: Video, open: () -> Unit, save: () -> Unit, saved: Boolean) {
+    val video = resolvedVideo(source)
     Column(Modifier.padding(horizontal = 22.dp, vertical = 12.dp)) {
         Box((if (video.short) Modifier.width(160.dp) else Modifier.fillMaxWidth()).aspectRatio(VideoArtworkShape.ratio(video.short)).clip(RoundedCornerShape(22.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh).clickable(onClick = open)) {
             VideoThumbnail(video, video.title, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
@@ -663,13 +679,14 @@ private fun VideoCard(video: Video, open: () -> Unit, save: () -> Unit, saved: B
                 Text(video.title, maxLines = 2, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleMedium)
                 Text(listOf(video.channel, viewLabel(video.views)).filter { it.isNotBlank() }.joinToString(" · "), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            IconButton(onClick = save, modifier = Modifier.size(36.dp)) { Icon(if (saved) PrismIcons.HeartFilled else PrismIcons.Heart, if (saved) "Unsave video" else "Save video", Modifier.size(20.dp), tint = if (saved) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant) }
+            IconButton(onClick = save, modifier = Modifier.size(36.dp)) { Icon(if (saved) PrismIcons.HeartFilled else PrismIcons.Heart, if (saved) "Unsave video" else "Save video", Modifier.size(20.dp), tint = if (saved) Color(0xFFFF3355) else MaterialTheme.colorScheme.onSurfaceVariant) }
         }
     }
 }
 
 @Composable
-private fun VideoRow(video: Video, open: () -> Unit, save: () -> Unit, saved: Boolean, actionIcon: ImageVector? = null) {
+private fun VideoRow(source: Video, open: () -> Unit, save: () -> Unit, saved: Boolean, actionIcon: ImageVector? = null) {
+    val video = resolvedVideo(source)
     Row(Modifier.fillMaxWidth().clickable(onClick = open).padding(horizontal = 22.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.width(VideoArtworkShape.rowWidth(video.short).dp).aspectRatio(VideoArtworkShape.ratio(video.short)).clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh)) {
             VideoThumbnail(video, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
@@ -679,7 +696,7 @@ private fun VideoRow(video: Video, open: () -> Unit, save: () -> Unit, saved: Bo
             Text(video.title, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             Text(video.channel, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        IconButton(onClick = save, modifier = Modifier.size(34.dp)) { Icon(actionIcon ?: if (saved) PrismIcons.HeartFilled else PrismIcons.Heart, if (actionIcon != null) "Delete download" else if (saved) "Unsave video" else "Save video", Modifier.size(18.dp)) }
+        IconButton(onClick = save, modifier = Modifier.size(34.dp)) { Icon(actionIcon ?: if (saved) PrismIcons.HeartFilled else PrismIcons.Heart, if (actionIcon != null) "Delete download" else if (saved) "Unsave video" else "Save video", Modifier.size(18.dp), tint = if (actionIcon == null && saved) Color(0xFFFF3355) else MaterialTheme.colorScheme.onSurfaceVariant) }
     }
 }
 

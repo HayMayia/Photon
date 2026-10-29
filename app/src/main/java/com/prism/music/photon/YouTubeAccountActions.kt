@@ -30,7 +30,13 @@ internal object GoogleAccountControls {
                     status(button["likeStatus"])?.let(states::add)
             }
             (node["likeButtonViewModel"] as? JsonObject)?.let { button ->
-                ((button["likeStatusEntity"] as? JsonObject)?.get("likeStatus"))?.let { status(it)?.let(states::add) }
+                if (objects(button).any { (it["target"] as? JsonObject)?.get("videoId")?.jsonPrimitive?.contentOrNull == id })
+                    ((button["likeStatusEntity"] as? JsonObject)?.get("likeStatus"))?.let { status(it)?.let(states::add) }
+            }
+            (node["videoPrimaryInfoRenderer"] as? JsonObject)?.let { primary ->
+                for (part in objects(primary)) (part["likeButtonViewModel"] as? JsonObject)?.let { button ->
+                    status((button["likeStatusEntity"] as? JsonObject)?.get("likeStatus"))?.let(states::add)
+                }
             }
         }
         return states.singleOrNull()
@@ -66,6 +72,10 @@ internal class YouTubeAccountActionsApi(client: OkHttpClient = OkHttpClient()) {
         }
         val context = YouTubeWebBootstrap.context(html) ?: throw IOException("Missing account context")
         return Document(root, context, html)
+    }
+    suspend fun likeState(id: String, session: YouTubeWebSession): Boolean? = withContext(Dispatchers.IO) {
+        require(id.matches(Regex("[A-Za-z0-9_-]{11}")))
+        GoogleAccountControls.liked(read("/watch?v=$id", session).root, id)
     }
     suspend fun execute(change: GoogleChange, session: YouTubeWebSession, permitted: () -> Boolean): GoogleChangeResult = withContext(Dispatchers.IO) {
         fun checkPermission() { if (!permitted()) throw IOException("Account changed or request was revoked") }

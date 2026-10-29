@@ -56,7 +56,7 @@ internal object YouTubeLayoutIcons {
     val Shorts = vector("Shorts", "M15.5 2.3a4 4 0 0 1 4 6.9L16 11.3l1.7 1a4 4 0 0 1 0 6.9l-9.2 5.3a4 4 0 0 1-4-6.9L8 15.5l-1.7-1a4 4 0 0 1 0-6.9zM10 9v8l6-4z")
     val Add = vector("Create", "M11 4h2v7h7v2h-7v7h-2v-7H4v-2h7z")
     val More = vector("More", "M12 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4M12 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4M12 17a2 2 0 1 0 0 4 2 2 0 0 0 0-4")
-    val Settings = vector("Settings", "M4 3h16v2H4zM4 11h16v2H4zM4 19h16v2H4zM8 1h2v6H8zM15 9h2v6h-2zM8 17h2v6H8z")
+    val Settings = vector("Settings", "M19.4 13a7.8 7.8 0 0 0 0-2l2-1.5-2-3.4-2.3 1a8 8 0 0 0-1.7-1L15 3h-4l-.4 3.1a8 8 0 0 0-1.7 1l-2.3-1-2 3.4 2 1.5a7.8 7.8 0 0 0 0 2l-2 1.5 2 3.4 2.3-1a8 8 0 0 0 1.7 1L11 21h4l.4-3.1a8 8 0 0 0 1.7-1l2.3 1 2-3.4zM13 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8")
 }
 
 @Composable
@@ -94,7 +94,10 @@ internal fun YouTubeLayoutNavigation(selected: Int, home: () -> Unit, shorts: ()
 }
 
 @Composable
-internal fun YouTubeLayoutVideo(video: Video, open: () -> Unit, like: () -> Unit, channel: () -> Unit, modifier: Modifier = Modifier) {
+internal fun YouTubeLayoutVideo(source: Video, open: () -> Unit, like: () -> Unit, channel: () -> Unit, modifier: Modifier = Modifier) {
+    val video = resolvedVideo(source)
+    val model: PhotonViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    val likes by model.googleLikes.collectAsStateWithLifecycle()
     var menu by remember(video.id) { mutableStateOf(false) }
     Column(modifier.padding(bottom = 16.dp)) {
         Box((if (video.short) Modifier.width(164.dp) else Modifier.fillMaxWidth()).aspectRatio(VideoArtworkShape.ratio(video.short)).clip(RoundedCornerShape(8.dp)).clickable(onClick = open)) {
@@ -109,11 +112,16 @@ internal fun YouTubeLayoutVideo(video: Video, open: () -> Unit, like: () -> Unit
                 Text(video.title, maxLines = 2, overflow = TextOverflow.Ellipsis, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                 Text(listOf(video.channel, viewLabel(video.views), video.published).filter { it.isNotBlank() }.joinToString(" · "), maxLines = 2, overflow = TextOverflow.Ellipsis, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+            IconButton(onClick = like, modifier = Modifier.size(30.dp)) {
+                Icon(if (likes[video.id] == true) com.prism.music.ui.theme.PrismIcons.HeartFilled else com.prism.music.ui.theme.PrismIcons.Heart,
+                    if (likes[video.id] == true) "Unlike on YouTube" else "Like on YouTube", Modifier.size(20.dp),
+                    tint = if (likes[video.id] == true) Color(0xFFFF3355) else MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             Box {
                 IconButton(onClick = { menu = true }, modifier = Modifier.size(28.dp)) { Icon(YouTubeLayoutIcons.More, "Video actions", Modifier.size(20.dp)) }
                 DropdownMenu(menu, { menu = false }) {
                     DropdownMenuItem(text = { Text("Play") }, onClick = { menu = false; open() })
-                    DropdownMenuItem(text = { Text("Like / unlike on YouTube") }, onClick = { menu = false; like() })
+                    DropdownMenuItem(text = { Text(if (likes[video.id] == true) "Remove like on YouTube" else "Like on YouTube") }, onClick = { menu = false; like() })
                     if (video.channelUrl.isNotBlank()) DropdownMenuItem(text = { Text("View channel") }, onClick = { menu = false; channel() })
                 }
             }

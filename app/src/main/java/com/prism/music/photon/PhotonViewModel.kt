@@ -9,6 +9,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withPermit
 import java.io.File
 
 /** UI state lives outside the Activity, so rotating does not start playback or searches again. */
@@ -45,6 +46,36 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     private var youtubeMoreJob: Job? = null
     private val consumedHomeTokens = mutableSetOf<String>()
     val googleChange = MutableStateFlow(GoogleChangeState())
+    val videoPresentation = MutableStateFlow<Map<String, Video>>(emptyMap())
+    private val presentationPending = mutableSetOf<String>()
+    private val likesPending = mutableSetOf<String>()
+    private val likeReadSlots = kotlinx.coroutines.sync.Semaphore(2)
+    fun resolveVideoPresentation(video: Video) {
+        if (video.id !in videoPresentation.value && presentationPending.add(video.id)) viewModelScope.launch {
+            try {
+                val resolved = app.videos.presentation(video)
+                val current = mutableWatch.value
+                if (current.video?.id == video.id) mutableWatch.value = current.copy(video = current.video.copy(
+                    short = current.video.short || resolved.short, thumbnail = if (resolved.short) resolved.thumbnail else current.video.thumbnail))
+                videoPresentation.value = (videoPresentation.value + (video.id to resolved)).entries.toList().takeLast(512).associate { it.toPair() }
+            } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { /* Unknown stays unknown; no duration guesses. */ }
+            finally { presentationPending.remove(video.id) }
+        }
+        val revision = library.value.youtubeSessionRevision
+        val key = "$revision:${video.id}"
+        val previousLike = googleLikes.value[video.id]
+        if (library.value.youtubeHome && library.value.youtubeSessionReady && video.id !in googleLikes.value && likesPending.add(key)) viewModelScope.launch {
+            try {
+                val value = likeReadSlots.withPermit {
+                    if (revision != library.value.youtubeSessionRevision) return@withPermit null
+                    app.accountActions.likeState(video.id, app.youtubeHistory.session())
+                }
+                if (value != null && googleLikes.value[video.id] == previousLike && revision == library.value.youtubeSessionRevision && library.value.youtubeHome && library.value.youtubeSessionReady)
+                    googleLikes.value = googleLikes.value + (video.id to value)
+            } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { /* No fabricated unliked state on failure. */ }
+            finally { likesPending.remove(key) }
+        }
+    }
     val googleLikes = MutableStateFlow<Map<String, Boolean>>(emptyMap())
     val googleSubscriptions = MutableStateFlow<Map<String, Boolean>>(emptyMap())
     private var googleChangeJob: Job? = null
@@ -107,6 +138,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 val kind = if (playlist != null || shelf in listOf(AccountShelf.HISTORY, AccountShelf.LIKED)) AccountEntryKind.VIDEO else if (shelf == AccountShelf.CHANNELS) AccountEntryKind.CHANNEL else AccountEntryKind.PLAYLIST
                 val page = if (more) app.accountLibrary.more(session, oldPage!!, kind) else app.accountLibrary.load(session, shelf, playlist)
                 if (revision != library.value.youtubeSessionRevision || !library.value.youtubeSessionReady) return@launch
+                if (shelf == AccountShelf.LIKED && playlist == null) googleLikes.value = googleLikes.value + page.items.mapNotNull { it.video?.id }.associateWith { true }
                 if (more) accountLibraryTokens += oldPage!!.continuation!!
                 val items = ((if (more) oldPage!!.items else emptyList()) + page.items).distinctBy { it.kind to it.id }
                 accountLibrary.value = AccountLibraryState(shelf, playlist, title, page.copy(items = items, continuation = page.continuation?.takeUnless { it in accountLibraryTokens }))
@@ -367,14 +399,16 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
         val revision = library.value.youtubeSessionRevision
         PhotonDiagnostics.event("Open video requested")
         if (!fromQueue) queue.value = emptyList()
+        resolveVideoPresentation(video)
         watchJob?.cancel()
         watchJob = viewModelScope.launch {
             mutableWatch.value = WatchState(video = video, busy = true)
             try {
+                val presentation = videoPresentation.value[video.id] ?: video
                 val details = app.videos.details(video.id)
                 val max = library.value.defaultHeight
                 val quality = details.qualities.firstOrNull { it.height <= max } ?: details.qualities.last()
-                mutableWatch.value = WatchState(details.video.copy(short = video.short || details.video.short, thumbnail = if (video.short && video.thumbnail.isNotBlank()) video.thumbnail else details.video.thumbnail), details, quality, request = System.nanoTime(), startPositionMs = library.value.progress[video.id]?.resumeMs() ?: 0, openedAtMs = opened, webRevision = revision)
+                mutableWatch.value = WatchState(details.video.copy(short = video.short || presentation.short || details.video.short, thumbnail = if (presentation.short && presentation.thumbnail.isNotBlank()) presentation.thumbnail else details.video.thumbnail), details, quality, request = System.nanoTime(), startPositionMs = library.value.progress[video.id]?.resumeMs() ?: 0, openedAtMs = opened, webRevision = revision)
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (error: Exception) { mutableWatch.value = WatchState(video = video, error = error.message ?: "This video could not be played") }
         }

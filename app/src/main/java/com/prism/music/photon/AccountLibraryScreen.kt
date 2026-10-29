@@ -9,6 +9,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.layout.ContentScale
+import com.prism.music.ui.theme.PrismIcons
+import coil3.compose.AsyncImage
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -18,6 +24,7 @@ import com.prism.music.ui.components.SectionHeader
 internal fun AccountLibraryScreen(model: PhotonViewModel, revision: Long, ready: Boolean, open: (Video) -> Unit, channel: (String) -> Unit) {
     var creating by remember { mutableStateOf(false) }
     var name by remember { mutableStateOf("") }
+    val likes by model.googleLikes.collectAsStateWithLifecycle()
     val state by model.accountLibrary.collectAsStateWithLifecycle()
     LaunchedEffect(revision, ready) {
         if (ready && state.page == null && !state.busy && state.error == null) model.openAccountShelf(state.shelf, state.playlist, state.title)
@@ -47,14 +54,21 @@ internal fun AccountLibraryScreen(model: PhotonViewModel, revision: Long, ready:
         }
         items(state.page?.items.orEmpty(), key = { "${it.kind}:${it.id}" }) { entry ->
             if (entry.video != null) {
-                Column(Modifier.fillMaxWidth().clickable { open(entry.video) }.padding(horizontal = 22.dp, vertical = 10.dp)) {
-                    VideoThumbnail(entry.video, entry.title, (if (entry.video.short) Modifier.width(160.dp) else Modifier.fillMaxWidth()).aspectRatio(VideoArtworkShape.ratio(entry.video.short)))
+                val video = resolvedVideo(entry.video)
+                Column(Modifier.fillMaxWidth().clickable { open(video) }.padding(horizontal = 22.dp, vertical = 10.dp)) {
+                    VideoThumbnail(video, entry.title, (if (video.short) Modifier.width(160.dp) else Modifier.fillMaxWidth()).aspectRatio(VideoArtworkShape.ratio(video.short)))
                     Text(entry.title, Modifier.padding(top = 8.dp), fontWeight = FontWeight.SemiBold)
-                    if (state.playlist != null) TextButton(onClick = { model.removeFromPlaylist(state.playlist!!, entry.video) }) { Text("Remove from YouTube playlist") }
-                    Text(entry.video.channel, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                    if (state.playlist != null) TextButton(onClick = { model.removeFromPlaylist(state.playlist!!, video) }) { Text("Remove from YouTube playlist") }
+                    IconButton(onClick = { model.save(video) }) { Icon(if (likes[video.id] == true) PrismIcons.HeartFilled else PrismIcons.Heart, if (likes[video.id] == true) "Remove like on YouTube" else "Like on YouTube", tint = if (likes[video.id] == true) androidx.compose.ui.graphics.Color(0xFFFF3355) else MaterialTheme.colorScheme.onSurfaceVariant) }
+                    Text(video.channel, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                 }
             } else ListItem(
                 headlineContent = { Text(entry.title, fontWeight = FontWeight.SemiBold) },
+                leadingContent = {
+                    if (entry.artwork.isNotBlank()) AsyncImage(entry.artwork, entry.title,
+                        Modifier.size(64.dp).clip(if (entry.kind == AccountEntryKind.CHANNEL) CircleShape else RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
+                    else Icon(if (entry.kind == AccountEntryKind.CHANNEL) PrismIcons.Person else PrismIcons.Library, null, Modifier.size(48.dp))
+                },
                 supportingContent = { Text(if (entry.kind == AccountEntryKind.CHANNEL) "Subscribed channel · open channel" else "YouTube playlist · open videos") },
                 trailingContent = { if (entry.kind == AccountEntryKind.PLAYLIST) TextButton(onClick = { model.deletePlaylist(entry.id, entry.title) }) { Text("Delete on YouTube") } },
                 modifier = Modifier.clickable {

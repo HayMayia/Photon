@@ -1,6 +1,9 @@
 package com.prism.music.photon
 
 import android.content.Context
+import android.view.HapticFeedbackConstants
+import androidx.media3.common.PlaybackParameters
+import androidx.media3.common.MediaItem
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
@@ -13,9 +16,38 @@ import androidx.media3.ui.PlayerView
 /** Observe native touch routing rather than covering PlayerView with a gesture-stealing overlay. */
 @UnstableApi
 internal class PhotonPlayerView(context: Context) : PlayerView(context) {
+    private var boostPlayer: Player? = null
+    private var priorParameters: PlaybackParameters? = null
+    private val boostListener = object : Player.Listener {
+        override fun onIsPlayingChanged(isPlaying: Boolean) { if (!isPlaying) endBoost() }
+        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) { endBoost() }
+    }
+    private fun endBoost() {
+        val current = boostPlayer ?: return
+        val previous = priorParameters
+        boostPlayer = null; priorParameters = null
+        current.removeListener(boostListener)
+        if (previous != null && current.isCommandAvailable(Player.COMMAND_SET_SPEED_AND_PITCH)) current.playbackParameters = previous
+        parent?.requestDisallowInterceptTouchEvent(false)
+    }
     private var seekingGesture = false
     private var feedback: Toast? = null
     private val gestures = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
+        override fun onDown(event: MotionEvent): Boolean = true
+        override fun onLongPress(event: MotionEvent) {
+            val current = player ?: return
+            if (!useController || !current.isPlaying || current.isCurrentMediaItemLive || boostPlayer != null ||
+                !current.isCommandAvailable(Player.COMMAND_SET_SPEED_AND_PITCH) || hitsControl(this@PhotonPlayerView, event.rawX, event.rawY)) return
+            priorParameters = current.playbackParameters
+            boostPlayer = current
+            current.addListener(boostListener)
+            current.playbackParameters = PlaybackParameters(2f, current.playbackParameters.pitch)
+            parent?.requestDisallowInterceptTouchEvent(true)
+            performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+            hideController()
+            feedback?.cancel()
+            feedback = Toast.makeText(context, "2× speed · release to restore", Toast.LENGTH_SHORT).also { it.show() }
+        }
         override fun onDoubleTap(event: MotionEvent): Boolean {
             val current = player ?: return false
             if (!useController || !current.isCurrentMediaItemSeekable ||
@@ -44,7 +76,13 @@ internal class PhotonPlayerView(context: Context) : PlayerView(context) {
     }
 
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        if (event.actionMasked == MotionEvent.ACTION_DOWN) endBoost()
+        if (event.pointerCount > 1) endBoost()
         gestures.onTouchEvent(event)
+        if (boostPlayer != null) {
+            if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) endBoost()
+            return true
+        }
         if (seekingGesture) {
             if (event.actionMasked == MotionEvent.ACTION_DOWN) {
                 val cancel = MotionEvent.obtain(event)
@@ -58,7 +96,10 @@ internal class PhotonPlayerView(context: Context) : PlayerView(context) {
         return super.dispatchTouchEvent(event)
     }
 
+    override fun setPlayer(player: Player?) { if (player !== this.player) endBoost(); super.setPlayer(player) }
+    override fun onWindowFocusChanged(hasWindowFocus: Boolean) { if (!hasWindowFocus) endBoost(); super.onWindowFocusChanged(hasWindowFocus) }
     override fun onDetachedFromWindow() {
+        endBoost()
         feedback?.cancel()
         seekingGesture = false
         super.onDetachedFromWindow()

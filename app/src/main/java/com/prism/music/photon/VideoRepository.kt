@@ -8,6 +8,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.serialization.Serializable
 import okhttp3.OkHttpClient
 import org.schabi.newpipe.extractor.NewPipe
@@ -96,6 +97,26 @@ class VideoRepository {
         }
     }
 
+    private val presentationCache = ExpiringVideoCache<Pair<Boolean, String>>(512, 600_000)
+    private val presentationSlots = kotlinx.coroutines.sync.Semaphore(2)
+    private val presentationHttp by lazy { http.newBuilder().followRedirects(false).followSslRedirects(false)
+        .cookieJar(okhttp3.CookieJar.NO_COOKIES).callTimeout(15, TimeUnit.SECONDS).build() }
+    suspend fun presentation(video: Video): Video = withContext(Dispatchers.IO) {
+        val cached = presentationCache.get(video.id)
+        val result = cached ?: presentationSlots.withPermit {
+            require(video.id.matches(Regex("[A-Za-z0-9_-]{11}")))
+            presentationHttp.newCall(okhttp3.Request.Builder().url("https://www.youtube.com/shorts/${video.id}?hl=en").build()).execute().use { response ->
+                if (!response.isSuccessful) return@use null
+                val source = response.body.source()
+                source.request(4_000_001)
+                if (source.buffer.size > 4_000_000) return@use null
+                ShortsPresentation.fromHtml(video.id, source.readUtf8())?.also { presentationCache.put(video.id, it) }
+            }
+        }
+        if (result == null) video else video.copy(short = video.short || result.first,
+            thumbnail = if (result.first) result.second.ifBlank { video.thumbnail } else video.thumbnail)
+    }
+
     suspend fun details(id: String): VideoDetails = withContext(Dispatchers.IO) {
         require(Regex("[A-Za-z0-9_-]{11}").matches(id)) { "Invalid YouTube video link" }
         detailLocks[(id.hashCode() and Int.MAX_VALUE) % detailLocks.size].withLock {
@@ -126,7 +147,7 @@ class VideoRepository {
         }.distinctBy { it.height }.sortedByDescending { it.height }
         check(qualities.isNotEmpty()) { "YouTube did not provide a compatible stream. It may require sign-in, be restricted, or be temporarily unavailable." }
         val result = VideoDetails(
-            Video(id, info.name, info.uploaderName, info.thumbnails.maxByOrNull { it.height }?.url.orEmpty(), info.duration, info.viewCount, info.textualUploadDate.orEmpty(), info.uploaderUrl.orEmpty()),
+            Video(id, info.name, info.uploaderName, info.thumbnails.maxByOrNull { it.height }?.url.orEmpty(), info.duration, info.viewCount, info.textualUploadDate.orEmpty(), info.uploaderUrl.orEmpty(), info.isShortFormContent),
             info.description?.content.orEmpty(), qualities,
             info.relatedItems.filterIsInstance<StreamInfoItem>().mapNotNull(::preview).distinctBy { it.id }, live,
             info.uploaderUrl?.takeIf { it.isNotBlank() }?.let { Channel(it, info.uploaderName, info.uploaderAvatars.maxByOrNull { image -> image.height }?.url.orEmpty()) },

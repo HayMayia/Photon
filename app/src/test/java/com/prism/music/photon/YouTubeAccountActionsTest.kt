@@ -52,7 +52,8 @@ class YouTubeAccountActionsTest {
         assertEquals(0, writes)
     }
     @Test fun modernLikeEntityIsReadStructurally() {
-        assertEquals(true, GoogleAccountControls.liked(Json.parseToJsonElement("""{"likeButtonViewModel":{"likeStatusEntity":{"likeStatus":"LIKE"}}}""").jsonObject, id))
+        assertNull(GoogleAccountControls.liked(Json.parseToJsonElement("""{"likeButtonViewModel":{"likeStatusEntity":{"likeStatus":"LIKE"}}}""").jsonObject, id))
+        assertEquals(true, GoogleAccountControls.liked(Json.parseToJsonElement("""{"videoPrimaryInfoRenderer":{"likeButtonViewModel":{"likeStatusEntity":{"likeStatus":"LIKE"}}}}""").jsonObject, id))
     }
     @Test fun wrongVideoOrConflictingControlsFailClosed() {
         val root = YouTubeWebBootstrap.assigned(like(true), "ytInitialData")

@@ -11,7 +11,7 @@ enum class AccountShelf(val label: String, val path: String) {
     LIKED("Liked videos", "/playlist?list=LL"), CHANNELS("Channels", "/feed/channels")
 }
 enum class AccountEntryKind { VIDEO, PLAYLIST, CHANNEL }
-data class AccountEntry(val id: String, val title: String, val kind: AccountEntryKind, val video: Video? = null)
+data class AccountEntry(val id: String, val title: String, val kind: AccountEntryKind, val video: Video? = null, val artwork: String = "")
 data class AccountLibraryPage(val items: List<AccountEntry>, val continuation: String? = null, val context: JsonObject? = null, val message: String? = null)
 data class AccountLibraryState(val shelf: AccountShelf = AccountShelf.HISTORY, val playlist: String? = null, val title: String = "History",
     val page: AccountLibraryPage? = null, val busy: Boolean = false, val moreBusy: Boolean = false, val error: String? = null)
@@ -56,9 +56,11 @@ internal object YouTubeAccountLibraryParser {
             else -> ""
         }
         fun addCollection(item: JsonObject, idKey: String, entryKind: AccountEntryKind) {
+            val artwork = GoogleAccountControls.objects(item).mapNotNull { it["url"]?.jsonPrimitive?.contentOrNull }
+                .map(ShortsPresentation::safeArtwork).firstOrNull { it.isNotBlank() }.orEmpty()
             val id = text(item[idKey]); val title = text(item["title"])
             val valid = if (entryKind == AccountEntryKind.CHANNEL) id.matches(Regex("UC[A-Za-z0-9_-]{20,30}")) else id.matches(Regex("[A-Za-z0-9_-]{2,150}"))
-            if (kind == entryKind && valid && title.isNotBlank()) rows.putIfAbsent(id, AccountEntry(id, title, entryKind))
+            if (kind == entryKind && valid && title.isNotBlank()) rows.putIfAbsent(id, AccountEntry(id, title, entryKind, artwork = artwork))
         }
         fun walk(node: JsonElement, depth: Int = 0) {
             if (depth > 70 || rows.size >= 250) return
@@ -79,7 +81,7 @@ internal object YouTubeAccountLibraryParser {
                         val expected = if (kind == AccountEntryKind.CHANNEL) "LOCKUP_CONTENT_TYPE_CHANNEL" else "LOCKUP_CONTENT_TYPE_PLAYLIST"
                         if (type == expected) {
                             val metadata = ((lockup["metadata"] as? JsonObject)?.get("lockupMetadataViewModel") as? JsonObject)
-                            addCollection(buildJsonObject { put(if (kind == AccountEntryKind.CHANNEL) "channelId" else "playlistId", text(lockup["contentId"])); put("title", text(metadata?.get("title"))) }, if (kind == AccountEntryKind.CHANNEL) "channelId" else "playlistId", kind)
+                            addCollection(buildJsonObject { put(if (kind == AccountEntryKind.CHANNEL) "channelId" else "playlistId", text(lockup["contentId"])); put("title", text(metadata?.get("title"))); lockup["contentImage"]?.let { put("contentImage", it) } }, if (kind == AccountEntryKind.CHANNEL) "channelId" else "playlistId", kind)
                         }
                         return
                     }

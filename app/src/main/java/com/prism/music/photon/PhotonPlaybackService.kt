@@ -32,6 +32,9 @@ class PhotonPlaybackService : MediaSessionService() {
     private var lastVideo: Video? = null
     private var wasPlaying = false
     private var historyWasPaused = false
+    private val accountHistoryGate = PlaybackHistoryGate()
+    private var historyRefreshJob: Job? = null
+    private var lastHistoryRefresh = -30_000L
     private val json = Json { ignoreUnknownKeys = true }
 
     private fun snapshot(savePosition: Boolean = false) {
@@ -39,7 +42,25 @@ class PhotonPlaybackService : MediaSessionService() {
         val now = android.os.SystemClock.elapsedRealtime()
         val delta = now - lastTick
         lastTick = now
-        if ((application as PhotonApplication).library.state.value.historyPaused) {
+        val app = application as PhotonApplication
+        val library = app.library.state.value
+        val history = app.youtubeHistory
+        if (player.playWhenReady && player.playbackState in setOf(androidx.media3.common.Player.STATE_BUFFERING, androidx.media3.common.Player.STATE_READY) && library.youtubeHome && library.youtubeSessionReady && now - lastHistoryRefresh >= 30_000 && historyRefreshJob?.isActive != true) {
+            lastHistoryRefresh = now
+            historyRefreshJob = scope.launch { history.refresh() }
+        }
+        val extras = player.currentMediaItem?.mediaMetadata?.extras
+        val itemRevision = extras?.getLong("photon_web_revision", -1) ?: -1
+        val opened = extras?.getLong("photon_open_elapsed", 0) ?: 0
+        val id = player.currentMediaItem?.mediaId
+        val remote = extras?.getBoolean("photon_remote", false) == true
+        val viewKey = if (remote && opened > 0 && id != null) "$id:$opened:$itemRevision" else null
+        val eligible = remote && library.accountHistorySync && library.youtubeHome && library.youtubeSessionReady &&
+            itemRevision == library.youtubeSessionRevision && !history.locallyPaused()
+        accountHistoryGate.tick(viewKey, now, player.isPlaying, eligible)?.let { watched ->
+            if (id != null) scope.launch { try { history.report(id, watched, itemRevision) } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { /* No automatic retry or UI credential logging. */ } }
+        }
+        if (history.locallyPaused()) {
             wasPlaying = false; historyWasPaused = true; return
         }
         if (historyWasPaused) { wasPlaying = false; historyWasPaused = false }
@@ -125,7 +146,7 @@ class PhotonPlaybackService : MediaSessionService() {
     }
 }
 
-fun playbackItem(video: Video, quality: VideoQuality? = null, localPath: String? = null, subtitles: List<VideoSubtitle> = emptyList(), openedAtMs: Long = 0): MediaItem =
+fun playbackItem(video: Video, quality: VideoQuality? = null, localPath: String? = null, subtitles: List<VideoSubtitle> = emptyList(), openedAtMs: Long = 0, webRevision: Long = -1): MediaItem =
     MediaItem.Builder()
         .setMediaId(video.id)
         .setUri(localPath?.let { Uri.fromFile(java.io.File(it)).toString() } ?: requireNotNull(quality).url)
@@ -140,6 +161,8 @@ fun playbackItem(video: Video, quality: VideoQuality? = null, localPath: String?
             .setExtras(android.os.Bundle().apply {
                 putString("photon_video", Json.encodeToString(video))
                 putLong("photon_open_elapsed", openedAtMs)
+                putLong("photon_web_revision", webRevision)
+                putBoolean("photon_remote", localPath == null)
                 quality?.audioUrl?.let { putString("photon_audio", it) }
             })
             .build())

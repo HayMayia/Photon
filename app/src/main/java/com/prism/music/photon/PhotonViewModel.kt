@@ -33,6 +33,7 @@ data class WatchState(
     val preservePosition: Boolean = false,
     val startPositionMs: Long = 0,
     val openedAtMs: Long = 0,
+    val webRevision: Long = -1,
 )
 
 class PhotonViewModel(application: Application) : AndroidViewModel(application) {
@@ -41,6 +42,45 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     val account = app.account.state
     val youtubeHome = MutableStateFlow(YouTubeHomeState())
     private var youtubeHomeJob: Job? = null
+    private var youtubeMoreJob: Job? = null
+    private val consumedHomeTokens = mutableSetOf<String>()
+    val googleHistory = app.youtubeHistory.state
+    fun refreshGoogleHistory() { viewModelScope.launch { app.youtubeHistory.refresh() } }
+    fun setGoogleHistoryPaused(paused: Boolean) { viewModelScope.launch { try { app.youtubeHistory.changePause(paused) } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { app.youtubeHistory.invalidate() } } }
+    fun enableAccountHistory(enabled: Boolean) {
+        app.library.update { it.copy(accountHistorySync = enabled, historyPaused = if (enabled) false else it.historyPaused) }
+        if (enabled) refreshGoogleHistory()
+    }
+    fun beginYouTubeWebChange() {
+        youtubeHomeJob?.cancel(); youtubeMoreJob?.cancel()
+        app.library.update { it.copy(youtubeSessionRevision = it.youtubeSessionRevision + 1, youtubeSessionReady = false, accountHistorySync = false) }
+        app.youtubeHistory.invalidate(); youtubeHome.value = YouTubeHomeState(error = "Finish reconnecting the web account. History reporting is off.")
+    }
+    fun moreYouTubeHome() {
+        val previous = youtubeHome.value
+        val page = previous.page ?: return
+        val token = page.continuation ?: return
+        if (previous.busy || previous.loadingMore || youtubeMoreJob?.isActive == true || !library.value.youtubeSessionReady) return
+        if (token in consumedHomeTokens || consumedHomeTokens.size >= 200) {
+            youtubeHome.value = previous.copy(page = page.copy(continuation = null), error = "YouTube repeated a continuation or reached the session limit. Refresh Home.")
+            return
+        }
+        youtubeMoreJob = viewModelScope.launch {
+            val revision = library.value.youtubeSessionRevision
+            youtubeHome.value = previous.copy(loadingMore = true, error = null)
+            try {
+                val session = app.youtubeHistory.session()
+                val result = app.youtubeHome.more(session, page)
+                if (revision != library.value.youtubeSessionRevision || !library.value.youtubeSessionReady) return@launch
+                consumedHomeTokens += token
+                val merged = (page.videos + result.videos).distinctBy { it.id }
+                val next = result.continuation?.takeUnless { it in consumedHomeTokens }
+                youtubeHome.value = previous.copy(page = page.copy(videos = merged, continuation = next), loadingMore = false,
+                    error = null, autoMore = merged.size > page.videos.size)
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { if (revision == library.value.youtubeSessionRevision) youtubeHome.value = previous.copy(loadingMore = false, autoMore = false, error = "More recommendations could not load. Your existing Home cards are kept. Tap Load more to retry explicitly.") }
+        }
+    }
     fun pauseHistory(paused: Boolean) {
         app.library.update { it.copy(historyPaused = paused) }
         if (paused) { searchJob?.cancel(); shelfJob?.cancel(); shelves.value = emptyList(); mutableBrowse.value = BrowseState() }
@@ -48,24 +88,32 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     }
     fun connectYouTubeHome(accountIndex: Int) = refreshYouTubeHome(accountIndex, connecting = true)
     fun refreshYouTubeHome(accountIndex: Int = library.value.youtubeWebUser, connecting: Boolean = false) {
-        youtubeHomeJob?.cancel()
+        youtubeHomeJob?.cancel(); youtubeMoreJob?.cancel(); consumedHomeTokens.clear()
         youtubeHomeJob = viewModelScope.launch {
             youtubeHome.value = YouTubeHomeState(busy = true)
             try {
-                val cookie = android.webkit.CookieManager.getInstance().getCookie("https://www.youtube.com").orEmpty()
-                val page = app.youtubeHome.home(cookie, accountIndex)
+                val revision = library.value.youtubeSessionRevision
+                check(connecting || library.value.youtubeSessionReady)
+                val cookies = android.webkit.CookieManager.getInstance()
+                val page = app.youtubeHome.home(YouTubeWebSession(accountIndex, revision,
+                    cookies.getCookie("https://www.youtube.com").orEmpty(), cookies.getCookie("https://s.youtube.com").orEmpty()))
+                if (revision != library.value.youtubeSessionRevision) return@launch
                 if (connecting) {
                     searchJob?.cancel(); shelfJob?.cancel(); shelves.value = emptyList()
-                    app.library.update { it.copy(youtubeHome = true, youtubeWebUser = accountIndex, historyPaused = true) }
+                    app.library.update { it.copy(youtubeHome = true, youtubeWebUser = accountIndex, youtubeSessionReady = true,
+                        youtubeSessionRevision = it.youtubeSessionRevision + 1, accountHistorySync = false) }
                 }
                 youtubeHome.value = YouTubeHomeState(page = page)
+                refreshGoogleHistory()
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { youtubeHome.value = YouTubeHomeState(error = "Could not load a verified signed-in YouTube Home. Review the web session/consent and try again. No local or search recommendations were substituted.") }
         }
     }
     fun disconnectYouTubeHome() {
-        youtubeHomeJob?.cancel()
-        app.library.update { it.copy(youtubeHome = false, youtubeWebUser = 0) }
+        youtubeHomeJob?.cancel(); youtubeMoreJob?.cancel(); consumedHomeTokens.clear()
+        app.library.update { it.copy(youtubeHome = false, youtubeWebUser = 0, youtubeSessionReady = false,
+            youtubeSessionRevision = it.youtubeSessionRevision + 1, accountHistorySync = false) }
+        app.youtubeHistory.invalidate()
         youtubeHome.value = YouTubeHomeState()
         android.webkit.CookieManager.getInstance().removeAllCookies { android.webkit.CookieManager.getInstance().flush() }
         android.webkit.WebStorage.getInstance().deleteAllData()
@@ -232,6 +280,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
 
     fun open(video: Video, fromQueue: Boolean = false) {
         val opened = android.os.SystemClock.elapsedRealtime()
+        val revision = library.value.youtubeSessionRevision
         PhotonDiagnostics.event("Open video requested")
         if (!fromQueue) queue.value = emptyList()
         watchJob?.cancel()
@@ -241,7 +290,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 val details = app.videos.details(video.id)
                 val max = library.value.defaultHeight
                 val quality = details.qualities.firstOrNull { it.height <= max } ?: details.qualities.last()
-                mutableWatch.value = WatchState(details.video, details, quality, request = System.nanoTime(), startPositionMs = library.value.progress[video.id]?.resumeMs() ?: 0, openedAtMs = opened)
+                mutableWatch.value = WatchState(details.video, details, quality, request = System.nanoTime(), startPositionMs = library.value.progress[video.id]?.resumeMs() ?: 0, openedAtMs = opened, webRevision = revision)
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (error: Exception) { mutableWatch.value = WatchState(video = video, error = error.message ?: "This video could not be played") }
         }

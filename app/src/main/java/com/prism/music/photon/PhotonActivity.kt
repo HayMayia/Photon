@@ -238,7 +238,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
         val position = if (watch.preservePosition) controller.currentPosition else watch.startPositionMs
         val play = if (watch.preservePosition) controller.playWhenReady else true
         playerError = null
-        controller.setMediaItem(playbackItem(video, watch.quality, watch.localPath, watch.details?.subtitles.orEmpty(), watch.openedAtMs), position)
+        controller.setMediaItem(playbackItem(video, watch.quality, watch.localPath, watch.details?.subtitles.orEmpty(), watch.openedAtMs, watch.webRevision), position)
         controller.prepare()
         controller.playWhenReady = play
     }

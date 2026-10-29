@@ -24,6 +24,9 @@ import kotlinx.serialization.json.*
 internal fun YouTubeHomeConnection(model: PhotonViewModel) {
     val library by model.library.collectAsStateWithLifecycle()
     val feed by model.youtubeHome.collectAsStateWithLifecycle()
+    val history by model.googleHistory.collectAsStateWithLifecycle()
+    var confirmSync by remember { mutableStateOf(false) }
+    var changePause by remember { mutableStateOf<Boolean?>(null) }
     var disclosure by remember { mutableStateOf(false) }
     var signingIn by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -36,15 +39,39 @@ internal fun YouTubeHomeConnection(model: PhotonViewModel) {
         if (feed.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
         feed.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         Row {
-            Text("Pause local history & resume tracking", Modifier.weight(1f))
+            Text("Additional local history pause", Modifier.weight(1f))
             Switch(library.historyPaused, model::pauseHistory)
         }
-        Text("Local pause is separate from Google's setting. Photon does not upload playback history or change Google's history/recommendation controls. Connecting Home pauses local tracking by default; you can change it here. Existing history is not erased.", style = MaterialTheme.typography.bodySmall)
+        Text("Google's last verified watch-history state: ${history.status.name.lowercase()}. In connected mode, paused, unknown or stale Google state also blocks local tracking. Additional local pause never changes Google's setting.", style = MaterialTheme.typography.bodySmall)
+        if (library.youtubeHome) {
+            history.message?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+            if (history.checking) LinearProgressIndicator(Modifier.fillMaxWidth())
+            Row {
+                TextButton(onClick = model::refreshGoogleHistory) { Text("Check Google history") }
+                if (history.status != GoogleHistoryStatus.UNKNOWN) TextButton(enabled = !history.checking,
+                    onClick = { changePause = history.status == GoogleHistoryStatus.ENABLED }) {
+                    Text(if (history.status == GoogleHistoryStatus.ENABLED) "Pause on YouTube" else "Resume on YouTube")
+                }
+            }
+            Row {
+                Text("Report real playback to YouTube history", Modifier.weight(1f))
+                Switch(library.accountHistorySync, { enabled -> if (enabled) confirmSync = true else model.enableAccountHistory(false) }, enabled = library.youtubeSessionReady)
+            }
+            Text("Off until you explicitly enable it. One report after 15 seconds of actual native playback, only with freshly verified enabled Google history; no offline uploads or automatic report retries.", style = MaterialTheme.typography.bodySmall)
+        }
     }
     if (disclosure) AlertDialog(onDismissRequest = { disclosure = false }, title = { Text("Connect a YouTube web session?") },
-        text = { Text("To read the real YouTube Home feed, Photon needs a separate website session, like Prism's feed integration. Google comment authorization cannot provide it. Google's pages handle your login; Photon does not read password fields. WebView keeps sensitive session cookies in this app's private storage (app backup is disabled), and Photon temporarily sends YouTube cookies only to www.youtube.com to read Home. Disconnect clears this app's web cookies, not Google's native authorization.\n\nThis unofficial integration can stop working. If Google blocks embedded sign-in, Photon will not disguise its login browser or ask you to paste cookies. Home shows YouTube's returned cards/messages without a generated fallback, but it cannot read/sync Google's history-pause switch. Native playback is not added to Google history. Website interactions are handled by YouTube itself.", Modifier.heightIn(max = 400.dp).verticalScroll(rememberScrollState())) },
-        confirmButton = { TextButton(onClick = { disclosure = false; signingIn = true }) { Text("Continue to YouTube") } },
+        text = { Text("To read the real YouTube Home feed, Photon needs a separate website session, like Prism's feed integration. Google comment authorization cannot provide it. Google's pages handle your login; Photon does not read password fields. WebView keeps sensitive session cookies in this app's private storage (app backup is disabled), and Photon temporarily sends YouTube cookies only to www.youtube.com to read Home. Disconnect clears this app's web cookies, not Google's native authorization.\n\nThis unofficial integration can stop working. If Google blocks embedded sign-in, Photon will not disguise its login browser or ask you to paste cookies. Home shows YouTube's returned cards/messages without a generated fallback, Google watch-history controls are read separately; unknown state blocks tracking. Optional playback reports require another explicit opt-in and a confirmed active history setting. Website interactions are handled by YouTube itself.", Modifier.heightIn(max = 400.dp).verticalScroll(rememberScrollState())) },
+        confirmButton = { TextButton(onClick = { disclosure = false; model.beginYouTubeWebChange(); signingIn = true }) { Text("Continue to YouTube") } },
         dismissButton = { TextButton(onClick = { disclosure = false }) { Text("Cancel") } })
+    if (confirmSync) AlertDialog(onDismissRequest = { confirmSync = false }, title = { Text("Add real plays to YouTube history?") },
+        text = { Text("Photon will report a video once after at least 15 seconds of real playback, for the connected website account. It checks Google's history setting before sending; paused or unknown state blocks reporting. This can change your account's history and future recommendations. Previously saved local history and downloaded/offline plays are not uploaded. Additional local pause will be turned off when you enable this; Google's pause is never overridden. Switching/reviewing web accounts disables reporting until you opt in again.") },
+        confirmButton = { TextButton(onClick = { confirmSync = false; model.enableAccountHistory(true) }) { Text("Enable playback reporting") } },
+        dismissButton = { TextButton(onClick = { confirmSync = false }) { Text("Cancel") } })
+    changePause?.let { paused -> AlertDialog(onDismissRequest = { changePause = null }, title = { Text(if (paused) "Pause YouTube watch history?" else "Resume YouTube watch history?") },
+        text = { Text("This changes the connected account's Google/YouTube watch-history setting, not just Photon. Existing history is not deleted. Photon will verify the resulting state; an unconfirmed change will block tracking, not trigger an automatic retry.") },
+        confirmButton = { TextButton(onClick = { changePause = null; model.setGoogleHistoryPaused(paused) }) { Text(if (paused) "Pause account history" else "Resume account history") } },
+        dismissButton = { TextButton(onClick = { changePause = null }) { Text("Cancel") } }) }
     if (signingIn) YouTubeSessionDialog(done = { index -> signingIn = false; model.connectYouTubeHome(index) }, close = { signingIn = false })
 }
 
@@ -64,7 +91,7 @@ private fun YouTubeSessionDialog(done: (Int) -> Unit, close: () -> Unit) {
     DisposableEffect(Unit) { onDispose { active = false } }
     var error by remember { mutableStateOf<String?>(null) }
     var host by remember { mutableStateOf("www.youtube.com") }
-    Dialog(onDismissRequest = close, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+    Dialog(onDismissRequest = { active = false; close() }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
                 Text("YouTube website session · $host", Modifier.padding(12.dp), style = MaterialTheme.typography.labelMedium)
@@ -99,7 +126,7 @@ private fun YouTubeSessionDialog(done: (Int) -> Unit, close: () -> Unit) {
                     }
                 }, onRelease = { it.stopLoading(); it.destroy() })
                 Row(Modifier.fillMaxWidth().padding(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(onClick = close) { Text("Cancel") }
+                    TextButton(onClick = { active = false; close() }) { Text("Cancel") }
                     Button(enabled = error == null, onClick = {
                         val view = browser
                         val current = view?.url.orEmpty()
@@ -109,7 +136,7 @@ private fun YouTubeSessionDialog(done: (Int) -> Unit, close: () -> Unit) {
                             if (!active || view.url != current) return@evaluateJavascript
                             val index = runCatching { Json.parseToJsonElement(result).jsonPrimitive.content.toIntOrNull() }.getOrNull()
                             if (index == null || index !in 0..9) error = "Could not verify the web account selection. Open YouTube Home and try again."
-                            else { CookieManager.getInstance().flush(); done(index) }
+                            else { active = false; CookieManager.getInstance().flush(); done(index) }
                         }
                     }) { Text("Use this YouTube session") }
                 }

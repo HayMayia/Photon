@@ -8,6 +8,7 @@ import com.prism.music.ui.theme.IconStyle
 class PhotonApplication : Application() {
     val account by lazy { YouTubeAccount() }
     val youtubeHome by lazy { YouTubeHomeApi() }
+    val youtubeHistory by lazy { YouTubeHistoryCoordinator(library) }
     val casting by lazy { PhotonCast(this, videos) }
     val library by lazy { PhotonStore(this) }
     lateinit var videos: VideoRepository

@@ -7,6 +7,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
@@ -20,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.flow.distinctUntilChanged
 import com.prism.music.ui.components.SectionHeader
 import com.prism.music.ui.theme.*
 
@@ -179,7 +181,13 @@ private fun HomeCover(video: Video, music: Boolean, open: () -> Unit) {
 private fun ActualYouTubeHome(model: PhotonViewModel, open: (Video) -> Unit, settings: () -> Unit, search: () -> Unit,
                               shorts: () -> Unit, subscriptions: () -> Unit, downloads: () -> Unit, saved: () -> Unit) {
     val feed by model.youtubeHome.collectAsStateWithLifecycle()
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(22.dp)) {
+    val list = rememberLazyListState()
+    LaunchedEffect(feed.page?.continuation, feed.page?.videos?.size, feed.loadingMore, feed.autoMore, feed.error) {
+        if (feed.page?.continuation == null || feed.loadingMore || !feed.autoMore || feed.error != null || feed.page?.videos.isNullOrEmpty()) return@LaunchedEffect
+        snapshotFlow { (list.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1) >= list.layoutInfo.totalItemsCount - 5 }
+            .distinctUntilChanged().collect { nearEnd -> if (nearEnd) model.moreYouTubeHome() }
+    }
+    LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(22.dp)) {
         item {
             Row {
                 Text("YouTube Home", Modifier.weight(1f), style = MaterialTheme.typography.headlineLarge)
@@ -206,8 +214,10 @@ private fun ActualYouTubeHome(model: PhotonViewModel, open: (Video) -> Unit, set
                 Text(video.channel, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        if (!feed.page?.videos.isNullOrEmpty()) item {
-            Text("Current Home page · refresh for a new response. Continuation loading is not supported yet.", style = MaterialTheme.typography.bodySmall)
+        item {
+            if (feed.loadingMore) CircularProgressIndicator()
+            else if (feed.page?.continuation != null) TextButton(onClick = model::moreYouTubeHome) { Text("Load more recommendations") }
+            else if (!feed.page?.videos.isNullOrEmpty()) Text("YouTube returned no further page. Refresh Home for a new response.", style = MaterialTheme.typography.bodySmall)
         }
     }
 }

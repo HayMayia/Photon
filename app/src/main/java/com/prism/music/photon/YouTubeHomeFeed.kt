@@ -10,35 +10,21 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 /** Unofficial web-feed integration, separate from Google's supported comment OAuth API. */
-data class YouTubeHomePage(val videos: List<Video>, val message: String? = null)
-data class YouTubeHomeState(val busy: Boolean = false, val page: YouTubeHomePage? = null, val error: String? = null)
+data class YouTubeHomePage(val videos: List<Video>, val message: String? = null, val continuation: String? = null, val context: JsonObject? = null)
+data class YouTubeHomeState(val busy: Boolean = false, val page: YouTubeHomePage? = null, val error: String? = null, val loadingMore: Boolean = false, val autoMore: Boolean = true)
 
 class YouTubeHomeApi(client: OkHttpClient = OkHttpClient()) {
-    private val http = client.newBuilder().followRedirects(false).followSslRedirects(false)
-        .retryOnConnectionFailure(false).callTimeout(30, TimeUnit.SECONDS).build()
-    suspend fun home(cookie: String, accountIndex: Int = 0): YouTubeHomePage = withContext(Dispatchers.IO) {
-        if (cookie.isBlank() || cookie.contains('\r') || cookie.contains('\n')) throw IOException("Connect a YouTube web session first.")
-        require(accountIndex in 0..9) { "Invalid YouTube web account index" }
-        val request = Request.Builder().url("https://www.youtube.com/?authuser=$accountIndex")
-            .header("X-Goog-AuthUser", accountIndex.toString())
-            .header("Cookie", cookie)
-            // Desktop layout for parsing YouTube's returned Home cards; never used for Google login.
-            .header("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36")
-            .header("Accept-Language", "en-US,en;q=0.8").get().build()
-        http.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) throw IOException("YouTube Home could not load. Reconnect to review sign-in or consent; no local recommendations were substituted.")
-            val output = ByteArrayOutputStream()
-            response.body.byteStream().use { input ->
-                val buffer = ByteArray(8192)
-                while (true) {
-                    val read = input.read(buffer)
-                    if (read < 0) break
-                    if (output.size() + read > 8 * 1024 * 1024) throw IOException("YouTube Home response was too large. No fallback feed was substituted.")
-                    output.write(buffer, 0, read)
-                }
-            }
-            YouTubeHomeParser.parse(output.toString(Charsets.UTF_8.name()))
-        }
+    private val transport = YouTubeWebTransport(client)
+    suspend fun home(cookie: String, accountIndex: Int = 0): YouTubeHomePage = home(YouTubeWebSession(accountIndex, 0, cookie, ""))
+    suspend fun home(session: YouTubeWebSession): YouTubeHomePage {
+        val html = transport.html("/", session)
+        return YouTubeHomeParser.parse(html).copy(context = YouTubeWebBootstrap.context(html))
+    }
+    suspend fun more(session: YouTubeWebSession, page: YouTubeHomePage): YouTubeHomePage {
+        val token = page.continuation?.takeIf { it.length in 1..32768 } ?: throw IOException("No further Home page")
+        val context = page.context ?: throw IOException("Refresh Home to obtain a web context")
+        val response = transport.post("browse", context, buildJsonObject { put("continuation", token) }, session)
+        return YouTubeHomeParser.continuation(response).copy(context = context)
     }
 }
 
@@ -54,8 +40,35 @@ object YouTubeHomeParser {
         if (loggedOut != false && !(loggedOut == null && loggedInConfig))
             throw IOException("YouTube did not confirm a signed-in web session. Connect YouTube Home separately from comment authorization.")
         val contents = root["contents"] ?: throw IOException("YouTube returned no recognizable Home content. No fallback feed was substituted.")
+        val container = contents as? JsonObject ?: throw IOException("Unrecognized YouTube Home layout. No fallback feed was substituted.")
+        val primary = (container["twoColumnBrowseResultsRenderer"] as? JsonObject)?.get("tabs")
+            ?: (container["singleColumnBrowseResultsRenderer"] as? JsonObject)?.get("tabs")
+            ?: container["richGridRenderer"] ?: container["sectionListRenderer"]
+            ?: throw IOException("YouTube Home layout changed. No fallback feed was substituted.")
+        return cards(primary)
+    }
+
+    fun continuation(root: JsonObject): YouTubeHomePage {
+        val loggedOut = ((root["responseContext"] as? JsonObject)?.get("mainAppWebResponseContext") as? JsonObject)?.get("loggedOut")?.jsonPrimitive?.booleanOrNull
+        if (loggedOut == true || root.containsKey("error")) throw IOException("YouTube session expired")
+        val actions = root["onResponseReceivedActions"] ?: root["onResponseReceivedEndpoints"] ?: throw IOException("Home continuation format changed")
+        val batches = mutableListOf<JsonElement>()
+        fun find(node: JsonElement) {
+            when (node) {
+                is JsonObject -> { (node["appendContinuationItemsAction"] as? JsonObject)?.get("continuationItems")?.let { batches += it }; node.values.forEach(::find) }
+                is JsonArray -> node.forEach(::find)
+                else -> Unit
+            }
+        }
+        find(actions)
+        if (batches.isEmpty()) throw IOException("No recognized Home continuation response")
+        return cards(JsonArray(batches))
+    }
+
+    private fun cards(primary: JsonElement): YouTubeHomePage {
         val videos = linkedMapOf<String, Video>()
         val messages = mutableListOf<String>()
+        var next: String? = null
         fun text(value: JsonElement?): String = when (value) {
             is JsonPrimitive -> value.contentOrNull.orEmpty()
             is JsonObject -> value["simpleText"]?.jsonPrimitive?.contentOrNull
@@ -70,6 +83,11 @@ object YouTubeHomeParser {
                 is JsonObject -> {
                     // Do not mine the sidebar, other tabs, account menus or player suggestions for a fake Home fallback.
                     if (node["selected"]?.jsonPrimitive?.booleanOrNull == false) return
+                    (node["continuationItemRenderer"] as? JsonObject)?.let { continuation ->
+                        val endpoint = continuation["continuationEndpoint"] as? JsonObject
+                        val command = endpoint?.get("continuationCommand") as? JsonObject
+                        command?.get("token")?.jsonPrimitive?.contentOrNull?.takeIf { it.length in 1..32768 }?.let { next = it }
+                    }
                     for (key in listOf("videoRenderer", "gridVideoRenderer", "videoWithContextRenderer")) {
                         val item = node[key] as? JsonObject ?: continue
                         val id = item["videoId"]?.jsonPrimitive?.contentOrNull.orEmpty()
@@ -107,14 +125,9 @@ object YouTubeHomeParser {
                 else -> Unit
             }
         }
-        val container = contents as? JsonObject ?: throw IOException("Unrecognized YouTube Home layout. No fallback feed was substituted.")
-        val primary = (container["twoColumnBrowseResultsRenderer"] as? JsonObject)?.get("tabs")
-            ?: (container["singleColumnBrowseResultsRenderer"] as? JsonObject)?.get("tabs")
-            ?: container["richGridRenderer"] ?: container["sectionListRenderer"]
-            ?: throw IOException("YouTube Home layout changed. No fallback feed was substituted.")
         visit(primary)
         return YouTubeHomePage(videos.values.toList(), messages.distinct().joinToString("\n").takeIf { it.isNotBlank() }
-            ?: if (videos.isEmpty()) "YouTube returned no supported Home video cards. Your history/recommendation settings have not been changed, and Photon has not filled this with search results." else null)
+            ?: if (videos.isEmpty()) "YouTube returned no supported Home video cards. Your history/recommendation settings have not been changed, and Photon has not filled this with search results." else null, continuation = next)
     }
 
     fun extractInitialData(html: String): String {

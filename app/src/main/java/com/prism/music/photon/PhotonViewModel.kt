@@ -447,8 +447,9 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
         watchJob = viewModelScope.launch {
             mutableWatch.value = WatchState(video = video, busy = true)
             try {
-                val presentation = videoPresentation.value[video.id] ?: video
                 val details = app.videos.details(video.id)
+                // Metadata may finish while stream extraction is suspended; use the latest proof, not the opening snapshot.
+                val presentation = videoPresentation.value[video.id] ?: video
                 val max = library.value.defaultHeight
                 val quality = details.qualities.firstOrNull { it.height <= max } ?: details.qualities.last()
                 mutableWatch.value = WatchState(details.video.copy(short = video.short || presentation.short || details.video.short, thumbnail = if (presentation.short && presentation.thumbnail.isNotBlank()) presentation.thumbnail else details.video.thumbnail), details, quality, request = System.nanoTime(), startPositionMs = library.value.progress[video.id]?.resumeMs() ?: 0, openedAtMs = opened, webRevision = revision)

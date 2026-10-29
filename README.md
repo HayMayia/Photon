@@ -4,15 +4,17 @@
 [Yigder's Prism](https://github.com/Yigder/Prism), retaining its real Compose theme,
 fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
 
-> **0.5.1 alpha — stable signing for native Google authorization.**
-> **[Download 0.5.1 APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40867400991/artifacts/12895050509)**
+> **0.6.0 alpha — experimental native YouTube account Home and local history pause.**
+> **[Download 0.6 APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40871610491/artifacts/12896153246)**
 > — GitHub sign-in required; extract and install `app-debug.apk`.
-> APK assembly, all 56 focused Photon tests and final APK certificate matching
-> passed at revision `de4e5db` ([verified build](https://github.com/HayMayia/Photon/actions/runs/40867400991)).
-> Owner reports Android OAuth client registration complete. Actual device sign-in
-> and comment posting are not yet verified. Ordinary users do not create Cloud projects.
-> Includes 0.5 captions, double-tap seeking and startup changes; their device checks
-> remain pending. See [account setup](docs/GOOGLE_SIGN_IN.md) and [signing/migration](signing/README.md).
+> APK assembly, all 71 focused Photon tests and permanent certificate matching
+> passed at revision `2852d9b` ([verified build](https://github.com/HayMayia/Photon/actions/runs/40871610491)).
+> **Real web-session sign-in/Home rendering remain unverified on a device.**
+> Google may block embedded sign-in. No automatic Google history-setting sync or
+> native watch-history upload is implemented; [precise limits](docs/YOUTUBE_HOME.md).
+> Native comment authorization remains separate; live posting is still unverified.
+> Keep Cloud testing enabled while checking account flows; production verification
+> is a separate process. Existing stable-signed 0.5.1 should update without uninstalling.
 
 
 ## Feature status
@@ -26,7 +28,8 @@ fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
 | Playlists | Local create/add/remove/delete, play loaded videos as a queue; browse paginated public YouTube playlists by link |
 | Comments | Read comments/replies with pagination; native top-level composer with public confirmation and official YouTube API posting, requiring Google setup/authorization; replies remain read-only |
 | Shorts | Swipeable vertical video feed using extracted Shorts and channel Shorts tabs; discovery is not YouTube's signed-in Shorts algorithm |
-| Recommendations | On-device ranking of related videos from engaged watch-history seeds, saved-video weighting, seen-video exclusion, subscription boosting and channel diversity; cold-start topic discovery remains search-based |
+| Recommendations | Optional native **YouTube account Home** from a separately connected website session, in server order; no local/search fallback in that mode. One page plus refresh; unofficial and device-unverified. Original on-device related-video ranking remains a distinct local mode |
+| History pause | Local history/progress pause, enabled by default on connecting account Home; cancels generated local feeds. Google pause controls are **not read/synced**; native playback is not uploaded to YouTube history. Returned empty/feed messages are preserved |
 | History/resume | Recorded by the playback service, including background playback; periodic positions, playing-time accumulation (not seek distance), and resume across app restarts; recently finished videos restart from the beginning |
 | Casting | LAN discovery/control for Google Cast and DLNA using Prism's protocols; proxies a combined MP4 or serves your downloaded merged MP4; **keep Photon open**; no live/adaptive-stream casting |
 | Audio language | Original AAC audio takes priority over bitrate. Explicit dubs/descriptive/secondary tracks are not selected automatically. Missing labels are shown as unverified; source availability still limits playback |
@@ -35,12 +38,12 @@ fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
 | Player | Native CC subtitle language/off selector for extracted caption tracks, ±10-second side double-taps (except buttons/unseekable streams), background session, lock-screen/headset controls, fullscreen, PiP and mini-player |
 | Startup | 750 ms initial / 1.5 s rebuffer thresholds, bounded two-minute stream-detail cache and same-video extraction deduplication; retry refreshes signed URLs. Device latency reduction not yet measured |
 | Testing tools | Settings → **Share device test report**; bounded local playback events without credentials/stream URLs; [device checklist](docs/TESTING.md) and issue template |
-| Google authorization | Official native Google Play services account/consent flow, memory-only session and verified YouTube channel; **requires registered Android OAuth package/certificate and enabled YouTube Data API v3** ([setup](docs/GOOGLE_SIGN_IN.md)); live device flow unverified |
+| Google authorization | Official native authorization for comments (memory-only token); separate optional app-private WebView session for account Home. These are not interchangeable. [Comment setup](docs/GOOGLE_SIGN_IN.md) · [Home/session/privacy limits](docs/YOUTUBE_HOME.md) |
 | YouTube likes/account sync | Not implemented; authorization for commenting does not sync local subscriptions/playlists or turn bookmarks into likes |
 | Live | Extracted live HLS playback when available. **Live recording is not implemented**; the MP4 downloader is not misrepresented as a live recorder |
 
 Local saves are **bookmarks, not YouTube likes**. Local playlists/subscriptions do
-not modify your Google account. No account or Photon server is required for signed-out browsing/playback. Optional native commenting needs Google authorization and an app-owner Google Cloud registration. No passwords, cookies or client secrets should be pasted into issues or chat. Native authorization uses the broad YouTube API scope disclosed before Google's consent screen; it does not implement full account synchronization.
+not modify your Google account. No account or Photon server is required for signed-out browsing/playback. Optional native commenting needs Google authorization and an app-owner Google Cloud registration. No passwords, cookies or client secrets should be pasted into issues or chat. Native authorization uses the broad YouTube API scope disclosed before Google's consent screen; it does not implement full account synchronization. Optional account Home separately uses sensitive website-session cookies kept by Android WebView; see the in-app disclosure and [Home privacy/limitations](docs/YOUTUBE_HOME.md).
 
 ## Get an APK
 

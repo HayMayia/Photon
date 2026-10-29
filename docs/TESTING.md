@@ -188,3 +188,27 @@ Owner must save PHOTON_SIGNING_PASSWORD directly as a GitHub Actions repository 
 - [APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40867400991/artifacts/12895050509): 31,062,109 bytes; includes `app-debug.apk` and public `ANDROID_OAUTH.txt`.
 - Owner reports Google Android OAuth client creation complete with the permanent package/SHA-1. This is not an independently verified Console result or a device sign-in test.
 - **PENDING:** actual Google authorization, real comment posting, subtitle/gesture device checks and measured startup improvement. Public distribution verification/policy review remains separate from testing-mode client creation.
+
+
+## 0.6 account Home and local pause (build passed; device checks pending)
+
+See docs/YOUTUBE_HOME.md for the complete session/account/privacy limits and device checklist.
+
+- [ ] Connect website session after disclosure; verify account selection and supported Home cards against YouTube. Native comment OAuth must remain separate.
+- [ ] Google embedded-browser rejection is not bypassed or hidden; no cookie-pasting option. Clear web session must work after canceled/failed setup too.
+- [ ] YouTube history-off nudge/empty page is preserved without generated recommendations or discovery shelves. Unknown empty feed must not be labelled paused.
+- [ ] Explicit local pause prevents history/watch-time/resume writes, preserves old data, survives restart, and does not count paused elapsed time on unpause.
+- [ ] Cancel/clear/switch/rotation: no stale or cross-account feed; match web account index; test brand channels separately (not assumed to match native OAuth channel).
+- [ ] Refresh and one-page limitation are clear; unsupported layouts fail without a fake feed.
+- [ ] Search, manual Shorts discovery, local subscriptions, downloads, saved items, native playback/comments/subtitles/gestures remain accessible.
+- [ ] Upgrade from stable-signed 0.5.1 without uninstalling; certificate matches permanent registered SHA-1.
+
+New automated fixtures/protocol tests cover server order/deduplication, empty/history-off messages, signed-out/unknown-state rejection, bootstrap JSON scanning, modern card IDs, untrusted thumbnails, strict login hosts, selected web account and redirect rejection. Store tests cover paused tracking and persistence. No fixture establishes live web-session authentication, current website layout support, Google setting synchronization, native history upload or public-release policy approval.
+
+### 0.6 verified build
+
+- **PASS:** revision `2852d9b`, [run 40871610491](https://github.com/HayMayia/Photon/actions/runs/40871610491), 8m22s: stable-key restore, APK assembly, all 71 Photon Android test methods, final permanent-certificate match, artifact upload and signing-file cleanup.
+- [APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40871610491/artifacts/12896153246): 31,105,113 bytes, includes `app-debug.apk` and public `ANDROID_OAUTH.txt`.
+- Fifteen new focused tests: twelve Home/parser/protocol/navigation checks and three history-pause/persistence checks. XML/SVG main-source parse (92 files) and `git diff --check` passed.
+- Earlier core implementation `42e40b8` also passed run 40870748774 (7m51s). Final build adds explicit Shorts/library navigation to account Home.
+- **NOT VERIFIED:** live embedded Google/YouTube sign-in, actual account Home response, same-account/brand-channel matching, physical history-pause behavior, comments, latency or public-release approval. Google history flags/sync, history uploads and feed continuations are not implemented, not merely untested.

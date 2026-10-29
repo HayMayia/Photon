@@ -43,3 +43,7 @@ This is an unofficial website integration. Google production verification, YouTu
 7. Review disclosure, clear-web-session accessibility, TalkBack and narrow-screen layout. No credentials or private session data in the shared device report.
 
 Automated fixtures/protocol tests cannot verify a live Google sign-in, account recommendation response or website DOM behavior on a physical phone.
+
+## Build verification
+
+Source `2852d9b` passed APK assembly, all 71 focused Photon test methods and final permanent-certificate matching in [run 40871610491](https://github.com/HayMayia/Photon/actions/runs/40871610491) (8m22s). [APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40871610491/artifacts/12896153246), 31,105,113 bytes. This establishes build/protocol-fixture correctness, **not** a successful real web-session login/feed or Google history-state synchronization.

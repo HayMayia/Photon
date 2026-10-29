@@ -21,7 +21,7 @@ class YouTubeHistoryProtocolTest {
     private lateinit var store: PhotonStore
     private val config = """ytcfg.set({"INNERTUBE_CONTEXT":{"client":{"clientName":"WEB","clientVersion":"2.test"}}});"""
     private fun history(command: String?) = config + """var ytInitialData = {"responseContext":{"mainAppWebResponseContext":{"loggedOut":false}},"contents":{"twoColumnBrowseResultsRenderer":{"secondaryContents":{"browseFeedActionsRenderer":{"contents":[${if (command == null) "" else """{"buttonRenderer":{"serviceEndpoint":{"feedbackEndpoint":{"feedbackToken":"synthetic-action-token","actions":[{"localWatchHistoryCommand":{"localWatchHistoryCommandType":"LOCAL_WATCH_HISTORY_COMMAND_TYPE_$command"}}]}}}}"""}]}}}}};"""
-    private val watch = config + """var ytInitialPlayerResponse = {"videoDetails":{"videoId":"dQw4w9WgXcQ"},"playabilityStatus":{"status":"OK"},"playbackTracking":{"videostatsPlaybackUrl":{"baseUrl":"https://s.youtube.com/api/stats/playback?docid=dQw4w9WgXcQ"}}};"""
+    private val watch = config + """var ytInitialPlayerResponse = {"responseContext":{"mainAppWebResponseContext":{"loggedOut":false}},"videoDetails":{"videoId":"dQw4w9WgXcQ"},"playabilityStatus":{"status":"OK"},"playbackTracking":{"videostatsPlaybackUrl":{"baseUrl":"https://s.youtube.com/api/stats/playback?docid=dQw4w9WgXcQ"}}};"""
     @Before fun setup() {
         val context = RuntimeEnvironment.getApplication()
         context.getSharedPreferences("photon_library", 0).edit().clear().commit()

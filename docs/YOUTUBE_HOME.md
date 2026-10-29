@@ -1,49 +1,72 @@
-# YouTube account Home (0.6 alpha)
+# Account Home, Google history controls and real-play reporting (0.7 alpha)
 
-## What is implemented
+These are unofficial YouTube website integrations, adapted for ordinary videos rather than Prism's music-only endpoints. They are separate from the supported native Google authorization used for comments. They can fail if Google blocks embedded sign-in or changes website responses. A successful build/fixture test does not establish a working live account integration.
 
-An optional native YouTube Home screen reads the signed-in YouTube website's returned Home cards, preserving their server order. It does **not** call Photon's on-device recommendation ranker or replace an empty/error result with topic searches. Server-provided empty-feed messages (including a history-off nudge when YouTube supplies one) are displayed as text. Unsupported layouts fail closed rather than being labelled personal recommendations.
+## Connect and use
 
-The current implementation loads one Home page. Refresh fetches a new response. Continuation pagination, account Shorts/subscription synchronization and a fully faithful rendering of all YouTube shelves/cards are not implemented. Unsupported card types can be omitted; modern lockups may have limited channel/duration metadata. It is a native rendering of supported server cards, not a pixel-identical YouTube website or a guarantee that the account receives the same experiment/layout on every client.
+1. Home or Settings → YouTube account → **Connect YouTube Home**.
+2. Read the website-session disclosure, finish Google's/YouTube's own login, review the account, return to YouTube and choose **Use this YouTube session**.
+3. Home displays supported YouTube recommendation cards in server order. Scrolling near the end requests the next continuation automatically; **Load more** also supports explicit retries.
+4. In account settings use **Check Google history** to read the current watch-history control. **Pause on YouTube / Resume on YouTube** each require confirmation because they change the connected account's setting, not just Photon.
+5. To have real native plays reported, explicitly enable **Report real playback to YouTube history** and accept its separate disclosure. Enabling removes the additional local pause, but never overrides a paused/unknown Google setting.
 
-## Two different account connections
+Google may reject embedded WebView sign-in. Photon does not disguise the login browser or ask for pasted cookies. The official comment OAuth token cannot be converted into a YouTube website session. Switching a Cloud project to Production does not remove an embedded-browser rejection or complete Google verification.
 
-- **Sign in with Google:** official Play services authorization for verified channel identity and explicitly confirmed comment posting. This does not expose the personalized Home feed.
-- **Connect YouTube Home:** a separate, explicitly disclosed YouTube website session, similar in principle to Prism's session-based feed integration. Open Home or Settings → YouTube account, read the disclosure, sign in/review the account on Google's/YouTube's pages, return to YouTube and choose **Use this YouTube session**. The selected web account index is read from YouTube's own page configuration, not assumed to match the comment channel.
+## Home continuation behavior
 
-Google can reject sign-in in an embedded WebView. Photon preserves the real/default login browser user-agent, does not bypass that rejection, and does not provide cookie-pasting or password-field inspection. If Google blocks the browser or the website's format changes, native Home may be unavailable. Do not claim this has been device-tested merely because the APK builds. Native comment authorization can still work independently.
+The initial response supplies the authenticated web-client context and continuation token. More pages use a fixed authenticated `youtubei/v1/browse` request, not a search query or local ranker. Supported cards are appended in server order and deduplicated by video ID. In-flight loads are serialized, repeated/consumed tokens stop loops, and the account/session revision is checked before appending. Errors preserve prior cards and require an explicit retry; pages containing no new supported cards stop automatic chaining. Refresh starts a new feed. A 200-page-per-refresh guard bounds memory/network use; this implements practical infinite scrolling, not unbounded storage.
 
-## History and recommendation pause — precise limits
+Empty/history-off messages returned by YouTube remain visible. The app does not fabricate an empty state to mean history is paused or replace an empty/error Home with generated alternatives. Some card types/layouts may be unsupported; native rendering is not a pixel-identical copy of all YouTube shelves. A missing or unrecognized client context prevents pagination rather than inventing credentials/version data.
 
-- YouTube determines the returned feed using its account settings. If it returns no supported cards or a history-off message, Photon shows that outcome, without filling Home with generated alternatives.
-- **Photon cannot read or synchronize Google's history-pause switch through the official API used here.** An empty feed alone is not proof of a paused setting; neither the UI nor parser invents such a flag.
-- A separate **Pause local history & resume tracking** switch stops Photon's local history/progress writes and cancels generated local discovery/recommendation requests. It retains previously saved history; clearing old data remains an explicit action.
-- Connecting account Home turns the local pause on conservatively by default, regardless of the unknown Google switch. You can explicitly unpause it. This is not advertised as automatic Google-setting synchronization.
-- Native playback does **not** upload watch history to YouTube. Watching in Photon will not train the account's YouTube recommendations through a watch-history integration in this version. Website interactions during the web connection screen are handled by YouTube itself and may affect the account in the ordinary way.
-- Search, manual discovery, saved items, local subscriptions, Shorts discovery and downloads remain explicit separate features; a user opening one is not an automatic Home fallback.
+## Reading and changing Google's watch-history pause
 
-## Session/privacy safeguards
+Photon reads the signed-in English desktop `/feed/history` page. It inspects **structured watch-history commands in the history sidebar controls**, not English video titles or an empty Home:
 
-The embedded website stores session cookies in Android WebView's app-private storage, not in Photon's library/preferences, diagnostic reports, APK, repository or backend. App backup is disabled. These are sensitive authentication credentials even though they are not a password. This is distinct from the native comment OAuth access token, which remains memory-only.
+- An offered `LOCAL_WATCH_HISTORY_COMMAND_TYPE_PAUSE` action means the returned control currently allows pausing: **enabled**.
+- An offered `..._RESUME` action means the returned control allows resuming: **paused**.
+- Missing, contradictory, signed-out or unrecognized controls mean **unknown**.
 
-Home HTTP reads temporarily obtain only the YouTube cookie header and send it to the fixed HTTPS `www.youtube.com` Home endpoint with the selected web-account index. Redirects and connection retries are disabled; responses are size-limited. No arbitrary feed URL can be supplied. The parser accepts only valid video IDs and trusted video-thumbnail hosts. There are no JavaScript interfaces or password/cookie-reading scripts on login pages; the only evaluation reads YouTube's non-secret account index after validating the current YouTube origin.
+This is an inference from an explicit server-provided actionable control, not an official Google settings API or a push notification. State is account-revision-bound, stays in memory, and becomes unsafe for tracking after **30 seconds**. While playing, checks are scheduled at approximately that interval. Home refresh/settings checks also refresh it. Changes made elsewhere are therefore not mirrored instantaneously; Google remains authoritative.
 
-Login top-level navigation is restricted to explicit HTTPS Google/YouTube hosts, file/content access and mixed content are disabled, TLS errors are rejected, and untrusted navigation is blocked. **Clear web session** is available even after a canceled/failed connection and removes this app's WebView cookies/site storage, not Chrome's login, Android's Google account or the native comment authorization grant. It also cancels pending feed loads and clears the native feed.
+Confirmed pause/resume uses only the action token offered by that freshly read watch-history control and a fixed `youtubei/v1/feedback` endpoint. It does not replay history-deletion tokens. The resulting history page must show the requested state before the app presents it as verified. A failed/ambiguous change becomes unknown and is not automatically resent. This action does not delete previous history.
 
-This is an unofficial website integration. Google production verification, YouTube policy compliance, secure release builds and real-device acceptance are separate prerequisites for public distribution; switching the Cloud project from Testing to Production does not establish them.
+In connected mode, Google's paused/unknown/stale state blocks local history/progress writes as well as account reports. **Additional local history pause** can block tracking even when Google history is enabled; it never changes Google's setting. Previously saved local history remains until explicitly cleared.
 
-## Required device checks
+## Reporting actual native playback
 
-1. Connect a permitted website session, review the chosen account, compare supported cards/order with that account's YouTube Home. Test a non-default web account too.
-2. History off / reduced personalization: check actual server response/message, no local/search fallback. Do not infer a flag from an unexplained empty result.
-3. Unknown/expired session, consent interstitial, blocked embedded browser, missing WebView provider, network/TLS failure and changed layout: useful failure, no fake recommendations.
-4. Pause local history, play/seek/background, restart: no new local position/watch-time/history writes. Unpause explicitly and verify tracking resumes without counting paused elapsed time.
-5. Connect Home, clear session, cancel during loading, switch accounts and recreate UI: no stale feed resurrection or cross-account results.
-6. Verify existing native comment authorization, subtitles, ±10s gestures, original audio, downloads/casting and saved library remain intact. Upgrade from the stable-signed 0.5.1 APK without uninstalling.
-7. Review disclosure, clear-web-session accessibility, TalkBack and narrow-screen layout. No credentials or private session data in the shared device report.
+Reporting is **off by default**, independently of Home connection and local history. Once explicitly enabled:
 
-Automated fixtures/protocol tests cannot verify a live Google sign-in, account recommendation response or website DOM behavior on a physical phone.
+- At least **15 seconds of actual `isPlaying` wall time** are required. Pauses/buffering/unknown-state intervals do not count; seeks do not add distance, and long sampling gaps are conservatively capped. Plays shorter than the threshold are not reported.
+- One report is attempted per native view. Quality changes keep the view identity; a new explicit video open is a new view. Offline/downloaded playback, missing view identities, old local history and unplayed metadata previews are not uploaded.
+- The viewing item is bound to the web account/session revision at opening. Reviewing/switching accounts immediately invalidates that revision, disables reporting consent and blocks account work until reconnection. An old playing item cannot silently become a new account's report.
+- Immediately before a report the current Google history control is read again. Only freshly enabled history plus current consent, no additional local pause and an unchanged session permit proceeding.
+- A signed-in watch-page response must identify the actual playing video and provide its playback-tracking URL and web context. Only HTTPS `www.youtube.com` or `s.youtube.com` at the exact `/api/stats/playback` path, with a matching `docid`, are allowed.
+- A single playback-registration request is sent with a per-view random nonce and the actual measured played time. This is not a fabricated watchtime stream, view-count booster, recommendation ranker or complete YouTube watch-duration ledger. No offline queue, history backfill or automatic report retry is implemented.
+- HTTP acceptance is labelled **report accepted**, not proof that Google stored an activity item or immediately changed recommendations. Verify on official YouTube; account policy, server behavior and processing delay remain authoritative.
 
-## Build verification
+A change/disconnect can cancel not-yet-sent work, but an already in-flight request cannot be undone. Credentials remain pinned to the captured account, not substituted with a new account's cookies. A failed/ambiguous report is not automatically sent again for that view.
 
-Source `2852d9b` passed APK assembly, all 71 focused Photon test methods and final permanent-certificate matching in [run 40871610491](https://github.com/HayMayia/Photon/actions/runs/40871610491) (8m22s). [APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40871610491/artifacts/12896153246), 31,105,113 bytes. This establishes build/protocol-fixture correctness, **not** a successful real web-session login/feed or Google history-state synchronization.
+## Privacy and request safeguards
+
+WebView stores sensitive session cookies in app-private storage; Android backup is disabled. Cookies are not placed in Photon's library/preferences, repository, APK, diagnostic report or a Photon backend. Only the non-secret selected web-account index is read via evaluated JavaScript on a validated YouTube origin. No password-field reader, JavaScript interface or cookie-paste flow is provided.
+
+HTTP credentials are captured on the main thread and used only for allowlisted YouTube hosts. `www.youtube.com` and `s.youtube.com` receive their own CookieManager cookie headers, not a blindly forwarded host-only cookie. Internal web requests use the session's SAPISID authorization scheme. Cookies, opaque feedback/continuation tokens and client contexts remain memory-only outside WebView; server-derived context/tokens are not logged. Redirects and connection retries are disabled, and a per-call network guard prevents a second transmission through automatic follow-up behavior. Responses are size-limited. Bootstrap parsing/network work runs off the UI thread and does not delay playback preparation.
+
+Login navigation allows explicit HTTPS Google/YouTube hosts only, rejects TLS errors and disables file/content access and mixed content. Login uses WebView's real/default user-agent; the separate read-only website parser requests desktop layout, not a disguised Google login. **Clear web session** also works after failed/canceled setup and removes this app's web cookies/site storage, clears the feed, invalidates pending work and disables reporting. It does not sign out Chrome, Android's Google account or revoke native comment OAuth.
+
+## Device acceptance before public distribution
+
+- Real website sign-in; verify default/non-default Google account and brand-channel behavior separately. Do not assume the comment channel matches the website identity.
+- Compare Home order, scroll several continuation pages, duplicate handling, refresh, network failure and explicit retry; ensure no search/local fallback when paused/empty.
+- Compare detected pause with official YouTube. Pause/resume in Photon and externally; verify read-back and periodic refresh, unknown-state blocking and retention of old local data.
+- Enable reporting knowingly, play a remote video for >15 real seconds, and inspect official YouTube history. Test paused/buffering/short/offline plays, quality changes, account switching, consent disabling and cancellation during requests.
+- Confirm no duplicate automatic reports, history backfill, inaccurate watched-time claims or cross-account records. Review the shared device report for absence of credentials/URLs.
+- Upgrade over stable-signed 0.5.1/0.6 without uninstalling; retain captions, ±10s gestures, original audio, downloads, casting and library navigation.
+
+Keep OAuth testing while validating accounts; add another email as a test user instead of assuming Production status fixes access. Google production verification, privacy/policy review, release-build hardening and real-device acceptance remain separate work. Approval and reliable unofficial website behavior are not guaranteed.
+
+## Implementation references and verification
+
+Prism's `YouTubeMusic.home/continueBrowse`, `playerExtras/registerPlayback` informed the architecture; ordinary-video requests and safeguards are implemented separately. Structured history-control shape was checked against public TeamPiped/rustypipe and yewtubes history fixtures; tests use newly constructed synthetic data, not copied account history/identifiers/action tokens.
+
+0.7 Android build and live-device acceptance are pending verification. The focused test source contains 98 methods, including account continuation, structured pause parsing, policy freshness, real-play gating, global-setting read-back, account changes, scoped cookies and ambiguous-report failure. No test sends live account mutations.

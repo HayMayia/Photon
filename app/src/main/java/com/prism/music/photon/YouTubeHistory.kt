@@ -77,6 +77,7 @@ internal object YouTubePlaybackUrls {
     fun forVideo(html: String, videoId: String, watchedMs: Long): Pair<HttpUrl, JsonObject> {
         require(watchedMs >= 15_000 && Regex("[A-Za-z0-9_-]{11}").matches(videoId))
         val player = YouTubeWebBootstrap.assigned(html, "ytInitialPlayerResponse")
+        if (!YouTubeWebBootstrap.signedIn(player, html)) throw IOException("YouTube did not confirm a signed-in player response")
         if ((player["videoDetails"] as? JsonObject)?.get("videoId")?.jsonPrimitive?.content != videoId ||
             (player["playabilityStatus"] as? JsonObject)?.get("status")?.jsonPrimitive?.content != "OK") throw IOException("YouTube did not verify the playing video")
         val base = ((player["playbackTracking"] as? JsonObject)?.get("videostatsPlaybackUrl") as? JsonObject)?.get("baseUrl")?.jsonPrimitive?.content
@@ -175,7 +176,7 @@ class YouTubeHistoryCoordinator(private val store: PhotonStore, client: OkHttpCl
             val context = before.context ?: throw IOException("Missing history context")
             mutable.value = GoogleHistoryState(checking = true, revision = session.revision)
             if (!same(session)) return@withLock
-            transport.post("feedback", context, buildJsonObject { putJsonArray("feedbackTokens") { add(token) } }, session)
+            transport.post("feedback", context, buildJsonObject { putJsonArray("feedbackTokens") { add(token) } }, session) { same(session) }
             val after = read(session)
             if (after.status != desired) throw IOException("Google did not confirm the history-setting change")
         } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
@@ -193,7 +194,7 @@ class YouTubeHistoryCoordinator(private val store: PhotonStore, client: OkHttpCl
             val watch = transport.html("/watch?v=$videoId", session)
             val (url, context) = withContext(Dispatchers.IO) { YouTubePlaybackUrls.forVideo(watch, videoId, watchedMs) }
             if (!permitted() || !AccountHistoryPolicy.active(state.value, revision, now())) return@withLock
-            transport.playback(url, session, context) // One real-play registration, never a watchtime/engagement fabrication.
+            transport.playback(url, session, context) { permitted() && AccountHistoryPolicy.active(state.value, revision, now()) } // One real-play registration, never a watchtime/engagement fabrication.
             if (same(session)) mutable.value = state.value.copy(message = "Playback report accepted by YouTube. History/recommendation updates may take time; verify on YouTube.")
         } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
         catch (_: Exception) { if (same(session)) mutable.value = GoogleHistoryState(revision = revision,

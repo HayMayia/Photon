@@ -15,7 +15,7 @@ class YouTubeAccountPlaybackTest {
     private val context = """<script>ytcfg.set({"INNERTUBE_CONTEXT":{"client":{"clientName":"WEB","clientVersion":"2.test"}}});</script>"""
     private fun control(command: String, token: String = "test-action") = """{"buttonRenderer":{"serviceEndpoint":{"feedbackEndpoint":{"feedbackToken":"$token","actions":[{"localWatchHistoryCommand":{"localWatchHistoryCommandType":"LOCAL_WATCH_HISTORY_COMMAND_TYPE_$command"}}]}}}}"""
     private fun history(controls: String, signedOut: Boolean = false) = context + """<script>var ytInitialData = {"responseContext":{"mainAppWebResponseContext":{"loggedOut":$signedOut}},"contents":{"twoColumnBrowseResultsRenderer":{"secondaryContents":{"browseFeedActionsRenderer":{"contents":[$controls]}}}}};</script>"""
-    private fun player(url: String, id: String = "dQw4w9WgXcQ") = context + """var ytInitialPlayerResponse = {"videoDetails":{"videoId":"$id"},"playabilityStatus":{"status":"OK"},"playbackTracking":{"videostatsPlaybackUrl":{"baseUrl":"$url"}}};"""
+    private fun player(url: String, id: String = "dQw4w9WgXcQ") = context + """var ytInitialPlayerResponse = {"responseContext":{"mainAppWebResponseContext":{"loggedOut":false}},"videoDetails":{"videoId":"$id"},"playabilityStatus":{"status":"OK"},"playbackTracking":{"videostatsPlaybackUrl":{"baseUrl":"$url"}}};"""
 
     @Test fun pauseActionMeansHistoryCurrentlyEnabled() {
         val result = YouTubeHistoryParser.parse(history(control("PAUSE")))

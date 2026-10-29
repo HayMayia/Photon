@@ -82,6 +82,10 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
     private fun invalidateGoogleChanges() {
+        if (mutableBrowse.value.query == "Google subscriptions") {
+            searchJob?.cancel()
+            mutableBrowse.value = BrowseState(query = "Google subscriptions", error = "Account changed. Reload the Google subscriptions feed for the current account.")
+        }
         googleChangeJob?.cancel(); googleChange.value = GoogleChangeState()
         googleLikes.value = emptyMap(); googleSubscriptions.value = emptyMap()
     }

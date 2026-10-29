@@ -32,14 +32,16 @@ class PhotonPlaybackService : MediaSessionService() {
     private var wasPlaying = false
     private val json = Json { ignoreUnknownKeys = true }
 
-    private fun snapshot() {
+    private fun snapshot(savePosition: Boolean = false) {
         val player = session?.player ?: return
         val now = android.os.SystemClock.elapsedRealtime()
-        val elapsed = if (wasPlaying) now - lastTick else 0L
+        val delta = now - lastTick
         lastTick = now
-        val raw = player.currentMediaItem?.mediaMetadata?.extras?.getString("photon_video") ?: return
-        val video = runCatching { json.decodeFromString<Video>(raw) }.getOrNull() ?: return
-        if (player.isPlaying || (wasPlaying && lastVideo?.id == video.id)) {
+        val raw = player.currentMediaItem?.mediaMetadata?.extras?.getString("photon_video")
+        val video = raw?.let { runCatching { json.decodeFromString<Video>(it) }.getOrNull() }
+        if (video == null) { wasPlaying = false; return }
+        val elapsed = if (wasPlaying && lastVideo?.id == video.id) delta else 0L
+        if (player.isPlaying || ((wasPlaying || savePosition) && lastVideo?.id == video.id)) {
             (application as PhotonApplication).library.recordPlayback(video, player.currentPosition, player.duration, elapsed)
             lastVideo = video
         }
@@ -76,6 +78,9 @@ class PhotonPlaybackService : MediaSessionService() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         session = MediaSession.Builder(this, player).setSessionActivity(launch).build()
         player.addListener(object : androidx.media3.common.Player.Listener {
+            override fun onPositionDiscontinuity(oldPosition: androidx.media3.common.Player.PositionInfo, newPosition: androidx.media3.common.Player.PositionInfo, reason: Int) {
+                if (reason == androidx.media3.common.Player.DISCONTINUITY_REASON_SEEK) snapshot(true)
+            }
             override fun onPlaybackStateChanged(state: Int) { PhotonDiagnostics.event("Playback state=$state") }
             override fun onPlayerError(error: androidx.media3.common.PlaybackException) { PhotonDiagnostics.event("Playback error=${error.errorCodeName}") }
             override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -97,7 +102,7 @@ class PhotonPlaybackService : MediaSessionService() {
     }
 
     override fun onDestroy() {
-        snapshot()
+        snapshot(true)
         scope.cancel()
         session?.let { it.player.release(); it.release() }
         session = null

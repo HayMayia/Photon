@@ -225,7 +225,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 collection.value = if (previous == null) result else previous.copy(videos = (previous.videos + result.videos).distinctBy { it.id }, next = result.next)
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (error: Exception) { collectionError.value = error.message ?: "Could not load this page" }
-            finally { collectionBusy.value = false }
+            finally { if (kotlinx.coroutines.currentCoroutineContext()[Job]?.isActive == true) collectionBusy.value = false }
         }
     }
     fun moreCollection() { if (collection.value?.next != null) openCollection(collectionUrl, collectionIsChannel, collectionShorts, true) }
@@ -243,7 +243,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 comments.value = if (previous == null) result else result.copy(comments = (previous.comments + result.comments).distinctBy { it.id })
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (error: Exception) { commentsError.value = error.message ?: "Comments unavailable" }
-            finally { commentsBusy.value = false }
+            finally { if (kotlinx.coroutines.currentCoroutineContext()[Job]?.isActive == true) commentsBusy.value = false }
         }
     }
 }

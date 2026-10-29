@@ -226,4 +226,4 @@ internal fun CastPanel(casting: PhotonCast, watch: WatchState, pausePhone: () ->
 }
 
 
-internal fun browserIntent(url: String): Intent = Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_BROWSER).apply { data = Uri.parse(url) }
+internal fun browserIntent(url: String): Intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply { selector = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_BROWSER) }

@@ -100,7 +100,15 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
             try {
                 val result = app.videos.search("shorts")
                 page = result
-                mutableBrowse.value = BrowseState(result.videos.filter { it.short }, query = "Shorts", hasMore = result.next != null)
+                val videos = result.videos.filter { it.short }.toMutableList()
+                val sources = (library.value.subscriptions.map { it.url } + library.value.history.map { it.channelUrl } + result.videos.map { it.channelUrl })
+                    .filter { it.isNotBlank() }.distinct().take(3)
+                for (url in sources) {
+                    try { videos += app.videos.channel(url, shorts = true).videos.map { it.copy(short = true) } }
+                    catch (cancelled: CancellationException) { throw cancelled }
+                    catch (_: Exception) { /* A creator may have no Shorts tab. */ }
+                }
+                mutableBrowse.value = BrowseState(videos.distinctBy { it.id }, query = "Shorts", hasMore = result.next != null)
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (error: Exception) { mutableBrowse.value = BrowseState(query = "Shorts", error = error.message ?: "Shorts unavailable") }
         }

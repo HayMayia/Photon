@@ -40,3 +40,14 @@ redistributed by this repository.
 Photon is an independent project, not endorsed by Prism, Google or YouTube.
 When distributing an APK, provide its corresponding source under GPL-3.0-or-later,
 including modifications and build files. Keep copyright and license notices.
+
+## 0.2 expansion
+
+Photon adds standard-YouTube channel/public-playlist/comment extraction, local
+subscriptions and playlists, a vertical Shorts browser, service-owned watch
+progress/resume, local related-video recommendation ranking, and independently
+wired LAN video casting. `GoogleCastLink` metadata now distinguishes video from
+its unchanged music metadata path. The Photon manifest declares LAN/multicast
+permissions and allows HTTP for dynamically addressed UPnP TVs; casting targets
+are explicitly validated as LAN addresses. No authenticated Google account client
+or live recorder is claimed. Device testing remains separate from unit/build checks.

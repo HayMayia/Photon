@@ -175,6 +175,7 @@ internal fun ShortsScreen(browse: BrowseState, watch: WatchState, controller: Me
                     TextButton(onClick = { model.save(video) }) { Text("Save locally") }
                 }
                 if (index == pager.currentPage && watch.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+                if (index == browse.videos.lastIndex && browse.hasMore) TextButton(onClick = model::loadMore) { Text("Load more Shorts") }
                 if (index == pager.currentPage) watch.error?.let { Text(it, Modifier.padding(16.dp), color = MaterialTheme.colorScheme.error) }
             }
         }

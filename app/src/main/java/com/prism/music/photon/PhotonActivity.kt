@@ -553,6 +553,10 @@ private fun SettingsPage(library: PhotonLibrary, model: PhotonViewModel, notific
         item {
             SettingsGroup("ABOUT PHOTON") {
                 ListItem(headlineContent = { Text("Photon ${BuildConfig.VERSION_NAME}") }, supportingContent = { Text("Early Android preview · not affiliated with Google or YouTube") }, leadingContent = { Icon(PrismIcons.Play, null) })
+                ListItem(headlineContent = { Text("Share device test report") }, supportingContent = { Text("Device/API, app version and URL-free playback events. Review before sending.") }, leadingContent = { Icon(PrismIcons.Share, null) }, modifier = Modifier.clickable {
+                    context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, PhotonDiagnostics.report()), "Share test report"))
+                })
+                ListItem(headlineContent = { Text("Google account on YouTube (browser)") }, supportingContent = { Text("Opens official YouTube. This does not sign Photon in or sync its local library.") }, trailingContent = { Icon(PrismIcons.OpenInNew, null) }, modifier = Modifier.clickable { context.startActivity(browserIntent("https://www.youtube.com/")) })
                 ListItem(headlineContent = { Text("Source code & issues") }, supportingContent = { Text("HayMayia/Photon · GPL-3.0-or-later") }, trailingContent = { Icon(PrismIcons.ArrowForward, null) }, modifier = Modifier.clickable { link("https://github.com/HayMayia/Photon") })
                 ListItem(headlineContent = { Text("Built on Prism by Yigder") }, supportingContent = { Text("Original design, icons, typography and Android foundation · GPL-3.0-or-later") }, trailingContent = { Icon(PrismIcons.ArrowForward, null) }, modifier = Modifier.clickable { link("https://github.com/Yigder/Prism") })
                 ListItem(headlineContent = { Text("NewPipe Extractor") }, supportingContent = { Text("YouTube extraction · GPL-3.0-or-later") }, trailingContent = { Icon(PrismIcons.ArrowForward, null) }, modifier = Modifier.clickable { link("https://github.com/TeamNewPipe/NewPipeExtractor") })

@@ -42,3 +42,34 @@ All device checks above remain unverified. Local Android compilation cannot
 run in the coding sandbox (no JDK/SDK; Maven/Google/Gradle hosts restricted).
 GitHub Actions supplied the successful external build check above. A successful
 build is not a claim that streaming or download muxing passed on a real phone.
+
+## 0.2 expanded-feature device cases (not yet device-verified)
+
+Use **Settings → Share device test report**, fill in the case ID and steps, then
+send the report with a screenshot if helpful. Review before sharing. The report
+contains app version, device model/API and bounded local playback-state/error-code
+events, not cookies, stream URLs, SSID or unique device identifiers.
+
+| ID | Action | Expected result |
+|---|---|---|
+| CH-01 | Open a video → Channel; switch Videos/Shorts; load more | Real uploads and tab-specific errors, not a crash |
+| SUB-01 | Subscribe locally, restart, open Library → Channels | Subscription persists; refresh fetches uploads |
+| SUB-02 | Unsubscribe and refresh | Channel removed locally, Google account unchanged |
+| PL-01 | Create playlist; add the same video twice | One entry; playlist survives app restart |
+| PL-02 | Paste a public YouTube playlist URL in Search; load more | Public list pages, no sign-in-required content bypass |
+| PL-03 | Play all, let first video finish | Next loaded video resolves/plays while UI/controller is active |
+| CM-01 | Open comments, load more, view replies, back to comments | Paginated real text; disabled/unavailable errors visible |
+| SH-01 | Home → Shorts; swipe up/down | Selected Short plays; previous audio stops; no parallel playback |
+| WP-01 | Play 30 s, pause, force-stop, relaunch and reopen | Resume near saved position, within ~5 s |
+| WP-02 | Seek forward 5 min after watching 10 s | History does not claim 5 min watched |
+| WP-03 | Play to end, reopen | Restarts at beginning rather than sticking at the end |
+| WP-04 | Lock screen, play 30 s, return | Service records background playing time and position |
+| REC-01 | Actually watch several videos, tap Home → For you | Related candidates ranked locally, watched seeds excluded |
+| CAST-01 | Same Wi-Fi, tap Cast and select Google Cast/DLNA TV | Combined MP4 or downloaded merged file plays with sound |
+| CAST-02 | Cast an adaptive-only video without a combined source | Explains that downloading/merging first is required |
+| CAST-03 | Pause/play/disconnect; dismiss picker | Remote controls work; discovery stops on dismissal |
+| PRIV-01 | Clear watch history | History and resume positions clear; saves/downloads/playlists remain |
+
+**Do not mark implemented:** native Google account sync/YouTube likes, native
+comment posting, signed-in Shorts personalization, live recording or live casting.
+The official YouTube browser link is not evidence of native account integration.

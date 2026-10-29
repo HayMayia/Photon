@@ -76,7 +76,10 @@ class PhotonPlaybackService : MediaSessionService() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         session = MediaSession.Builder(this, player).setSessionActivity(launch).build()
         player.addListener(object : androidx.media3.common.Player.Listener {
+            override fun onPlaybackStateChanged(state: Int) { PhotonDiagnostics.event("Playback state=$state") }
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) { PhotonDiagnostics.event("Playback error=${error.errorCodeName}") }
             override fun onIsPlayingChanged(isPlaying: Boolean) {
+                PhotonDiagnostics.event("Playing=$isPlaying")
                 snapshot()
                 lastTick = android.os.SystemClock.elapsedRealtime()
             }

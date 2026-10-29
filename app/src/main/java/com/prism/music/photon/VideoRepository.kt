@@ -139,7 +139,7 @@ class VideoRepository {
     }
 
     suspend fun comments(video: Video, next: Page? = null): CommentPage = withContext(Dispatchers.IO) {
-        fun convert(item: org.schabi.newpipe.extractor.comments.CommentsInfoItem) = VideoComment(item.commentId.orEmpty(), item.uploaderName.orEmpty(), item.commentText.content.orEmpty(), item.likeCount, item.replyCount, item.replies)
+        fun convert(item: org.schabi.newpipe.extractor.comments.CommentsInfoItem) = VideoComment(item.commentId?.takeIf { it.isNotBlank() } ?: "${item.uploaderName}:${item.commentText.content.hashCode()}", item.uploaderName.orEmpty(), item.commentText.content.orEmpty(), item.likeCount, item.replyCount, item.replies)
         if (next == null) {
             val result = org.schabi.newpipe.extractor.comments.CommentsInfo.getInfo(ServiceList.YouTube, video.url) ?: error("Comments unavailable")
             CommentPage(result.relatedItems.map(::convert), result.nextPage?.takeIf { Page.isValid(it) }, result.isCommentsDisabled)

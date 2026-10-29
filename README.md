@@ -4,117 +4,129 @@
 [Yigder's Prism](https://github.com/Yigder/Prism), retaining its real Compose theme,
 fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
 
-> **0.1.0 alpha — not a finished Prism-equivalent release.**
-> Android APK compilation and the focused Photon unit suite **passed** on
-> [GitHub Actions](https://github.com/HayMayia/Photon/actions/runs/40852929196)
-> for source revision `3a7501f`. Physical-device playback/download testing remains
-> unverified. See [testing](#testing).
->
-> **[Download the verified-build APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40852929196/artifacts/12888497023)**
-> (GitHub sign-in required). Extract it and install `app-debug.apk` on Android 8+.
+> **0.2.0 alpha — expanded native features, not complete Prism/YouTube parity.**
+> See the latest successful **Build Photon APK** run for a verified binary.
+> Physical-device results must be confirmed by a tester; a successful build is
+> not proof that a particular YouTube video, phone or TV works.
 
-## Implemented in this preview
+## Feature status
 
-- Ordinary YouTube video search, topic discovery and paginated results (not YT Music).
-- YouTube watch/Shorts/live links, including Android's Share → Photon.
-- Video player with seeking, background media session, lock-screen/headset controls,
-  full-screen landscape, explicit picture-in-picture and a mini-player.
-- Available MP4 quality selection, preferring up to 1080p by default.
-- HD downloads where compatible source streams are available. Separate AVC video
-  and AAC audio are downloaded and merged **on the device** into one MP4 using
-  Android's MediaMuxer. No server or FFmpeg binary. No silent quality substitution.
-- Download queue/progress/cancellation/error messages and optional unmetered-network
-  constraint (on by default). Offline playback and deletion of downloaded copies.
-- Local saved videos and a 100-entry watch history; light/dark appearance and quality preferences.
-- Distinct Photon branding and application ID, installing alongside Prism.
+| Feature | Current implementation |
+|---|---|
+| Videos | Standard YouTube search, topic discovery, result pagination, video/channel/public-playlist links and Android Share → Photon |
+| Channel pages | Native channel details, Videos and Shorts tabs, paginated uploads |
+| Subscriptions | **Device-local** subscribe/unsubscribe and refresh uploads from up to 20 subscribed channels; not Google subscriptions |
+| Playlists | Local create/add/remove/delete, play loaded videos as a queue; browse paginated public YouTube playlists by link |
+| Comments | Native **read-only** comments, pagination and replies; posting opens the official YouTube site in the browser |
+| Shorts | Swipeable vertical video feed using extracted Shorts and channel Shorts tabs; discovery is not YouTube's signed-in Shorts algorithm |
+| Recommendations | On-device ranking of related videos from engaged watch-history seeds, saved-video weighting, seen-video exclusion, subscription boosting and channel diversity; cold-start topic discovery remains search-based |
+| History/resume | Recorded by the playback service, including background playback; periodic positions, playing-time accumulation (not seek distance), and resume across app restarts; recently finished videos restart from the beginning |
+| Casting | LAN discovery/control for Google Cast and DLNA using Prism's protocols; proxies a combined MP4 or serves your downloaded merged MP4; **keep Photon open**; no live/adaptive-stream casting |
+| Downloads | Available MP4/AVC + AAC qualities; foreground progress/cancel; separate audio/video muxed on-device with MediaMuxer |
+| Offline | Play/delete downloaded MP4 files including sound |
+| Player | Seeking, background session, lock-screen/headset controls, full-screen landscape, explicit PiP and mini-player |
+| Testing tools | Settings → **Share device test report**; bounded local playback events without credentials/stream URLs; [device checklist](docs/TESTING.md) and issue template |
+| Google login, YouTube likes/account sync | **Not implemented natively.** Settings provides an explicitly labelled official-YouTube browser link; this does not sign Photon in or sync its library |
+| Live | Extracted live HLS playback when available. **Live recording is not implemented**; the MP4 downloader is not misrepresented as a live recorder |
 
-No account, API key or Photon server is required. YouTube may refuse extraction
-on some networks or for some videos. No DRM, paid-access or sign-in bypass.
-Download only content you own or have permission to save, and follow applicable
-terms and laws.
+Local saves are **bookmarks, not YouTube likes**. Local playlists/subscriptions do
+not modify your Google account. No account, API key or Photon server is required
+for the native features above. The browser link is a convenience, not a substitute
+for native account integration. A secure native account client and authenticated
+YouTube mutations remain separate work; no passwords or cookies should be pasted
+into issues or chat.
 
 ## Get an APK
 
-1. Open this repository's **Actions → Build Photon APK**.
-2. Open the latest successful run on branch `arena/c217a41b-photon`.
+1. Open **[Actions → Build Photon APK](https://github.com/HayMayia/Photon/actions)**.
+2. Open the latest **successful** run for branch `arena/c217a41b-photon` and check
+   that its revision contains the features you want.
 3. Under **Artifacts**, download **Photon-Android-APK** (GitHub sign-in required).
-4. Extract the ZIP, transfer `app-debug.apk` to your Android phone, and open it.
+4. Extract the ZIP, transfer `app-debug.apk` to your Android 8+ phone, and open it.
 5. Allow installation from that browser/file manager if Android asks.
 
-Artifacts expire after 90 days. Keep a local copy of the APK and source ZIP.
-After the workflow is on the default branch, it can also be started using
-**Run workflow**. If a later workflow is red,
-there is no verified APK yet: inspect its build log rather than installing an
-unrelated Prism release. The sandbox cannot compile locally: it has no JDK/SDK
-and Maven/Google/Gradle download hosts are network-restricted.
+Artifacts expire after 90 days. Keep a local APK/source copy. If a workflow is
+red, there is no verified APK for that revision. Earlier successful runs remain
+available but do not include later changes. The original 0.1 build passed at
+[revision 3a7501f](https://github.com/HayMayia/Photon/actions/runs/40852929196).
 
-Debug builds are for evaluation. GitHub runners may generate different debug
-signing keys on different runs, which can prevent installing a later APK over
-an earlier one. Before a public release, configure a persistent private signing
-key (never commit it) and build a signed release.
+**Upgrade warning:** these are debug-signed evaluation builds. Separate CI runs
+may generate different signing keys, preventing installation over an earlier APK.
+Do not uninstall a populated app casually: it deletes its local library/downloads.
+A production release needs a persistent private signing key configured outside
+Git. Never commit signing keys or post credentials.
 
-## Build locally
+## Build and test
 
-Use JDK 21 (as verified in CI), Android SDK platform 37.2, and internet access to Google Maven, Maven
-Central, Gradle and JitPack. The inherited upstream dependency versions are pinned
-in the Gradle scripts.
+Verified toolchain baseline: JDK 21, explicit Android SDK platform **37.2**, and
+internet access to Google Maven, Maven Central, Gradle and JitPack. Gradle source
+is pinned to Prism's upstream dependency versions. CI resolves the minor SDK
+version explicitly rather than requesting the nonexistent `android-37` package.
 
 ```sh
 chmod +x gradlew
 ./gradlew :app:assembleDebug
 # app/build/outputs/apk/debug/app-debug.apk
-```
-
-## Testing
-
-Focused Photon unit tests (no YouTube network required):
-
-```sh
 ./gradlew :app:testDebugUnitTest --tests 'com.prism.music.photon.*'
 ```
 
-[Device acceptance checklist](docs/TESTING.md). Inherited Prism tests also remain,
-but many exercise live music/lyric services and are not a Photon acceptance suite.
+The focused suite exercises link validation, library persistence and migration,
+subscriptions, playlist mutation/deduplication, progress accumulation/resume,
+bounded history retention and recommendation ranking. It does not call YouTube.
+Inherited Prism tests remain, but many exercise live music/lyric services and are
+not a Photon acceptance suite. Local compilation is unavailable in the coding
+sandbox (no JDK/SDK and restricted Maven/Google/Gradle hosts); GitHub Actions is
+the external compilation/test gate.
 
-## Important limitations
+## Important remaining limitations
 
-- No Google login, subscriptions, channel pages, comments, Shorts feed, playlists,
-  casting or account sync in this first preview.
-- Topic discovery uses explicit YouTube searches, not a personalized recommendation
-  algorithm. Saved videos are local bookmarks, not YouTube likes.
-- Only available progressive MP4/AVC + AAC streams are offered. A video may have no
-  compatible format. No guaranteed 1080p/4K for every video; device codecs also vary.
-- Live HLS playback is offered if extraction provides it; live downloads are not.
-- Downloads restart rather than resume partial files after interruption. Android
-  may impose background-work/time/battery restrictions on large downloads.
-- Downloads are app-private and **removed when Photon is uninstalled**. Export to
-  public storage is not implemented. Thumbnail images are cached, not guaranteed
-  offline; offline video files include audio.
-- History records opening a video, not exact watched duration or resume position.
-- Device playback, full-screen/PiP, HD muxing and background lifecycle require
-  real-device testing. A source implementation is not proof of working playback.
+- No native Google login, Google library import/sync, YouTube likes, posting
+  comments, or editing your account's online playlists. Official YouTube in a
+  browser can perform account actions, but those are **not Photon-native features**.
+- Live recording is not implemented. Live manifests can have rotating windows,
+  separate tracks, discontinuities and encryption; ordinary MP4 downloads cannot
+  safely record them.
+- Only compatible available progressive MP4/AVC + AAC streams are offered. No
+  guaranteed 1080p/4K; device codecs, IP/region restrictions and source availability vary.
+- Cast quality uses a combined MP4 source rather than silently sending video-only
+  adaptive media. If unavailable, download/mux first and cast the offline copy.
+  Keep Photon open while casting; background cast lifecycle and TV compatibility
+  remain device-test items. No live casting.
+- Downloads restart rather than resume partial files. Android may restrict long
+  background work. Downloads are app-private and **removed on uninstall**. Public
+  export and guaranteed-offline thumbnails are not implemented.
+- Local history/progress covers 100 recent videos. Progress is periodically saved
+  (up to about five seconds may be lost on abrupt process death). Seeking does not
+  add the seek distance to watched time. Queue continuation requires the active
+  Photon UI/controller; it is not a persisted background playlist service.
+- Subscriptions and playlist collections are local; remote playlist playback queues
+  only the videos loaded so far. Subscription refresh currently covers 20 channels.
+- YouTube may change extraction or refuse a request. Network errors and disabled
+  comments/absent channel tabs are reported rather than replaced with fake data.
+
+Download/record only content you own or have permission to save, following
+applicable terms and laws. No DRM, paid-access or age/sign-in restriction bypass.
 
 ## Code map
 
-Active Photon code: `app/src/main/java/com/prism/music/photon/`.
+Active application: `app/src/main/java/com/prism/music/photon/`.
 
-| File | Purpose |
-|---|---|
-| `PhotonApplication.kt` | Lightweight app startup, no inherited music jobs |
-| `VideoRepository.kt` | Standard YouTube search, link parsing, extraction and qualities |
-| `PhotonActivity.kt` | Prism-themed video interface, player surface and controls |
-| `PhotonPlaybackService.kt` | Media3 session and audio/video merged playback |
-| `VideoDownloadWorker.kt` | Download foreground work, progress and MP4 muxing |
-| `PhotonStore.kt` | Device-local library/settings persistence |
-| `PhotonViewModel.kt` | Retained screen state and user operations |
+- `VideoRepository.kt`: public YouTube extraction, channels, playlists, comments,
+  safe links and local recommendation ranking.
+- `PhotonActivity.kt`, `CommunityScreens.kt`: Prism-themed video/community UI.
+- `PhotonPlaybackService.kt`: Media3 session, merged playback and service-owned progress.
+- `VideoDownloadWorker.kt`: foreground downloads, cancellation, MP4 muxing.
+- `PhotonStore.kt`, `PhotonViewModel.kt`: local data, collections, retained state and queues.
+- `PhotonCast.kt`: independently wired Prism LAN discovery/control and media server.
+- `PhotonDiagnostics.kt`: bounded, local, URL-free playback test report.
 
-The original Prism code is preserved for design reuse and future work, but the
-manifest launches **only Photon**. Music-only features are not advertised as
-Photon features. Future cleanup can remove unused inherited dependencies.
+Original Prism sources remain for design reuse, but the manifest starts **Photon**,
+not Prism's music container/jobs. Music-only features are not advertised as Photon
+features. Future cleanup can remove unused inherited dependencies.
 
-## License & credit
+## License and credits
 
-**GPL-3.0-or-later**, as required by the upstream project. Original Prism copyright
-(C) 2026 Yigder. See [LICENSE](LICENSE), [UPSTREAM.md](UPSTREAM.md), and the
-[original README](docs/upstream/README.md). This is an independent modified app,
-not an official Prism product and not affiliated with Google/YouTube.
+**GPL-3.0-or-later**. Original Prism copyright (C) 2026 Yigder.
+See [LICENSE](LICENSE), [UPSTREAM.md](UPSTREAM.md), and the
+[original README](docs/upstream/README.md). Independent project, not an official
+Prism product and not affiliated with Google/YouTube.

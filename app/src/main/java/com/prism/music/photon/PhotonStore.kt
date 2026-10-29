@@ -72,7 +72,7 @@ class PhotonStore(context: Context) {
     fun recordPlayback(video: Video, positionMs: Long, durationMs: Long, elapsedMs: Long) = update { library ->
         val history = (listOf(video) + library.history.filterNot { it.id == video.id }).take(100)
         val old = library.progress[video.id] ?: WatchProgress()
-        val progress = WatchProgress(positionMs.coerceAtLeast(0), durationMs.coerceAtLeast(0), old.watchedMs + elapsedMs.coerceIn(0, 30_000), System.currentTimeMillis())
+        val progress = WatchProgress(positionMs.coerceAtLeast(0), durationMs.coerceAtLeast(0), old.watchedMs + elapsedMs.coerceAtLeast(0), System.currentTimeMillis())
         library.copy(history = history, progress = (library.progress + (video.id to progress)).filterKeys { id -> history.any { it.id == id } })
     }
     fun downloaded(download: SavedDownload) = update { it.copy(downloads = listOf(download) + it.downloads.filterNot { v -> v.video.id == download.video.id && v.height == download.height }) }

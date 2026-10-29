@@ -117,6 +117,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     fun save(video: Video) = app.library.toggleSaved(video)
     fun download(video: Video, quality: VideoQuality) = VideoDownloadWorker.enqueue(app, video, quality.height, library.value.wifiOnly)
     fun cancel(id: java.util.UUID) { WorkManager.getInstance(app).cancelWorkById(id) }
+    fun dismissFinishedDownloads() { WorkManager.getInstance(app).pruneWork() }
     fun remove(download: SavedDownload) {
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             val file = File(download.path)

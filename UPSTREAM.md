@@ -24,6 +24,8 @@ licensed under GNU GPL version 3 or (at your option) any later version.
   Photon launcher icon. Redirected the inactive inherited updater's repository
   constant so it cannot offer Prism releases if reused later.
 - Added an Android APK build workflow, preview documentation, and focused tests.
+- Changed compile SDK from the unavailable upstream 37 to available SDK 36 and
+  capped build worker/daemon memory for hosted CI.
 
 ## Other works
 

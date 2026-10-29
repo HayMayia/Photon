@@ -317,7 +317,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                             if (libraryTab == 2) {
                                 item { Text("Downloads stay in Photon's app storage. Uninstalling removes them.", Modifier.padding(horizontal = 22.dp, vertical = 12.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                                 items(work.filter { !it.state.isFinished || it.state == WorkInfo.State.FAILED }, key = { it.id.toString() }) { info ->
-                                    DownloadJob(info, { model.cancel(info.id) })
+                                    DownloadJob(info, { if (info.state.isFinished) model.dismissFinishedDownloads() else model.cancel(info.id) })
                                 }
                                 if (library.downloads.isEmpty() && work.none { !it.state.isFinished }) item { EmptyState("Ready when you are", "Open a video and tap Download. Available HD qualities include sound, merged on your phone.", PrismIcons.Download) }
                                 items(library.downloads, key = { it.path }) { download ->
@@ -448,6 +448,8 @@ private fun ErrorCard(message: String, retry: () -> Unit) {
 private fun DownloadJob(info: WorkInfo, cancel: () -> Unit) {
     Surface(Modifier.padding(horizontal = 22.dp, vertical = 8.dp), shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            val title = info.progress.getString("title") ?: info.outputData.getString("title")
+            title?.let { Text(it, maxLines = 2, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Bold) }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(when (info.state) {
                     WorkInfo.State.ENQUEUED -> "Queued · waiting for allowed network"
@@ -456,6 +458,7 @@ private fun DownloadJob(info: WorkInfo, cancel: () -> Unit) {
                     else -> info.state.name
                 }, Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
                 if (!info.state.isFinished) IconButton(onClick = cancel) { Icon(PrismIcons.Close, "Cancel download") }
+                else TextButton(onClick = cancel) { Text("Dismiss") }
             }
             if (info.state == WorkInfo.State.RUNNING) LinearProgressIndicator(progress = { info.progress.getInt("percent", 0) / 100f }, modifier = Modifier.fillMaxWidth())
             info.outputData.getString("error")?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }

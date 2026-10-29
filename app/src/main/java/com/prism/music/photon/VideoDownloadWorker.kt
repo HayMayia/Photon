@@ -61,6 +61,7 @@ class VideoDownloadWorker(context: Context, parameters: WorkerParameters) : Coro
         val root = File(applicationContext.getExternalFilesDir(Environment.DIRECTORY_MOVIES) ?: applicationContext.filesDir, "Photon").apply { mkdirs() }
         val temp = File(root, ".${id}").apply { mkdirs() }
         try {
+            setProgress(workDataOf("title" to inputData.getString("title"), "stage" to "Resolving ${requested}p video", "percent" to 0))
             setForeground(notification(0, "Resolving ${requested}p video"))
             val details = app.videos.details(videoId)
             val quality = details.qualities.firstOrNull { it.height == requested && it.downloadable }
@@ -71,7 +72,7 @@ class VideoDownloadWorker(context: Context, parameters: WorkerParameters) : Coro
             if (quality.audioUrl != null) {
                 val audioFile = File(temp, "audio.m4a")
                 fetch(quality.audioUrl, audioFile, 75, 20)
-                setProgress(workDataOf("percent" to 97, "stage" to "Merging audio and video"))
+                setProgress(workDataOf("title" to inputData.getString("title"), "percent" to 97, "stage" to "Merging audio and video"))
                 setForeground(notification(97, "Merging audio and video"))
                 mux(videoFile, audioFile, output)
             } else {
@@ -86,7 +87,7 @@ class VideoDownloadWorker(context: Context, parameters: WorkerParameters) : Coro
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (error: Exception) {
-            Result.failure(workDataOf("error" to (error.message ?: "Download failed").take(600)))
+            Result.failure(workDataOf("title" to inputData.getString("title"), "error" to (error.message ?: "Download failed").take(600)))
         } finally {
             temp.deleteRecursively()
         }
@@ -113,7 +114,7 @@ class VideoDownloadWorker(context: Context, parameters: WorkerParameters) : Coro
                         if (now - lastUpdate > 750) {
                             val percent = base + if (length > 0) (bytes * share / length).toInt().coerceIn(0, share) else 0
                             val stage = "${bytes / 1024 / 1024} MB downloaded"
-                            setProgress(workDataOf("percent" to percent, "stage" to stage))
+                            setProgress(workDataOf("title" to inputData.getString("title"), "percent" to percent, "stage" to stage))
                             setForeground(notification(percent, stage))
                             lastUpdate = now
                         }

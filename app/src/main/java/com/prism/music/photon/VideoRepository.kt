@@ -102,7 +102,7 @@ class VideoRepository {
     private val presentationSlots = kotlinx.coroutines.sync.Semaphore(2)
     private val presentationHttp by lazy { http.newBuilder().followRedirects(false).followSslRedirects(false)
         .cookieJar(okhttp3.CookieJar.NO_COOKIES).callTimeout(15, TimeUnit.SECONDS).build() }
-    suspend fun presentation(video: Video): Video = withContext(Dispatchers.IO) {
+    suspend fun presentation(video: Video): Video? = withContext(Dispatchers.IO) {
         val cached = presentationCache.get(video.id)
         val result = cached ?: presentationSlots.withPermit {
             require(video.id.matches(Regex("[A-Za-z0-9_-]{11}")))
@@ -114,7 +114,7 @@ class VideoRepository {
                 ShortsPresentation.fromHtml(video.id, source.readUtf8())?.also { presentationCache.put(video.id, it) }
             }
         }
-        if (result == null) video else video.copy(short = video.short || result.first,
+        if (result == null) video.takeIf { it.short } else video.copy(short = video.short || result.first,
             thumbnail = if (result.first) result.second.ifBlank { video.thumbnail } else video.thumbnail)
     }
 

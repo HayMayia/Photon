@@ -47,25 +47,29 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     private val consumedHomeTokens = mutableSetOf<String>()
     val googleChange = MutableStateFlow(GoogleChangeState())
     val videoPresentation = MutableStateFlow<Map<String, Video>>(emptyMap())
+    private val presentationRevisions = mutableMapOf<String, Long>()
     private val presentationPending = mutableSetOf<String>()
     private val likesPending = mutableSetOf<String>()
     private val metadataReadSlots = kotlinx.coroutines.sync.Semaphore(2)
     private val likeReadSlots = kotlinx.coroutines.sync.Semaphore(2)
     fun resolveVideoPresentation(video: Video) {
         val requestedRevision = library.value.youtubeSessionRevision
-        if (video.id !in videoPresentation.value && presentationPending.add(video.id)) viewModelScope.launch {
+        if ((video.id !in videoPresentation.value || (videoPresentation.value[video.id]?.short != true && presentationRevisions[video.id] != requestedRevision)) && presentationPending.add(video.id)) viewModelScope.launch {
             try {
                 val resolved = metadataReadSlots.withPermit {
                     var result = app.videos.presentation(video)
-                    if (!result.short && requestedRevision == library.value.youtubeSessionRevision && library.value.youtubeHome && library.value.youtubeSessionReady) {
+                    if (result?.short != true && requestedRevision == library.value.youtubeSessionRevision && library.value.youtubeHome && library.value.youtubeSessionReady) {
                         try {
                             val metadata = app.accountActions.presentation(video.id, app.youtubeHistory.session())
-                            if (requestedRevision == library.value.youtubeSessionRevision && library.value.youtubeSessionReady && metadata?.first == true)
-                                result = result.copy(short = true, thumbnail = metadata.second.ifBlank { result.thumbnail })
+                            if (requestedRevision == library.value.youtubeSessionRevision && library.value.youtubeSessionReady && metadata != null) {
+                                val base = result ?: video
+                                result = base.copy(short = base.short || metadata.first, thumbnail = if (metadata.first) metadata.second.ifBlank { base.thumbnail } else base.thumbnail)
+                            }
                         } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { /* Keep any public proof when the authenticated route is unavailable. */ }
                     }
                     result
-                }
+                } ?: return@launch
+                presentationRevisions[video.id] = requestedRevision
                 if (resolved.short && library.value.downloads.any { it.video.id == video.id && !it.video.short }) app.library.update { stored ->
                     stored.copy(downloads = stored.downloads.map { download -> if (download.video.id == video.id)
                         download.copy(video = ShortsPresentation.merge(download.video, resolved)) else download })

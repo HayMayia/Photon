@@ -247,7 +247,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
     val wantsAwake = isPlaying || (buffering && playIntent)
     DisposableEffect(activity, wantsAwake) {
         fun updateAwake() {
-            if (wantsAwake && activity.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED))
+            if (wantsAwake && activity.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED))
                 activity.window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             else activity.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }

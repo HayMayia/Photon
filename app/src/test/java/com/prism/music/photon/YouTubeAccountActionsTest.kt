@@ -23,6 +23,16 @@ class YouTubeAccountActionsTest {
     }.build())
     private fun body(request: Request): JsonObject { val buffer = okio.Buffer(); request.body!!.writeTo(buffer); return Json.parseToJsonElement(buffer.readUtf8()).jsonObject }
 
+    @Test fun authenticatedShortsMetadataUsesOnlyThePinnedReadonlyRoute() = runBlocking {
+        val service = api { request ->
+            assertEquals("GET", request.method)
+            assertEquals("www.youtube.com", request.url.host)
+            assertEquals("/shorts/$id", request.url.encodedPath)
+            assertEquals("2", request.url.queryParameter("authuser"))
+            """<link rel="canonical" href="https://www.youtube.com/shorts/$id">"""
+        }
+        assertEquals(true, service.presentation(id, session)?.first)
+    }
     @Test fun readingExistingLikeStateNeverSendsAMutation() = runBlocking {
         var reads = 0
         val service = api { request ->

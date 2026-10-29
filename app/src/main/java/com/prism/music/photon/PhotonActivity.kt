@@ -328,7 +328,8 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
     BackHandler(collection != null && !expanded && !pip && !shortsMode) { closeCollection() }
     BackHandler(expanded && !pip && !shortsMode) { if (fullscreen) fullscreen = false else expanded = false }
 
-    fun open(video: Video) {
+    fun open(source: Video) {
+        val video = ShortsPresentation.merge(source, model.videoPresentation.value[source.id])
         fullscreen = false
         if (video.short) { shortsMode = true; model.presentShort(video) }
         else { expanded = true; model.open(video) }

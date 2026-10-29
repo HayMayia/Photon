@@ -66,6 +66,10 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                     }
                     result
                 }
+                if (resolved.short && library.value.downloads.any { it.video.id == video.id && !it.video.short }) app.library.update { stored ->
+                    stored.copy(downloads = stored.downloads.map { download -> if (download.video.id == video.id)
+                        download.copy(video = ShortsPresentation.merge(download.video, resolved)) else download })
+                }
                 val current = mutableWatch.value
                 if (current.video?.id == video.id) mutableWatch.value = current.copy(video = current.video.copy(
                     short = current.video.short || resolved.short, thumbnail = if (resolved.short) resolved.thumbnail else current.video.thumbnail))

@@ -7,6 +7,10 @@ import org.jsoup.Jsoup
 
 /** Classification uses YouTube's canonical Shorts route, never duration or vertical dimensions. */
 internal object ShortsPresentation {
+    fun merge(source: Video, metadata: Video?): Video = if (metadata == null) source else source.copy(
+        short = source.short || metadata.short,
+        thumbnail = if (metadata.short) metadata.thumbnail.ifBlank { source.thumbnail } else source.thumbnail,
+        channelAvatar = source.channelAvatar.ifBlank { metadata.channelAvatar })
     fun fromHtml(id: String, html: String): Pair<Boolean, String>? {
         val doc = Jsoup.parse(html)
         val canonical = doc.selectFirst("link[rel=canonical]")?.attr("href").orEmpty()
@@ -33,7 +37,7 @@ internal fun resolvedVideo(source: Video): Video {
     val metadata by model.videoPresentation.collectAsStateWithLifecycle()
     val library by model.library.collectAsStateWithLifecycle()
     LaunchedEffect(source.id, library.youtubeSessionRevision, library.youtubeSessionReady) { model.resolveVideoPresentation(source) }
-    return metadata[source.id]?.let { source.copy(short = source.short || it.short, thumbnail = it.thumbnail.ifBlank { source.thumbnail }) } ?: source
+    return ShortsPresentation.merge(source, metadata[source.id])
 }
 
 @Composable

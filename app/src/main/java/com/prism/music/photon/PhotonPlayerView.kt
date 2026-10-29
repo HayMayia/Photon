@@ -49,7 +49,7 @@ internal class PhotonPlayerView(context: Context) : PlayerView(context) {
         override fun onDown(event: MotionEvent): Boolean = true
         override fun onLongPress(event: MotionEvent) {
             val current = player ?: return
-            if (!useController || !current.isPlaying || current.isCurrentMediaItemLive || boostPlayer != null ||
+            if (!isAttachedToWindow || !hasWindowFocus() || !useController || !current.isPlaying || current.isCurrentMediaItemLive || boostPlayer != null ||
                 !current.isCommandAvailable(Player.COMMAND_SET_SPEED_AND_PITCH) || hitsControl(this@PhotonPlayerView, event.rawX, event.rawY)) return
             priorParameters = current.playbackParameters
             boostPlayer = current

@@ -6,6 +6,16 @@ import org.junit.Test
 
 class ShortsPresentationTest {
     private val id = "abcdefghijk"
+    @Test fun resolvedPlaylistMetadataReachesTheOpenCallbackWithoutLosingItsTitle() {
+        val row = Video(id, "Playlist title", "Creator", "https://i.ytimg.com/landscape.jpg")
+        val resolved = row.copy(short = true, thumbnail = "https://i.ytimg.com/portrait.jpg")
+        val opened = ShortsPresentation.merge(row, resolved)
+        assertTrue(opened.short)
+        assertEquals("Playlist title", opened.title)
+        assertTrue(opened.thumbnail.endsWith("portrait.jpg"))
+        assertTrue(ShortsPresentation.merge(opened, row).short)
+        assertEquals(opened.thumbnail, ShortsPresentation.merge(opened, row).thumbnail)
+    }
     @Test fun canonicalShortsRouteWorksWithoutPlaylistShortsBadges() {
         val result = ShortsPresentation.fromHtml(id, """<link rel="canonical" href="https://www.youtube.com/shorts/$id"><meta property="og:image" content="https://i.ytimg.com/vi/$id/portrait.jpg">""")!!
         assertTrue(result.first)

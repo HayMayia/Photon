@@ -31,12 +31,12 @@ internal class YouTubeWebTransport(client: OkHttpClient = OkHttpClient()) {
         }
         .callTimeout(30, TimeUnit.SECONDS).build()
     suspend fun html(path: String, session: YouTubeWebSession): String = withContext(Dispatchers.IO) {
-        require(path in setOf("/", "/feed/history", "/feed/playlists", "/feed/channels") || Regex("/playlist\\?list=[A-Za-z0-9_-]{2,150}").matches(path) || path.startsWith("/watch?v=") && Regex("/watch\\?v=[A-Za-z0-9_-]{11}").matches(path))
+        require(path in setOf("/", "/feed/history", "/feed/playlists", "/feed/channels") || Regex("/playlist\\?list=[A-Za-z0-9_-]{2,150}").matches(path) || Regex("/channel/UC[A-Za-z0-9_-]{20,30}").matches(path) || path.startsWith("/watch?v=") && Regex("/watch\\?v=[A-Za-z0-9_-]{11}").matches(path))
         val url = "https://www.youtube.com$path".toHttpUrl().newBuilder().addQueryParameter("authuser", session.account.toString()).addQueryParameter("hl", "en").build()
         execute(builder(url, session).get().build())
     }
     suspend fun post(endpoint: String, context: JsonObject, body: JsonObject, session: YouTubeWebSession, permitted: () -> Boolean = { true }): JsonObject = withContext(Dispatchers.IO) {
-        require(endpoint in setOf("browse", "feedback"))
+        require(endpoint in setOf("browse", "feedback", "like/like", "like/removelike", "subscription/subscribe", "subscription/unsubscribe", "playlist/create", "browse/edit_playlist", "playlist/delete"))
         val payload = JsonObject(body + ("context" to context))
         val request = builder("https://www.youtube.com/youtubei/v1/$endpoint".toHttpUrl(), session, context, permitted)
             .post(payload.toString().toRequestBody("application/json; charset=utf-8".toMediaType())).build()

@@ -30,6 +30,7 @@ internal fun CollectionScreen(model: PhotonViewModel, library: PhotonLibrary, op
     val page by model.collection.collectAsStateWithLifecycle()
     val busy by model.collectionBusy.collectAsStateWithLifecycle()
     val error by model.collectionError.collectAsStateWithLifecycle()
+    val googleSubscriptions by model.googleSubscriptions.collectAsStateWithLifecycle()
     val current = page ?: return
     LazyColumn(Modifier.fillMaxSize().statusBarsPadding(), contentPadding = PaddingValues(20.dp)) {
         item {
@@ -42,9 +43,9 @@ internal fun CollectionScreen(model: PhotonViewModel, library: PhotonLibrary, op
                     AsyncImage(channel.avatar, null, Modifier.size(64.dp))
                     Column(Modifier.weight(1f)) {
                         if (channel.subscribers >= 0) Text("${channel.subscribers} subscribers")
-                        Text("Subscription stored on this device", style = MaterialTheme.typography.labelSmall)
+                        Text("Subscription changes are sent to YouTube", style = MaterialTheme.typography.labelSmall)
                     }
-                    FilledTonalButton(onClick = { model.subscribe(channel) }) { Text(if (library.subscriptions.any { it.url == channel.url }) "Subscribed" else "Subscribe") }
+                    FilledTonalButton(onClick = { model.subscribe(channel) }) { Text(if (googleSubscriptions[channel.url.substringAfterLast('/')] == true) "Unsubscribe on YouTube" else "Subscribe on YouTube") }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(onClick = { model.channelTab(false) }) { Text("Videos") }
@@ -65,54 +66,27 @@ internal fun CollectionScreen(model: PhotonViewModel, library: PhotonLibrary, op
 
 @Composable
 internal fun LibraryCollections(library: PhotonLibrary, model: PhotonViewModel, channels: Boolean, open: (Video) -> Unit, subscriptions: () -> Unit) {
-    var selected by remember { mutableStateOf<String?>(null) }
-    var name by remember { mutableStateOf("") }
-    var remove by remember { mutableStateOf<LocalPlaylist?>(null) }
-    Column(Modifier.fillMaxWidth().padding(22.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        if (channels) {
-            Text("Local subscriptions · not synced to Google", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            if (library.subscriptions.isEmpty()) Text("Open a video's channel and subscribe to see uploads here.")
-            else FilledTonalButton(onClick = subscriptions) { Text("Refresh subscription uploads") }
-            library.subscriptions.forEach { channel ->
-                ListItem(headlineContent = { Text(channel.name) }, leadingContent = { AsyncImage(channel.avatar, null, Modifier.size(44.dp)) },
-                    trailingContent = { IconButton(onClick = { model.subscribe(channel) }) { Icon(PrismIcons.Close, "Unsubscribe") } },
-                    modifier = Modifier.clickable { model.openCollection(channel.url, true) })
-            }
-        } else {
-            Text("Local playlists · paste a public YouTube playlist link in Search to browse it", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            OutlinedTextField(name, { name = it }, label = { Text("New playlist name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-            FilledTonalButton(enabled = name.isNotBlank(), onClick = { selected = model.createPlaylist(name); name = "" }) { Text("Create playlist") }
-            library.playlists.forEach { playlist ->
-                ListItem(headlineContent = { Text(playlist.name, fontWeight = FontWeight.Bold) }, supportingContent = { Text("${playlist.videos.size} videos") },
-                    trailingContent = { IconButton(onClick = { remove = playlist }) { Icon(PrismIcons.Delete, "Delete playlist") } }, modifier = Modifier.clickable { selected = if (selected == playlist.id) null else playlist.id })
-                if (selected == playlist.id) {
-                    if (playlist.videos.isNotEmpty()) FilledTonalButton(onClick = { model.playAll(playlist.videos) }) { Text("Play all") }
-                    else Text("Open a video and tap Add to playlist.")
-                    playlist.videos.forEach { video ->
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(video.title, Modifier.weight(1f).clickable { open(video) }.padding(8.dp), maxLines = 2, overflow = TextOverflow.Ellipsis)
-                            IconButton(onClick = { model.removeFromPlaylist(playlist.id, video) }) { Icon(PrismIcons.Close, "Remove from playlist") }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    remove?.let { playlist -> AlertDialog(onDismissRequest = { remove = null }, title = { Text("Delete ${playlist.name}?") }, text = { Text("Only this local playlist is deleted. Downloads and saved videos stay.") },
-        confirmButton = { TextButton(onClick = { model.deletePlaylist(playlist.id); remove = null }) { Text("Delete") } }, dismissButton = { TextButton(onClick = { remove = null }) { Text("Cancel") } }) }
+    Text("Use your Google-account library for channels and playlists. No local-only collection is created.", Modifier.padding(22.dp))
+    YouTubeHomeConnection(model)
 }
 
 @Composable
 internal fun PlaylistPicker(library: PhotonLibrary, video: Video, model: PhotonViewModel, done: () -> Unit) {
     var name by remember { mutableStateOf("") }
+    val state by model.accountLibrary.collectAsStateWithLifecycle()
+    LaunchedEffect(library.youtubeSessionRevision) { if (library.youtubeSessionReady && library.youtubeHome) model.openAccountShelf(AccountShelf.PLAYLISTS) }
     Column(Modifier.fillMaxWidth().padding(24.dp).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Add to playlist", style = MaterialTheme.typography.headlineSmall)
-        OutlinedTextField(name, { name = it }, label = { Text("New playlist name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-        FilledTonalButton(enabled = name.isNotBlank(), onClick = { val id = model.createPlaylist(name); model.addToPlaylist(id, video); done() }) { Text("Create and add") }
+        Text("Add to YouTube playlist", style = MaterialTheme.typography.headlineSmall)
+        Text("This changes the same Google account as Home. New playlists are private; no local fallback.", style = MaterialTheme.typography.bodySmall)
+        OutlinedTextField(name, { name = it }, label = { Text("New YouTube playlist name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        FilledTonalButton(enabled = name.isNotBlank(), onClick = { model.createGooglePlaylist(name, video); done() }) { Text("Create on YouTube and add") }
+        if (state.busy) LinearProgressIndicator()
+        state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         LazyColumn(Modifier.heightIn(max = 340.dp)) {
-            items(library.playlists, key = { it.id }) { playlist ->
-                ListItem(headlineContent = { Text(playlist.name) }, supportingContent = { Text("${playlist.videos.size} videos") }, modifier = Modifier.clickable { model.addToPlaylist(playlist.id, video); done() })
+            items(state.page?.items.orEmpty().filter { it.kind == AccountEntryKind.PLAYLIST }, key = { it.id }) { playlist ->
+                ListItem(headlineContent = { Text(playlist.title) }, modifier = Modifier.clickable { model.addToPlaylist(playlist.id, video); done() })
             }
+            if (state.page?.continuation != null) item { TextButton(onClick = model::moreAccountShelf) { Text("More YouTube playlists") } }
         }
     }
 }
@@ -191,6 +165,7 @@ internal fun CommentsPanel(model: PhotonViewModel, video: Video) {
 @Composable
 @UnstableApi
 internal fun ShortsScreen(browse: BrowseState, watch: WatchState, controller: MediaController?, model: PhotonViewModel, close: () -> Unit) {
+    val googleLikes by model.googleLikes.collectAsStateWithLifecycle()
     val pager = rememberPagerState(pageCount = { browse.videos.size })
     LaunchedEffect(browse.videos) {
         snapshotFlow { pager.currentPage }.distinctUntilChanged().collect { index ->
@@ -209,7 +184,7 @@ internal fun ShortsScreen(browse: BrowseState, watch: WatchState, controller: Me
                 Text(video.title, Modifier.padding(horizontal = 20.dp), fontWeight = FontWeight.Bold, maxLines = 2)
                 Row(Modifier.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(video.channel, Modifier.weight(1f), maxLines = 1)
-                    TextButton(onClick = { model.save(video) }) { Text("Save locally") }
+                    TextButton(onClick = { model.save(video) }) { Text(if (googleLikes[video.id] == true) "Unlike on YouTube" else "Like on YouTube") }
                 }
                 if (index == pager.currentPage && watch.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
                 if (index == browse.videos.lastIndex && browse.hasMore) TextButton(onClick = model::loadMore) { Text("Load more Shorts") }

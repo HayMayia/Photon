@@ -193,11 +193,15 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
     val browse by model.browse.collectAsStateWithLifecycle()
     val watch by model.watch.collectAsStateWithLifecycle()
     val library by model.library.collectAsStateWithLifecycle()
+    val googleLikes by model.googleLikes.collectAsStateWithLifecycle()
+    val googleSubscriptions by model.googleSubscriptions.collectAsStateWithLifecycle()
+    val googleChange by model.googleChange.collectAsStateWithLifecycle()
     val work by model.work.collectAsStateWithLifecycle(initialValue = emptyList())
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var expanded by rememberSaveable { mutableStateOf(false) }
     var fullscreen by rememberSaveable { mutableStateOf(false) }
     var search by rememberSaveable { mutableStateOf("") }
+    var syncRealPlays by rememberSaveable { mutableStateOf(false) }
     var libraryTab by rememberSaveable { mutableIntStateOf(0) }
     var localLibrary by rememberSaveable { mutableStateOf(false) }
     var qualitySheet by remember { mutableStateOf(false) }
@@ -211,6 +215,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
     var playlistSheet by remember { mutableStateOf(false) }
     var shortsMode by rememberSaveable { mutableStateOf(false) }
     var castSheet by remember { mutableStateOf(false) }
+    LaunchedEffect(library.youtubeSessionRevision) { syncRealPlays = false }
     val context = LocalContext.current
     val activity = context as PhotonActivity
     val casting = (context.applicationContext as PhotonApplication).casting
@@ -298,7 +303,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                                 ErrorCard(message) { model.retryPlayback(video) }
                             }
                             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                ActionChip(if (library.saved.any { it.id == video.id }) "Saved" else "Save", PrismIcons.Heart) { model.save(video) }
+                                ActionChip(if ((googleLikes[video.id] == true)) "Unlike on YouTube" else "Like on YouTube", PrismIcons.Heart) { model.save(video) }
                                 if (watch.details != null) {
                                     ActionChip(watch.quality?.label ?: "Quality", PrismIcons.Settings) { qualitySheet = true }
                                     if (!watch.details!!.live) ActionChip("Download", PrismIcons.Download) { downloadSheet = true }
@@ -306,7 +311,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                                 if (watch.details == null && watch.localPath == null && !watch.busy) ActionChip("Reload details", PrismIcons.Refresh) { model.open(video) }
                                 watch.details?.channel?.let { channel ->
                                     ActionChip("View Channel", PrismIcons.Person) { expanded = false; model.openCollection(channel.url, true) }
-                                    ActionChip(if (library.subscriptions.any { it.url == channel.url }) "Subscribed locally" else "Subscribe locally", PrismIcons.PersonAdd) { model.subscribe(channel) }
+                                    ActionChip(if (googleSubscriptions[channel.url.substringAfterLast('/')] == true) "Unsubscribe on YouTube" else "Subscribe on YouTube", PrismIcons.PersonAdd) { model.subscribe(channel) }
                                 }
                                 ActionChip("Comments", PrismIcons.Info) { model.loadComments(video); commentsSheet = true }
                                 ActionChip("Cast", PrismIcons.Cast) { activity.withLanPermission { casting.discover(); castSheet = true } }
@@ -331,7 +336,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                         }
                     }
                     items(watch.details?.related.orEmpty(), key = { it.id }) { related ->
-                        VideoRow(related, { open(related) }, { model.save(related) }, library.saved.any { it.id == related.id })
+                        VideoRow(related, { open(related) }, { model.save(related) }, (googleLikes[related.id] == true))
                     }
                 }
             }
@@ -371,7 +376,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                             shorts = { model.shorts(); shortsMode = true },
                             subscriptions = { if (library.youtubeHome) { localLibrary = false; model.openAccountShelf(AccountShelf.CHANNELS); tab = 2 } else { model.subscriptionsFeed(); tab = 1 } },
                             downloads = { localLibrary = true; tab = 2; libraryTab = 2 },
-                            saved = { localLibrary = !library.youtubeHome; tab = 2; libraryTab = 0 },
+                            saved = { localLibrary = false; tab = 2; libraryTab = 0 },
                             settings = { tab = 3 }, search = { tab = 1 })
                         1 -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 20.dp)) {
                             item {
@@ -412,8 +417,8 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                             browse.error?.let { error -> item { Box(Modifier.padding(22.dp)) { ErrorCard(error) { model.search(browse.query) } } } }
                             if (!browse.busy && browse.error == null && browse.videos.isEmpty()) item { EmptyState("No videos found", "Try a different search or paste a YouTube video link.", PrismIcons.Search) }
                             items(browse.videos, key = { it.id }) { video ->
-                                if (tab == 0) VideoCard(video, { open(video) }, { model.save(video) }, library.saved.any { it.id == video.id })
-                                else VideoRow(video, { open(video) }, { model.save(video) }, library.saved.any { it.id == video.id })
+                                if (tab == 0) VideoCard(video, { open(video) }, { model.save(video) }, (googleLikes[video.id] == true))
+                                else VideoRow(video, { open(video) }, { model.save(video) }, (googleLikes[video.id] == true))
                             }
                             if (browse.hasMore) item {
                                 Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
@@ -422,22 +427,15 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                             }
                         }
                         2 -> Column(Modifier.fillMaxSize()) {
-                            if (library.youtubeHome) Row(Modifier.padding(horizontal = 22.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(Modifier.padding(horizontal = 22.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 FilterChip(selected = !localLibrary, onClick = { localLibrary = false }, label = { Text("YouTube account") })
-                                FilterChip(selected = localLibrary, onClick = { localLibrary = true }, label = { Text("On device") })
+                                FilterChip(selected = localLibrary, onClick = { localLibrary = true }, label = { Text("Downloads") })
                             }
-                            if (library.youtubeHome && !localLibrary) AccountLibraryScreen(model, library.youtubeSessionRevision, library.youtubeSessionReady,
-                                open = { open(it) }, channel = { model.openCollection(it, channel = true) })
-                            else LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
-                            item {
-                                PageHeading("Library", "Your corner of YouTube. Kept on this device.")
-                                Row(Modifier.padding(horizontal = 22.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    listOf("Saved", "History", "Downloads", "Channels", "Playlists").forEachIndexed { index, name -> FilterChip(selected = libraryTab == index, onClick = { libraryTab = index }, label = { Text(name) }) }
-                                }
-                            }
-                            if (libraryTab >= 3) {
-                                item { LibraryCollections(library, model, libraryTab == 3, { open(it) }, { tab = 0; model.subscriptionsFeed() }) }
-                            } else if (libraryTab == 2) {
+                            if (!localLibrary) {
+                                if (library.youtubeHome) AccountLibraryScreen(model, library.youtubeSessionRevision, library.youtubeSessionReady,
+                                    open = { open(it) }, channel = { model.openCollection(it, channel = true) })
+                                else Column { PageHeading("Your YouTube library", "Sign in with Google. No local-only library is used."); YouTubeHomeConnection(model) }
+                            } else LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
                                 item { Text("Downloads stay in Photon's app storage. Uninstalling removes them.", Modifier.padding(horizontal = 22.dp, vertical = 12.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                                 items(work.filter { !it.state.isFinished || it.state == WorkInfo.State.FAILED }, key = { it.id.toString() }) { info ->
                                     DownloadJob(info, { if (info.state.isFinished) model.dismissFinishedDownloads() else model.cancel(info.id) })
@@ -449,19 +447,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                                         Text("${download.height}p · ${download.bytes / 1024 / 1024} MB · available offline", Modifier.padding(start = 22.dp, bottom = 12.dp), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                                     }
                                 }
-                            } else {
-                                val videos = if (libraryTab == 0) library.saved else library.history
-                                if (videos.isEmpty()) item { EmptyState(if (libraryTab == 0) "Keep the good ones" else "A fresh start", if (libraryTab == 0) "Tap the heart on any video to save it here." else "Videos you open appear here. Your history and playback resume positions stay on your phone.", if (libraryTab == 0) PrismIcons.Heart else PrismIcons.History) }
-                                items(videos, key = { it.id }) { video ->
-                                    Column {
-                                        VideoRow(video, { open(video) }, { model.save(video) }, library.saved.any { it.id == video.id })
-                                        if (libraryTab == 1) library.progress[video.id]?.let { progress ->
-                                            Text("${durationLabel(progress.watchedMs / 1000)} watched · resume at ${durationLabel(progress.resumeMs() / 1000)}", Modifier.padding(start = 22.dp, bottom = 8.dp), style = MaterialTheme.typography.labelSmall)
-                                        }
-                                    }
-                                }
                             }
-                        }
                         }
                         3 -> SettingsPage(library, model, notifications)
                     }
@@ -469,6 +455,30 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
             }
         }
     }
+    if (googleChange.pending != null || googleChange.message != null) AlertDialog(
+        onDismissRequest = model::dismissGoogleChange,
+        title = { Text(if (googleChange.pending == null) "YouTube account result" else "Change your YouTube account?") },
+        text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            googleChange.pending?.let { change ->
+                val verb = when (change.kind) {
+                    GoogleChangeKind.LIKE -> if (change.desired == false) "Remove YouTube like" else "Like on YouTube"
+                    GoogleChangeKind.SUBSCRIBE -> if (change.desired == false) "Unsubscribe on YouTube" else "Subscribe on YouTube"
+                    else -> change.kind.name.lowercase().replace('_', ' ')
+                }
+                Text("$verb: ${change.title}")
+                if (change.id.isNotBlank()) Text("Target: ${change.id}", style = MaterialTheme.typography.bodySmall)
+                Text("This changes the Google account connected to Home, not a local list or the separate comment account. Likes/subscriptions are read before changing and verified afterward. New playlists are private. A failed/ambiguous request is not automatically retried.")
+            }
+            if (googleChange.pending != null && !library.accountHistorySync) Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(checked = syncRealPlays, enabled = !googleChange.busy, onCheckedChange = { syncRealPlays = it })
+                Text("Also report real native plays to YouTube history after 15 playing seconds. Google paused/unknown state blocks reporting. Enabling removes the extra local playback pause.", style = MaterialTheme.typography.bodySmall)
+            }
+            googleChange.message?.let { Text(it) }
+            if (googleChange.busy) LinearProgressIndicator()
+        } },
+        confirmButton = { TextButton(enabled = !googleChange.busy, onClick = { if (googleChange.pending == null) model.dismissGoogleChange() else { if (syncRealPlays) model.enableAccountHistory(true); model.confirmGoogleChange() } }) { Text(if (googleChange.pending == null) "Close" else "Confirm on YouTube") } },
+        dismissButton = { if (googleChange.pending != null) TextButton(enabled = !googleChange.busy, onClick = model::dismissGoogleChange) { Text("Cancel") } }
+    )
     if (castSheet) ModalBottomSheet(onDismissRequest = { castSheet = false; casting.stopDiscovery() }) {
         DisposableEffect(Unit) { onDispose { casting.stopDiscovery() } }
         CastPanel(casting, watch) { controller?.pause() }
@@ -642,8 +652,8 @@ private fun SettingsPage(library: PhotonLibrary, model: PhotonViewModel, notific
         }
         item {
             SettingsGroup("YOUR DATA") {
-                ListItem(headlineContent = { Text("Clear watch history") }, supportingContent = { Text("Saved videos and downloads are not affected") }, leadingContent = { Icon(PrismIcons.History, null) }, modifier = Modifier.clickable { clear = true })
-                Text("No Photon account, analytics, or server. Searches, video requests and thumbnail requests go to YouTube and its delivery services. Library data stays on this device.", Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                ListItem(headlineContent = { Text("Clear device playback cache") }, supportingContent = { Text("Does not delete Google watch history, likes or playlists") }, leadingContent = { Icon(PrismIcons.History, null) }, modifier = Modifier.clickable { clear = true })
+                Text("No Photon account, analytics or backend server. Account changes go to YouTube. Downloads, settings and playback caches need device storage; they are not a separate account library.", Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
             }
         }
         item {
@@ -660,7 +670,7 @@ private fun SettingsPage(library: PhotonLibrary, model: PhotonViewModel, notific
             }
         }
     }
-    if (clear) AlertDialog(onDismissRequest = { clear = false }, title = { Text("Clear watch history?") }, text = { Text("This deletes the watch history kept on this device.") }, confirmButton = { TextButton(onClick = { model.clearHistory(); clear = false }) { Text("Clear history") } }, dismissButton = { TextButton(onClick = { clear = false }) { Text("Cancel") } })
+    if (clear) AlertDialog(onDismissRequest = { clear = false }, title = { Text("Clear device playback cache?") }, text = { Text("This clears only cached device history/resume positions, not your Google activity.") }, confirmButton = { TextButton(onClick = { model.clearHistory(); clear = false }) { Text("Clear history") } }, dismissButton = { TextButton(onClick = { clear = false }) { Text("Cancel") } })
 }
 
 @Composable

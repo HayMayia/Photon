@@ -44,6 +44,47 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     private var youtubeHomeJob: Job? = null
     private var youtubeMoreJob: Job? = null
     private val consumedHomeTokens = mutableSetOf<String>()
+    val googleChange = MutableStateFlow(GoogleChangeState())
+    val googleLikes = MutableStateFlow<Map<String, Boolean>>(emptyMap())
+    val googleSubscriptions = MutableStateFlow<Map<String, Boolean>>(emptyMap())
+    private var googleChangeJob: Job? = null
+    private fun requestGoogleChange(change: GoogleChange) {
+        if (googleChange.value.pending != null || googleChange.value.busy) return
+        if (!library.value.youtubeHome || !library.value.youtubeSessionReady) {
+            googleChange.value = GoogleChangeState(message = "Sign in with the primary Google button first. This action was not saved locally or sent to another account.")
+            return
+        }
+        googleChange.value = GoogleChangeState(pending = change, revision = library.value.youtubeSessionRevision)
+    }
+    fun dismissGoogleChange() { if (!googleChange.value.busy) googleChange.value = GoogleChangeState() }
+    fun confirmGoogleChange() {
+        val pending = googleChange.value
+        val change = pending.pending ?: return
+        if (pending.busy) return
+        googleChange.value = pending.copy(busy = true)
+        googleChangeJob = viewModelScope.launch {
+            val revision = pending.revision
+            fun permitted() = revision == library.value.youtubeSessionRevision && library.value.youtubeHome && library.value.youtubeSessionReady && googleChange.value.busy && googleChange.value.revision == revision
+            try {
+                check(permitted())
+                val session = app.youtubeHistory.session()
+                val result = app.accountActions.execute(change, session, ::permitted)
+                if (!permitted()) return@launch
+                result.liked?.let { googleLikes.value = googleLikes.value + (change.id to it) }
+                result.subscribed?.let { googleSubscriptions.value = googleSubscriptions.value + (change.id to it) }
+                googleChange.value = GoogleChangeState(message = result.message)
+                val shelf = accountLibrary.value
+                if (shelf.page != null) openAccountShelf(shelf.shelf, shelf.playlist, shelf.title)
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) {
+                if (revision == library.value.youtubeSessionRevision) googleChange.value = GoogleChangeState(message = "This Google change could not be verified. Nothing was saved locally instead, and no automatic retry was made. Check official YouTube before retrying: a request might already have reached it.")
+            }
+        }
+    }
+    private fun invalidateGoogleChanges() {
+        googleChangeJob?.cancel(); googleChange.value = GoogleChangeState()
+        googleLikes.value = emptyMap(); googleSubscriptions.value = emptyMap()
+    }
     val accountLibrary = MutableStateFlow(AccountLibraryState())
     private var accountLibraryJob: Job? = null
     private val accountLibraryTokens = mutableSetOf<String>()
@@ -83,7 +124,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
         if (enabled) refreshGoogleHistory()
     }
     fun beginYouTubeWebChange() {
-        invalidateAccountLibrary()
+        invalidateAccountLibrary(); invalidateGoogleChanges()
         youtubeHomeJob?.cancel(); youtubeMoreJob?.cancel()
         app.library.update { it.copy(youtubeSessionRevision = it.youtubeSessionRevision + 1, youtubeSessionReady = false, accountHistorySync = false) }
         app.youtubeHistory.invalidate(); youtubeHome.value = YouTubeHomeState(error = "Finish reconnecting the web account. History reporting is off.")
@@ -146,7 +187,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
     fun disconnectYouTubeHome() {
-        invalidateAccountLibrary()
+        invalidateAccountLibrary(); invalidateGoogleChanges()
         youtubeHomeJob?.cancel(); youtubeMoreJob?.cancel(); consumedHomeTokens.clear()
         app.library.update { it.copy(youtubeHome = false, youtubeWebUser = 0, youtubeSessionReady = false,
             youtubeSessionRevision = it.youtubeSessionRevision + 1, accountHistorySync = false) }
@@ -351,7 +392,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun close() { watchJob?.cancel(); mutableWatch.value = WatchState() }
-    fun save(video: Video) = app.library.toggleSaved(video)
+    fun save(video: Video) = requestGoogleChange(GoogleChange(GoogleChangeKind.LIKE, video.id, video.title, video, desired = googleLikes.value[video.id] != true))
     fun download(video: Video, quality: VideoQuality) = VideoDownloadWorker.enqueue(app, video, quality.height, library.value.wifiOnly)
     fun cancel(id: java.util.UUID) { WorkManager.getInstance(app).cancelWorkById(id) }
     fun dismissFinishedDownloads() { WorkManager.getInstance(app).pruneWork() }
@@ -370,11 +411,14 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     fun wifi(value: Boolean) = app.library.update { it.copy(wifiOnly = value) }
     fun maxHeight(value: Int) = app.library.update { it.copy(defaultHeight = value) }
     fun clearHistory() = app.library.update { it.copy(history = emptyList(), progress = emptyMap()) }
-    fun subscribe(channel: Channel) = app.library.subscribe(channel)
-    fun createPlaylist(name: String): String = app.library.createPlaylist(name)
-    fun addToPlaylist(id: String, video: Video) = app.library.playlistVideo(id, video)
-    fun removeFromPlaylist(id: String, video: Video) = app.library.playlistVideo(id, video, true)
-    fun deletePlaylist(id: String) = app.library.deletePlaylist(id)
+    fun subscribe(channel: Channel) {
+        val id = android.net.Uri.parse(channel.url).pathSegments.let { if (it.size == 2 && it[0] == "channel") it[1] else "" }
+        requestGoogleChange(GoogleChange(GoogleChangeKind.SUBSCRIBE, id, channel.name, channel = channel, desired = googleSubscriptions.value[id] != true))
+    }
+    fun createGooglePlaylist(name: String, video: Video? = null) = requestGoogleChange(GoogleChange(GoogleChangeKind.CREATE_PLAYLIST, "", name, video))
+    fun addToPlaylist(id: String, video: Video) = requestGoogleChange(GoogleChange(GoogleChangeKind.ADD_VIDEO, id, video.title, video))
+    fun removeFromPlaylist(id: String, video: Video) = requestGoogleChange(GoogleChange(GoogleChangeKind.REMOVE_VIDEO, id, video.title, video))
+    fun deletePlaylist(id: String, title: String) = requestGoogleChange(GoogleChange(GoogleChangeKind.DELETE_PLAYLIST, id, title))
     fun playAll(videos: List<Video>) {
         if (videos.isEmpty()) return
         queue.value = videos

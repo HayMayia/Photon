@@ -61,3 +61,8 @@ prefers `ORIGINAL` over bitrate, excludes explicit dubbed/descriptive fallbacks,
 filters embedded video-source audio when merging a chosen original track. Offline
 artwork is saved as bounded, validated image files beside videos; repair work can
 backfill older downloads. Accent and new thumbnail fields preserve old-data defaults.
+
+
+## Photon 0.4 account/comment additions
+
+Native Google Play services AuthorizationClient requests youtube.force-ssl; official YouTube Data API calls verify the connected channel and target video's uploader channel before explicitly confirmed top-level insertion. The target snippet.channelId is not confused with the author's channel. Tokens are memory-only, POST retries/redirects disabled, and only server comment IDs confirm posting. No upstream password/cookie collection or authenticated extractor was added. Cloud registration and device tests remain required; see docs/GOOGLE_SIGN_IN.md. Prior read-only-account limitations above describe 0.2/0.3, not this new optional authorization flow. Full account sync, likes and reply posting remain unimplemented. API protocol reference: https://github.com/youtube/api-samples/blob/master/python/comment_threads.py (used as endpoint/schema reference, not copied implementation).

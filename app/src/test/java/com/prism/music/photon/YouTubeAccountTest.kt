@@ -13,18 +13,21 @@ import java.io.IOException
 class YouTubeAccountTest {
     private val channel = """{"items":[{"id":"UC_verified","snippet":{"title":"My Channel"}}]}"""
     private val posted = """{"snippet":{"topLevelComment":{"id":"real-server-id","snippet":{"authorDisplayName":"My Channel","textOriginal":"Hello <world>","likeCount":0}}}}"""
-    private fun api(answer: (Request) -> Pair<Int, String>) = YouTubeCommentApi(OkHttpClient.Builder().addInterceptor { chain ->
-        val (code, body) = answer(chain.request())
+    private fun api(videoBody: String = """{"items":[{"id":"dQw4w9WgXcQ","snippet":{"channelId":"UC_target"}}]}""", answer: (Request) -> Pair<Int, String>) = YouTubeCommentApi(OkHttpClient.Builder().addInterceptor { chain ->
+        val request = chain.request()
+        val (code, body) = if (request.url.encodedPath == "/youtube/v3/videos")
+            200 to videoBody
+        else answer(request)
         Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(code).message("Test")
             .body(body.toResponseBody("application/json".toMediaType())).build()
     }.build())
 
-    @Test fun bodyContainsOnlyVideoAndPlainText() {
-        val root = YouTubeCommentApi.commentBody("dQw4w9WgXcQ", "  Hello <world>\n\"quoted\"  ")
+    @Test fun bodyContainsTargetChannelVideoAndPlainText() {
+        val root = YouTubeCommentApi.commentBody("dQw4w9WgXcQ", "  Hello <world>\n\"quoted\"  ", "UC_target")
         val snippet = root.getValue("snippet").jsonObject
         assertEquals("dQw4w9WgXcQ", snippet.getValue("videoId").jsonPrimitive.content)
         assertEquals("Hello <world>\n\"quoted\"", snippet.getValue("topLevelComment").jsonObject.getValue("snippet").jsonObject.getValue("textOriginal").jsonPrimitive.content)
-        assertFalse(root.toString().contains("channelId"))
+        assertEquals("UC_target", snippet.getValue("channelId").jsonPrimitive.content)
     }
     @Test fun invalidInputRejectedBeforeNetwork() = runBlocking {
         var calls = 0
@@ -41,13 +44,21 @@ class YouTubeAccountTest {
             assertEquals("POST", request.method)
             assertEquals("Bearer test-token", request.header("Authorization"))
             val buffer = Buffer(); request.body!!.writeTo(buffer)
-            assertTrue(buffer.readUtf8().contains("textOriginal"))
+            val snippet = Json.parseToJsonElement(buffer.readUtf8()).jsonObject.getValue("snippet").jsonObject
+            assertEquals("UC_target", snippet.getValue("channelId").jsonPrimitive.content)
+            assertTrue(snippet.toString().contains("textOriginal"))
             200 to posted
         }
         val result = api.post("test-token", "dQw4w9WgXcQ", "Hello <world>")
         assertEquals("real-server-id", result.comment.id)
         assertEquals("Hello <world>", result.comment.text)
         assertFalse(result.comment.html)
+    }
+    @Test fun missingTargetVideoNeverSendsPost() = runBlocking {
+        var posts = 0
+        try { api("""{"items":[]}""") { posts++; 200 to posted }.post("test-token", "dQw4w9WgXcQ", "Hello"); fail("Expected missing video") }
+        catch (error: YouTubeApiFailure) { assertEquals(404, error.status) }
+        assertEquals(0, posts)
     }
     @Test fun missingServerIdNeverBecomesLocalSuccess() = runBlocking {
         try { api { 200 to "{}" }.post("test-token", "dQw4w9WgXcQ", "Hello"); fail("Expected unconfirmed post") }

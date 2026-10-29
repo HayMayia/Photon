@@ -52,7 +52,15 @@ class YouTubeCommentApi(client: OkHttpClient = OkHttpClient()) {
     }
 
     suspend fun post(token: String, videoId: String, text: String): PublishedComment = withContext(Dispatchers.IO) {
-        val body = commentBody(videoId, text)
+        // Validate before any I/O, then obtain the target video's channel (not the posting user's channel).
+        commentBody(videoId, text, "validation")
+        val video = execute(Request.Builder().url("https://www.googleapis.com/youtube/v3/videos?part=snippet&id=$videoId")
+            .header("Authorization", "Bearer $token").get().build())["items"]?.jsonArray
+            ?.firstOrNull()?.jsonObject ?: throw YouTubeApiFailure(404, "videoNotFound")
+        check(video["id"]?.jsonPrimitive?.content == videoId) { "YouTube did not confirm the target video" }
+        val targetChannel = video["snippet"]?.jsonObject?.get("channelId")?.jsonPrimitive?.content
+            ?.takeIf { it.isNotBlank() } ?: throw IOException("Could not verify the video's channel. No comment was submitted.")
+        val body = commentBody(videoId, text, targetChannel)
         val root = execute(Request.Builder().url("https://www.googleapis.com/youtube/v3/commentThreads?part=snippet")
             .header("Authorization", "Bearer $token")
             .post(body.toString().toRequestBody("application/json; charset=utf-8".toMediaType())).build())
@@ -78,13 +86,15 @@ class YouTubeCommentApi(client: OkHttpClient = OkHttpClient()) {
     }
 
     companion object {
-        fun commentBody(videoId: String, text: String): JsonObject {
+        fun commentBody(videoId: String, text: String, targetChannelId: String): JsonObject {
             require(Regex("[A-Za-z0-9_-]{11}").matches(videoId)) { "Invalid YouTube video" }
+            require(targetChannelId.isNotBlank()) { "Missing target video channel" }
             val clean = text.trim()
             require(clean.isNotEmpty()) { "Write a comment first" }
             require(clean.length <= 10_000) { "Keep the comment under 10,000 characters" }
             return buildJsonObject { putJsonObject("snippet") {
                 put("videoId", videoId)
+                put("channelId", targetChannelId)
                 putJsonObject("topLevelComment") { putJsonObject("snippet") { put("textOriginal", clean) } }
             } }
         }

@@ -109,6 +109,10 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
         mutableWatch.value = mutableWatch.value.copy(quality = quality, request = System.nanoTime(), preservePosition = true)
     }
 
+    fun adoptPlaying(video: Video) {
+        if (mutableWatch.value.video == null) mutableWatch.value = WatchState(video = video)
+    }
+
     fun close() { watchJob?.cancel(); mutableWatch.value = WatchState() }
     fun save(video: Video) = app.library.toggleSaved(video)
     fun download(video: Video, quality: VideoQuality) = VideoDownloadWorker.enqueue(app, video, quality.height, library.value.wifiOnly)

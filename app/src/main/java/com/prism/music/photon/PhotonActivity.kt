@@ -145,6 +145,13 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
         isPlaying = controller?.isPlaying == true
         onDispose { controller?.removeListener(listener) }
     }
+    LaunchedEffect(controller) {
+        val item = controller?.currentMediaItem
+        if (item != null && model.watch.value.video == null) {
+            model.adoptPlaying(Video(item.mediaId, item.mediaMetadata.title?.toString() ?: "Playing video",
+                item.mediaMetadata.artist?.toString().orEmpty(), item.mediaMetadata.artworkUri?.toString().orEmpty()))
+        }
+    }
     // Bind the retained view model's selection once; expanding/minimizing never restarts playback.
     LaunchedEffect(watch.request, controller) {
         if (watch.request == 0L || controller == null) return@LaunchedEffect
@@ -206,6 +213,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                                     ActionChip(watch.quality?.label ?: "Quality", PrismIcons.Settings) { qualitySheet = true }
                                     if (!watch.details!!.live) ActionChip("Download", PrismIcons.Download) { downloadSheet = true }
                                 }
+                                if (watch.details == null && watch.localPath == null && !watch.busy) ActionChip("Reload details", PrismIcons.Refresh) { model.open(video) }
                                 ActionChip("Share", PrismIcons.Share) { share(video) }
                                 ActionChip("Full screen", PrismIcons.Fullscreen) { fullscreen = true }
                                 ActionChip("Pop out", PrismIcons.PlayCircle) { enterPip() }

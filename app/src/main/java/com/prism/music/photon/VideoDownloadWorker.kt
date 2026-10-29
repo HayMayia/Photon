@@ -78,14 +78,16 @@ class VideoDownloadWorker(context: Context, parameters: WorkerParameters) : Coro
             } else {
                 check(videoFile.renameTo(output)) { "Could not finalize downloaded video" }
             }
-            val thumbnail = OfflineArtwork.save(app, details.video, File(temp, "thumbnail"))
+            val short = inputData.getBoolean("video_short", false) || details.video.short
+            val artworkVideo = details.video.copy(short = short, thumbnail = if (short) inputData.getString("video_thumbnail")?.takeIf { it.isNotBlank() } ?: details.video.thumbnail else details.video.thumbnail)
+            val thumbnail = OfflineArtwork.save(app, artworkVideo, File(temp, "thumbnail"))
             currentCoroutineContext().ensureActive()
             val target = File(root, "$videoId-${quality.height}p.mp4")
             check(output.length() > 0) { "The download was empty" }
             check(output.renameTo(target)) { "Could not save video; check free storage" }
             val thumbTarget = File(root, "${videoId}-${quality.height}p.thumbnail")
             val thumbnailPath = thumbnail?.let { if (File(it).renameTo(thumbTarget)) thumbTarget.absolutePath else null }
-            app.library.downloaded(SavedDownload(details.video, target.absolutePath, quality.height, target.length(), thumbnailPath))
+            app.library.downloaded(SavedDownload(artworkVideo, target.absolutePath, quality.height, target.length(), thumbnailPath))
             Result.success(workDataOf("path" to target.absolutePath, "height" to quality.height))
         } catch (cancelled: CancellationException) {
             throw cancelled
@@ -177,7 +179,7 @@ class VideoDownloadWorker(context: Context, parameters: WorkerParameters) : Coro
         private const val CHANNEL = "photon-downloads"
         fun enqueue(context: Context, video: Video, height: Int, wifiOnly: Boolean) {
             val request = OneTimeWorkRequestBuilder<VideoDownloadWorker>()
-                .setInputData(workDataOf("video_id" to video.id, "title" to video.title, "height" to height))
+                .setInputData(workDataOf("video_id" to video.id, "title" to video.title, "height" to height, "video_short" to video.short, "video_thumbnail" to video.thumbnail.take(2000)))
                 .setConstraints(Constraints.Builder().setRequiredNetworkType(if (wifiOnly) NetworkType.UNMETERED else NetworkType.CONNECTED).build())
                 .addTag(TAG).build()
             WorkManager.getInstance(context).enqueueUniqueWork("photon-${video.id}-$height", ExistingWorkPolicy.KEEP, request)

@@ -103,6 +103,7 @@ internal fun CommentsPanel(model: PhotonViewModel, video: Video) {
     val published by model.lastPublished.collectAsStateWithLifecycle()
     var draft by rememberSaveable(video.id) { mutableStateOf("") }
     var confirming by remember { mutableStateOf(false) }
+    var authorizeComment by remember { mutableStateOf(false) }
     var seenId by remember(video.id) { mutableStateOf(model.lastPublished.value?.comment?.id) }
     LaunchedEffect(published) {
         if (published?.videoId == video.id && published?.comment?.id != seenId) {
@@ -122,8 +123,14 @@ internal fun CommentsPanel(model: PhotonViewModel, video: Video) {
                 GoogleAccountActions(model)
                 OutlinedTextField(value = draft, onValueChange = { draft = it.take(10_001) }, enabled = !posting,
                     label = { Text("Public comment") }, modifier = Modifier.fillMaxWidth(), minLines = 2, maxLines = 5,
-                    supportingText = { Text("${draft.length}/10000 · Top-level comments only; replies remain read-only.") })
-                Button(onClick = { confirming = true }, enabled = !posting && !account.busy && account.identity != null && draft.isNotBlank() && draft.trim().length <= 10_000 && page?.disabled != true) { Text(if (posting) "Posting…" else "Review and post") }
+                    supportingText = { Text("${draft.trim().length}/10000 · Top-level comments only; replies remain read-only.") })
+                Button(onClick = { if (account.identity == null) authorizeComment = true else confirming = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = CommentComposerPolicy.canReview(draft, posting, account.busy, page?.disabled == true)) {
+                    Text(if (posting) "Posting…" else if (account.identity == null) "Authorize and review comment" else "Review and post")
+                }
+                CommentComposerPolicy.reason(draft, posting, account.busy, page?.disabled == true)?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+                if (account.identity == null && CommentComposerPolicy.validDraft(draft)) Text("Your Home login is connected separately. Google comment permission is needed before publishing; your draft will be kept and nothing posts automatically.", style = MaterialTheme.typography.bodySmall)
                 if (posting) LinearProgressIndicator(Modifier.fillMaxWidth())
                 postError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 published?.takeIf { it.videoId == video.id }?.let { result ->
@@ -151,6 +158,10 @@ internal fun CommentsPanel(model: PhotonViewModel, video: Video) {
             }
         }
     }
+    if (authorizeComment) AlertDialog(onDismissRequest = { authorizeComment = false }, title = { Text("Authorize YouTube commenting?") },
+        text = { Text("Google's own screen will request youtube.force-ssl permission to identify your channel and post comments you explicitly confirm. Photon does not read your password. Your draft is kept; authorization alone will not publish it. Return here to review and post after authorization.") },
+        confirmButton = { TextButton(onClick = { authorizeComment = false; (context as? PhotonActivity)?.signInToYouTube() }) { Text("Continue to Google") } },
+        dismissButton = { TextButton(onClick = { authorizeComment = false }) { Text("Cancel") } })
     if (confirming) AlertDialog(onDismissRequest = { confirming = false }, title = { Text("Post publicly on YouTube?") },
         text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Channel: ${account.identity?.name.orEmpty()}")
@@ -158,7 +169,7 @@ internal fun CommentsPanel(model: PhotonViewModel, video: Video) {
             Text(draft.take(1000) + if (draft.length > 1000) "…" else "", maxLines = 12, overflow = TextOverflow.Ellipsis)
             Text("This submits your full draft to YouTube, not a local note. Check for an existing comment before retrying after a network error.", style = MaterialTheme.typography.bodySmall)
         } },
-        confirmButton = { TextButton(enabled = !posting && account.identity != null && !account.busy, onClick = { confirming = false; model.postComment(video, draft) }) { Text("Post publicly") } },
+        confirmButton = { TextButton(enabled = account.identity != null && CommentComposerPolicy.canReview(draft, posting, account.busy, page?.disabled == true), onClick = { confirming = false; model.postComment(video, draft) }) { Text("Post publicly") } },
         dismissButton = { TextButton(onClick = { confirming = false }) { Text("Cancel") } })
 }
 
@@ -198,7 +209,7 @@ internal fun ShortsScreen(browse: BrowseState, watch: WatchState, controller: Me
 @Composable
 private fun CommunityVideoRow(video: Video, open: () -> Unit) {
     Row(Modifier.fillMaxWidth().clickable(onClick = open).padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-        VideoThumbnail(video, null, Modifier.width(120.dp).aspectRatio(16f / 9))
+        VideoThumbnail(video, null, Modifier.width(VideoArtworkShape.rowWidth(video.short).dp).aspectRatio(VideoArtworkShape.ratio(video.short)))
         Column(Modifier.weight(1f).padding(start = 12.dp)) {
             Text(video.title, maxLines = 2, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold)
             Text(video.channel, style = MaterialTheme.typography.labelMedium)

@@ -198,7 +198,7 @@ class VideoRepository {
 
     private fun preview(item: StreamInfoItem): Video? {
         val id = YouTubeLinks.videoId(item.url) ?: return null
-        return Video(id, item.name, item.uploaderName.orEmpty(), item.thumbnails.maxByOrNull { it.height }?.url.orEmpty(),
+        return Video(id, item.name, item.uploaderName.orEmpty(), item.thumbnails.sortedWith(compareBy<org.schabi.newpipe.extractor.Image> { if (item.isShortFormContent && it.height > it.width) 1 else 0 }.thenBy { it.height }).lastOrNull()?.url.orEmpty(),
             item.duration, item.viewCount, item.textualUploadDate.orEmpty(), item.uploaderUrl.orEmpty(), item.isShortFormContent)
     }
 }

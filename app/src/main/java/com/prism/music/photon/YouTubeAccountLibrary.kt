@@ -83,10 +83,10 @@ internal object YouTubeAccountLibraryParser {
                         }
                         return
                     }
-                    val videoKey = listOf("videoRenderer", "gridVideoRenderer", "videoWithContextRenderer", "playlistVideoRenderer", "playlistPanelVideoRenderer").firstOrNull { node[it] is JsonObject }
-                    if (kind == AccountEntryKind.VIDEO && (videoKey != null || lockup != null)) {
+                    val videoKey = listOf("videoRenderer", "gridVideoRenderer", "videoWithContextRenderer", "playlistVideoRenderer", "playlistPanelVideoRenderer", "reelItemRenderer").firstOrNull { node[it] is JsonObject }
+                    if (kind == AccountEntryKind.VIDEO && (videoKey != null || lockup != null || node["shortsLockupViewModel"] != null)) {
                         // Playlist rows use the same title/byline/thumbnail fields as ordinary video renderers.
-                        val source = if (videoKey != null) buildJsonObject { put("videoRenderer", node[videoKey]!!) } else node
+                        val source = if (videoKey != null && videoKey != "reelItemRenderer") buildJsonObject { put("videoRenderer", node[videoKey]!!) } else node
                         YouTubeHomeParser.cards(source).videos.forEach { video -> rows.putIfAbsent(video.id, AccountEntry(video.id, video.title, kind, video)) }
                         return
                     }

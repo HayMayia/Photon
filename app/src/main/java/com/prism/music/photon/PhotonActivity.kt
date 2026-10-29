@@ -546,7 +546,7 @@ private fun PageHeading(title: String, subtitle: String) {
 @Composable
 private fun VideoCard(video: Video, open: () -> Unit, save: () -> Unit, saved: Boolean) {
     Column(Modifier.padding(horizontal = 22.dp, vertical = 12.dp)) {
-        Box(Modifier.fillMaxWidth().aspectRatio(16f / 9).clip(RoundedCornerShape(22.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh).clickable(onClick = open)) {
+        Box((if (video.short) Modifier.width(160.dp) else Modifier.fillMaxWidth()).aspectRatio(VideoArtworkShape.ratio(video.short)).clip(RoundedCornerShape(22.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh).clickable(onClick = open)) {
             VideoThumbnail(video, video.title, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             Surface(Modifier.align(Alignment.BottomEnd).padding(10.dp), shape = RoundedCornerShape(7.dp), color = Color.Black.copy(alpha = 0.8f)) {
                 Text(durationLabel(video.duration), Modifier.padding(horizontal = 7.dp, vertical = 3.dp), color = Color.White, style = MaterialTheme.typography.labelSmall)
@@ -565,7 +565,7 @@ private fun VideoCard(video: Video, open: () -> Unit, save: () -> Unit, saved: B
 @Composable
 private fun VideoRow(video: Video, open: () -> Unit, save: () -> Unit, saved: Boolean, actionIcon: ImageVector? = null) {
     Row(Modifier.fillMaxWidth().clickable(onClick = open).padding(horizontal = 22.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.width(128.dp).aspectRatio(16f / 9).clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh)) {
+        Box(Modifier.width(VideoArtworkShape.rowWidth(video.short).dp).aspectRatio(VideoArtworkShape.ratio(video.short)).clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh)) {
             VideoThumbnail(video, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             Text(durationLabel(video.duration), Modifier.align(Alignment.BottomEnd).background(Color.Black.copy(alpha = 0.8f)).padding(3.dp), color = Color.White, style = MaterialTheme.typography.labelSmall)
         }

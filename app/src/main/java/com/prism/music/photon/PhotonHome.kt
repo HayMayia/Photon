@@ -102,7 +102,7 @@ internal fun PhotonHome(model: PhotonViewModel, library: PhotonLibrary, open: (V
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         pair.forEach { video ->
                             Row(Modifier.weight(1f).clip(ui.tile).clickable { open(video) }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                VideoThumbnail(video, null, Modifier.size(48.dp).clip(ui.smallArt))
+                                VideoThumbnail(video, null, Modifier.width(if (video.short) 27.dp else 48.dp).aspectRatio(VideoArtworkShape.ratio(video.short)).clip(ui.smallArt))
                                 Column(Modifier.weight(1f).padding(start = 10.dp)) {
                                     Text(video.title, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge)
                                     Text(video.channel, maxLines = 1, overflow = TextOverflow.Ellipsis, color = scheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
@@ -163,8 +163,8 @@ private fun HomeVideoShelf(title: String?, subtitle: String?, videos: List<Video
 @Composable
 private fun HomeCover(video: Video, music: Boolean, open: () -> Unit) {
     val ui = LocalUi.current
-    Column(Modifier.width(if (music) 155.dp else 240.dp).clickable(onClick = open)) {
-        Box(Modifier.fillMaxWidth().aspectRatio(if (music) 1f else 16f / 9).clip(ui.art).background(MaterialTheme.colorScheme.surfaceContainerHigh)) {
+    Column(Modifier.width(if (video.short) 144.dp else 240.dp).clickable(onClick = open)) {
+        Box(Modifier.fillMaxWidth().aspectRatio(VideoArtworkShape.ratio(video.short)).clip(ui.art).background(MaterialTheme.colorScheme.surfaceContainerHigh)) {
             VideoThumbnail(video, video.title, Modifier.fillMaxSize())
             Surface(Modifier.align(Alignment.BottomEnd).padding(8.dp), shape = ui.smallArt, color = Color.Black.copy(alpha = 0.75f)) {
                 Text(durationLabel(video.duration), Modifier.padding(horizontal = 6.dp, vertical = 3.dp), color = Color.White, style = MaterialTheme.typography.labelSmall)
@@ -235,7 +235,7 @@ private fun ActualYouTubeHome(model: PhotonViewModel, open: (Video) -> Unit, set
         }
         items(feed.page?.videos.orEmpty(), key = { it.id }) { video ->
             Column(Modifier.fillMaxWidth().clickable { open(video) }.padding(vertical = 14.dp)) {
-                VideoThumbnail(video, video.title, Modifier.fillMaxWidth().aspectRatio(16f / 9))
+                VideoThumbnail(video, video.title, (if (video.short) Modifier.width(160.dp) else Modifier.fillMaxWidth()).aspectRatio(VideoArtworkShape.ratio(video.short)))
                 Text(video.title, Modifier.padding(top = 10.dp), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text(video.channel, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }

@@ -374,7 +374,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 val details = app.videos.details(video.id)
                 val max = library.value.defaultHeight
                 val quality = details.qualities.firstOrNull { it.height <= max } ?: details.qualities.last()
-                mutableWatch.value = WatchState(details.video, details, quality, request = System.nanoTime(), startPositionMs = library.value.progress[video.id]?.resumeMs() ?: 0, openedAtMs = opened, webRevision = revision)
+                mutableWatch.value = WatchState(details.video.copy(short = video.short || details.video.short, thumbnail = if (video.short && video.thumbnail.isNotBlank()) video.thumbnail else details.video.thumbnail), details, quality, request = System.nanoTime(), startPositionMs = library.value.progress[video.id]?.resumeMs() ?: 0, openedAtMs = opened, webRevision = revision)
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (error: Exception) { mutableWatch.value = WatchState(video = video, error = error.message ?: "This video could not be played") }
         }

@@ -47,7 +47,7 @@ internal fun AccountLibraryScreen(model: PhotonViewModel, revision: Long, ready:
         items(state.page?.items.orEmpty(), key = { "${it.kind}:${it.id}" }) { entry ->
             if (entry.video != null) {
                 Column(Modifier.fillMaxWidth().clickable { open(entry.video) }.padding(horizontal = 22.dp, vertical = 10.dp)) {
-                    VideoThumbnail(entry.video, entry.title, Modifier.fillMaxWidth().aspectRatio(16f / 9))
+                    VideoThumbnail(entry.video, entry.title, (if (entry.video.short) Modifier.width(160.dp) else Modifier.fillMaxWidth()).aspectRatio(VideoArtworkShape.ratio(entry.video.short)))
                     Text(entry.title, Modifier.padding(top = 8.dp), fontWeight = FontWeight.SemiBold)
                     if (state.playlist != null) TextButton(onClick = { model.removeFromPlaylist(state.playlist!!, entry.video) }) { Text("Remove from YouTube playlist") }
                     Text(entry.video.channel, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)

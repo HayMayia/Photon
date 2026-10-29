@@ -13,6 +13,7 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import java.io.IOException
 import java.security.SecureRandom
+import java.util.concurrent.atomic.AtomicInteger
 
 /** Unknown is a real state, not an alias for enabled. Never persist server state as a user preference. */
 enum class GoogleHistoryStatus { ENABLED, PAUSED, UNKNOWN }
@@ -127,11 +128,12 @@ class YouTubeHistoryCoordinator(private val store: PhotonStore, client: OkHttpCl
     private val sessionProvider: (suspend () -> YouTubeWebSession)? = null) {
     private val transport = YouTubeWebTransport(client)
     private val mutex = Mutex()
+    private val pendingChanges = AtomicInteger(0)
     private val mutable = MutableStateFlow(GoogleHistoryState())
     val state: StateFlow<GoogleHistoryState> = mutable
     fun invalidate() { mutable.value = GoogleHistoryState() }
     private fun now() = clock()
-    fun locallyPaused(): Boolean = AccountHistoryPolicy.localPaused(store.state.value, state.value, now())
+    fun locallyPaused(): Boolean = pendingChanges.get() > 0 || AccountHistoryPolicy.localPaused(store.state.value, state.value, now())
     suspend fun session(): YouTubeWebSession {
         sessionProvider?.let { return it() }
         return withContext(Dispatchers.Main) {
@@ -147,7 +149,7 @@ class YouTubeHistoryCoordinator(private val store: PhotonStore, client: OkHttpCl
     }
     private suspend fun read(session: YouTubeWebSession): HistoryPage {
         val page = withContext(Dispatchers.IO) { YouTubeHistoryParser.parse(transport.html("/feed/history", session)) }
-        if (same(session)) mutable.value = GoogleHistoryState(page.status, checkedAtMs = now(), revision = session.revision,
+        if (same(session)) mutable.value = GoogleHistoryState(page.status, checking = pendingChanges.get() > 0, checkedAtMs = now(), revision = session.revision,
             message = if (page.status == GoogleHistoryStatus.UNKNOWN) "History controls were not recognized. Local/account tracking is blocked." else null)
         return page
     }
@@ -163,7 +165,13 @@ class YouTubeHistoryCoordinator(private val store: PhotonStore, client: OkHttpCl
         }
         catch (_: Exception) { if (captured == null || same(captured)) mutable.value = GoogleHistoryState(message = "Could not verify Google's history setting. Tracking is blocked until refreshed.") }
     }
-    suspend fun changePause(paused: Boolean) = mutex.withLock {
+    suspend fun changePause(paused: Boolean) {
+        pendingChanges.incrementAndGet()
+        mutable.value = state.value.copy(checking = true)
+        try { changePauseLocked(paused) }
+        finally { mutable.value = state.value.copy(checking = pendingChanges.decrementAndGet() > 0) }
+    }
+    private suspend fun changePauseLocked(paused: Boolean) = mutex.withLock {
         val session = session()
         try {
             // Pause immediately stops local/reporting work while the change is in flight.
@@ -186,7 +194,7 @@ class YouTubeHistoryCoordinator(private val store: PhotonStore, client: OkHttpCl
     suspend fun report(videoId: String, watchedMs: Long, revision: Long) = mutex.withLock {
         if (watchedMs < 15_000 || !Regex("[A-Za-z0-9_-]{11}").matches(videoId)) return@withLock
         val session = session()
-        fun permitted() = same(session) && session.revision == revision && store.state.value.accountHistorySync && !store.state.value.historyPaused
+        fun permitted() = pendingChanges.get() == 0 && same(session) && session.revision == revision && store.state.value.accountHistorySync && !store.state.value.historyPaused
         if (!permitted()) return@withLock
         try {
             val before = read(session) // No stale assumption before an account mutation.

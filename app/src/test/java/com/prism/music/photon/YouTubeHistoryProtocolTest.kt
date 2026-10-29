@@ -1,7 +1,9 @@
 package com.prism.music.photon
 
 import android.app.Application
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.*
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import kotlinx.serialization.json.*
 import okhttp3.*
 import okhttp3.ResponseBody.Companion.toResponseBody
@@ -127,4 +129,23 @@ class YouTubeHistoryProtocolTest {
         assertEquals(GoogleHistoryStatus.UNKNOWN, coordinator.state.value.status)
         assertTrue(coordinator.state.value.message!!.contains("No automatic retry"))
     }
+    @Test fun requestedPauseBlocksAReportEvenWhileWaitingForItsMutex() = runBlocking {
+        val started = CountDownLatch(1); val release = CountDownLatch(1)
+        var paused = false; var reports = 0
+        val coordinator = coordinator { request -> when (request.url.encodedPath) {
+            "/feed/history" -> history(if (paused) "RESUME" else "PAUSE")
+            "/watch" -> { started.countDown(); check(release.await(5, TimeUnit.SECONDS)); watch }
+            "/youtubei/v1/feedback" -> { paused = true; "{}" }
+            else -> { reports++; "" }
+        } }
+        val reporting = launch { coordinator.report("dQw4w9WgXcQ", 15_000, 7) }
+        assertTrue(withContext(Dispatchers.IO) { started.await(5, TimeUnit.SECONDS) })
+        val pausing = launch(start = CoroutineStart.UNDISPATCHED) { coordinator.changePause(true) }
+        assertTrue(coordinator.locallyPaused())
+        release.countDown()
+        reporting.join(); pausing.join()
+        assertEquals(0, reports)
+        assertEquals(GoogleHistoryStatus.PAUSED, coordinator.state.value.status)
+    }
+
 }

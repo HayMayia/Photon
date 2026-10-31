@@ -9,3 +9,10 @@ Unknown Shorts can initially look like normal cards until YouTube supplies usabl
 Regression coverage includes unavailable metadata preserving normal frames, a mixed trailer/two-Shorts sequence committing spans [2,1,1], retained proof under stale metadata/remount and the existing UI/scroll/header tests. Physical/live-account verification remains pending.
 
 After publication use **Home → Update to v1.0.9 Beta**. If cached, force-stop/reopen then Home. No uninstall, storage clearing or manual APK delivery.
+
+
+## Verified publication
+
+App source `a1d0d8389a5ba962f330ae7d5f438e3169b96680`, code 26. [Release run 41226639238](https://github.com/HayMayia/Photon/actions/runs/41226639238) passed in 8m14s: debug/release assembly, 195-method focused suite, permanent certificates and publication. Tag targets that source; asset 25,303,368 bytes.
+
+An additional test-only commit `42d1d3f` passed [run 41226678098](https://github.com/HayMayia/Photon/actions/runs/41226678098) in 5m15s with 196 methods. Its actual Compose mixed-format regression uses the production idle-format effect and asserts full-width trailer plus side-by-side proven Shorts, preserved through duplicate/remount admission. It changes no app code and does not republish the tag. Physical/live-account verification remains pending.

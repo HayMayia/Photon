@@ -7,8 +7,8 @@ These are unofficial YouTube website integrations, adapted for ordinary videos r
 1. Settings → YouTube account → the top **Sign in with Google** button → **Continue with Google**.
 2. Choose your account or log in on Google's own page. When YouTube confirms the authenticated account, Photon automatically closes the login page and loads account Home. There is no separate “Use this YouTube session” step. **Check sign-in** is a retry if the page callback has not fired. Internally this uses the same website-authentication approach as Prism, not an OAuth-to-cookie conversion.
 3. Home displays supported YouTube recommendation cards in server order. Scrolling near the end requests the next continuation automatically; **Load more** also supports explicit retries.
-4. In account settings use **Check Google history** to read the current watch-history control. **Pause on YouTube / Resume on YouTube** each require confirmation because they change the connected account's setting, not just Photon.
-5. To have real native plays reported, explicitly enable **Report real playback to YouTube history** and accept its separate disclosure. Enabling removes the additional local pause, but never overrides a paused/unknown Google setting.
+4. In account settings use **Check Google history** to read the current watch-history control. **Pause / Resume** changes the connected account setting directly on tap and verifies the result; v1.0.4 removes the extra confirmation dialog.
+5. To have real native plays reported, explicitly enable **Report real playback to YouTube history** using its explicit Settings switch (no second confirmation dialog). Enabling removes the additional local pause, but never overrides a paused/unknown Google setting.
 
 Google may reject embedded WebView sign-in. Photon does not disguise the login browser or ask for pasted cookies. The official comment OAuth token cannot be converted into a YouTube website session. Switching a Cloud project to Production does not remove an embedded-browser rejection or complete Google verification.
 

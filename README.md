@@ -4,17 +4,21 @@
 [Yigder's Prism](https://github.com/Yigder/Prism), retaining its real Compose theme,
 fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
 
-> **v1.0.3 Beta — stable library scrolling and duplicate-page protection.**
-> [Release notes](docs/RELEASE_1_0_3_BETA.md). Use **Home → Update to v1.0.3 Beta**. If an automatic check is cached, force-stop/reopen then visit Home. Do not clear storage or uninstall.
+> **v1.0.4 Beta — direct actions and tap-to-show Shorts overlay.**
+> [Release notes](docs/RELEASE_1_0_4_BETA.md). Use **Home → Update to v1.0.4 Beta**. If a check is cached, force-stop/reopen then visit Home; no uninstall or storage clearing.
+> Removed Photon-only confirmation/result popups for account actions, public posting, history controls, sign-in pre-disclosures, root exit, download removal and local-cache clearing. Tap actions send authenticated Google requests directly; account revision/in-flight guards and verification remain. Errors stay visible. Only actual Google/Android authorization, permission and installer approval remain mandatory; naming forms and user-opened troubleshooting are retained.
+> Shorts title/channel/actions now overlay the full-size video, hidden until native player controls are shown by a tap; another tap or controls timeout hides them. Includes real comments/replies/pagination/posting, returned description/views/date, like, save/share and available subscription/channel actions. No invented data or gesture-intercepting Compose layer.
+> [Build 41222693382](https://github.com/HayMayia/Photon/actions/runs/41222693382) **PASS in 9m3s**, source `77a0a31`, code 21: debug/release assembly, focused suite (186 test methods), permanent signing and publication. Rendered overlay visibility/action regression passed; physical/live-account checks remain pending.
+> **Retained v1.0.3 library stability fix:**
 > Library cards now retain committed spans and thumbnail-frame sizes while browsing, independent of late Shorts metadata or global cache eviction. Known Shorts keep paired portrait cells. Later-discovered Shorts fit their reserved frame and use correct playback metadata; an explicit Refresh can repack a new dataset rather than moving rows mid-scroll.
 > Continuations merge by actual video ID, preserve first-seen order and current metadata, and reject stale dataset generations. Resolved presentation stays on the dataset so lazy remounts cannot lose it when the global cache evicts an entry.
 > [Build 41221594855](https://github.com/HayMayia/Photon/actions/runs/41221594855) **PASS in 9m36s**, source `d0a5021`: debug/release assembly, focused tests (185 methods), permanent certificates and Beta publication. Code 20, same package/key. Includes an actual Compose scroll/remount/overlapping-page regression using the production row/span/frame policy, plus pure stability tests. Physical/live-account verification remains pending.
 > Header overlap fix, wrapped titles, quiet Prism update banner, TV foreground-only playback, mobile background playback and player settings remain unchanged.
-> Back retraces tabs/pages/player before asking to leave at the root; fullscreen uses FIT and safe insets.
+> Back retraces tabs/pages/player before backgrounding at the root; fullscreen uses FIT and safe insets.
 > **Settings → Switch to YouTube layout** changes native presentation; **You → Settings → Switch to Photon** returns. Same player/accounts/downloads, no website-player replacement.
 > This is **not pixel-identical or the official YouTube interface**; some controls remain shared, and Android/Google permission screens keep the real app identity. [Scope and device checks](docs/INTERFACE_MODES.md).
-> Shorts cards use portrait 9:16 artwork; regular video cards use landscape 16:9. Valid comment drafts can authorize/review instead of silently requiring a missing comment grant; publishing still needs explicit authorization and confirmation.
-> Like/unlike, subscribe/unsubscribe and playlist actions now send confirmed same-account YouTube requests, not local saves.
+> Shorts cards use portrait 9:16 artwork; regular video cards use landscape 16:9. Valid drafts can authorize comments through Google; after authorization, **Post** submits directly. Sign-in never posts automatically.
+> Like/unlike, subscribe/unsubscribe and playlist actions now send authenticated, session-bound YouTube requests, not local saves.
 > Google is the default library; only downloads/device caches stay local. [Account writes and remaining scope](docs/ACCOUNT_WRITES.md).
 > Authenticated Home retains the Prism header and spectrum accents with compact shortcut chips.
 > **Library → YouTube account** reads History, Playlists, Liked videos and subscribed Channels;
@@ -22,7 +26,7 @@ fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
 > The primary **Sign in with Google** now connects account Home automatically after Google's login.
 > Optional native comment permission is separately labelled **Authorize comments**; it does not connect Home.
 > No extra “Use this YouTube session” step; failed Home loads show errors rather than silently keeping the local feed.
-> Home follows authenticated YouTube continuations; native pause/resume requires confirmation and read-back.
+> Home follows authenticated YouTube continuations; native pause/resume submits on the action tap and requires read-back.
 > Optional history registration keeps its 15-second default, with separate explicit 1-second short-play consent; fresh enabled Google history and the original account/session are required. Downloaded videos played while online can qualify; no offline backfill.
 > **User confirmed 0.7.1 login/account Home works. Account lists/writes, Google pause changes and saved history reports still need device verification.**
 > HTTP acceptance is not proof of stored activity. Unknown/stale/paused state blocks tracking in connected mode;
@@ -39,8 +43,8 @@ fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
 | Videos | Standard YouTube search, topic discovery, result pagination, video/channel/public-playlist links and Android Share → Photon |
 | Channel pages | Native channel details, Videos and Shorts tabs, paginated uploads |
 | Subscriptions | Actual Google subscribe/unsubscribe with structured state checks/read-back; account Channels lists subscriptions. Video feed reads Google's authenticated first page, not local channel aggregation |
-| Playlists | Account list/rows, private creation/initial video, Google add/remove with entry IDs and read-back; per-playlist confirmed deletion reports request acceptance, not independently verified deletion. No local fallback; multi-page editing/rename/privacy controls remain incomplete |
-| Comments | Read comments/replies with pagination; native top-level composer with public confirmation and official YouTube API posting, requiring Google setup/authorization; replies remain read-only |
+| Playlists | Account list/rows, private creation/initial video, Google add/remove with entry IDs and read-back; per-playlist direct deletion uses request acceptance, not independent deletion verification. No local fallback; multi-page editing/rename/privacy controls remain incomplete |
+| Comments | Read comments/replies with pagination; native top-level composer with direct Post and official YouTube API posting, requiring Google setup/authorization; replies remain read-only |
 | Shorts | Swipeable vertical video feed using extracted Shorts and channel Shorts tabs; discovery is not YouTube's signed-in Shorts algorithm |
 | Recommendations | Optional native **YouTube account Home** through Prism-style Google-page sign-in, in server order; no local/search fallback in that mode. Auto continuation loading with deduplication/loop guards; unofficial; 0.7.1 login/Home user-confirmed, continuation/device cases remain pending. Original on-device related-video ranking remains a distinct local mode |
 | History pause | Reads explicit server watch-history controls; confirmed account pause/resume with read-back; connected-mode local tracking is blocked when Google state is paused/unknown/stale. Additional local pause stays independent. Device verification pending |

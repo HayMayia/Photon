@@ -14,6 +14,11 @@ Shorts now keep the video full-size instead of placing metadata below it. One na
 
 ## Validation and delivery
 
-Includes a rendered Compose overlay visibility/action regression. Full debug/release build and focused tests must pass before publication. No physical-device or live-account verification is claimed. Existing stable library geometry/page deduplication and header fixes remain.
+Includes a rendered Compose overlay visibility/action regression. Debug/release build, focused tests and permanent signing checks passed before publication. No physical-device or live-account verification is claimed. Existing stable library geometry/page deduplication and header fixes remain.
 
 Use **Home → Update to v1.0.4 Beta** after publication; if cached, force-stop/reopen then visit Home. Same package and permanent signing key; do not uninstall or clear data. No manual APK delivery.
+
+
+### Published build record
+
+Source `77a0a31232447dd2b28841d54f8b342b2306dc5c`, version code 21. [Build 41222693382](https://github.com/HayMayia/Photon/actions/runs/41222693382) passed in 9m3s, including the 186-method focused suite. Public Beta tag targets that source; asset 25,286,984 bytes. Rendered overlay regression passed; native touch/device and real-account verification remain pending.

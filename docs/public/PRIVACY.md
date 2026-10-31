@@ -14,9 +14,9 @@ Photon is an independent, open-source Android YouTube client maintained through 
 
 ## How information is used and shared
 
-Information is used to provide the features you request. Confirmed likes/unlikes, subscription changes, supported playlist edits and authorized comments are sent to Google/YouTube and can change your real account. Public comments are subject to YouTube's visibility and moderation rules.
+Information is used to provide the features you request. Like/unlike, subscription and supported playlist action taps, and authorized comment Post taps, send requests directly to Google/YouTube and can change your real account. v1.0.4 does not show a second app confirmation; Google/Android still require their own authorization and permissions. Public comments are subject to YouTube's visibility and moderation rules.
 
-Optional playback-history reporting requires explicit consent and a freshly confirmed enabled Google history state. Paused, unknown or stale history state blocks reporting. Reports reflect eligible real playback, not a backfill of past or offline activity. Short-play reporting has a separate opt-in. Turning reporting off does not erase history already stored by Google.
+Optional playback-history reporting requires explicit consent and a freshly confirmed enabled Google history state. Paused, unknown or stale history state blocks reporting. Reports reflect eligible real playback, not a backfill of past or offline activity. Short-play reporting has a separate opt-in switch. The settings switches are the explicit opt-ins; no second app confirmation is shown. Turning reporting off does not erase history already stored by Google.
 
 Casting can communicate with devices on your local network. Media and associated information may be sent to the receiver you select. Android and Google services, YouTube, media/image delivery providers, and cast receivers process requests under their own policies. Network requests necessarily expose information such as IP address and request metadata to the receiving service.
 

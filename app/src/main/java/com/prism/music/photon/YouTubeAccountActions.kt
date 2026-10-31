@@ -62,6 +62,22 @@ internal object GoogleAccountControls {
             if (button["channelId"]?.jsonPrimitive?.contentOrNull == channelId)
                 button["subscribed"]?.jsonPrimitive?.booleanOrNull?.let(states::add)
         }
+        // Bind modern entity state to this channel, never to the two button variants.
+        val keys = mutableSetOf<String>()
+        for (node in objects(root)) {
+            val model = node["subscribeButtonViewModel"] as? JsonObject ?: continue
+            if (objects(model).any { it["channelId"]?.jsonPrimitive?.contentOrNull == channelId ||
+                    (it["channelIds"] as? JsonArray)?.any { id -> (id as? JsonPrimitive)?.contentOrNull == channelId } == true }) {
+                objects(model).forEach { part -> listOf("subscribedEntityKey", "subscriptionStateEntityKey").forEach { name ->
+                    (part[name] as? JsonPrimitive)?.contentOrNull?.let(keys::add)
+                } }
+            }
+        }
+        for (node in objects(root)) {
+            val entity = node["subscriptionStateEntity"] as? JsonObject ?: continue
+            if ((entity["key"] as? JsonPrimitive)?.contentOrNull in keys)
+                (entity["subscribed"] as? JsonPrimitive)?.booleanOrNull?.let(states::add)
+        }
         return states.singleOrNull()
     }
     fun playlistRow(root: JsonObject, videoId: String): JsonObject? = objects(root).mapNotNull { it["playlistVideoRenderer"] as? JsonObject }
@@ -69,6 +85,7 @@ internal object GoogleAccountControls {
 }
 
 internal class YouTubeAccountActionsApi(client: OkHttpClient = OkHttpClient()) {
+    private val transportClient = client
     private val transport = YouTubeWebTransport(client)
     private data class Document(val root: JsonObject, val context: JsonObject, val html: String)
     private suspend fun read(path: String, session: YouTubeWebSession): Document {
@@ -86,6 +103,26 @@ internal class YouTubeAccountActionsApi(client: OkHttpClient = OkHttpClient()) {
         require(id.matches(Regex("[A-Za-z0-9_-]{11}")))
         ShortsPresentation.fromHtml(id, transport.html("/shorts/$id", session))
     }
+    suspend fun subscriptionState(id: String, session: YouTubeWebSession): Boolean? = withContext(Dispatchers.IO) {
+        require(id.matches(Regex("UC[A-Za-z0-9_-]{20,30}")))
+        val document = read("/channel/$id", session)
+        subscriptionState(document.root, id, session)
+    }
+    private suspend fun subscriptionState(root: JsonObject, id: String, session: YouTubeWebSession): Boolean? {
+        GoogleAccountControls.subscribed(root, id)?.let { return it }
+        // The authenticated subscriptions directory is positive account evidence too.
+        val api = YouTubeAccountLibraryApi(transportClient)
+        var page = api.load(session, AccountShelf.CHANNELS)
+        var sawChannels = page.items.any { it.kind == AccountEntryKind.CHANNEL }
+        val tokens = mutableSetOf<String>()
+        while (true) {
+            if (page.items.any { it.kind == AccountEntryKind.CHANNEL && it.id == id }) return true
+            val token = page.continuation ?: return if (sawChannels) false else null
+            if (!tokens.add(token) || tokens.size >= 200) return null
+            page = api.more(session, page, AccountEntryKind.CHANNEL)
+            sawChannels = sawChannels || page.items.any { it.kind == AccountEntryKind.CHANNEL }
+        }
+    }
     suspend fun likeState(id: String, session: YouTubeWebSession): Boolean? = withContext(Dispatchers.IO) {
         require(id.matches(Regex("[A-Za-z0-9_-]{11}")))
         GoogleAccountControls.liked(read("/watch?v=$id", session).root, id)
@@ -99,7 +136,7 @@ internal class YouTubeAccountActionsApi(client: OkHttpClient = OkHttpClient()) {
                 throw IOException("YouTube did not confirm the account change")
             return result
         }
-        suspend fun verify(path: String, predicate: (JsonObject) -> Boolean): Boolean {
+        suspend fun verify(path: String, predicate: suspend (JsonObject) -> Boolean): Boolean {
             repeat(3) { attempt ->
                 checkPermission()
                 if (predicate(read(path, session).root)) return true
@@ -127,12 +164,12 @@ internal class YouTubeAccountActionsApi(client: OkHttpClient = OkHttpClient()) {
                 require(change.id.matches(Regex("UC[A-Za-z0-9_-]{20,30}")))
                 val path = "/channel/${change.id}"
                 val before = read(path, session)
-                val old = GoogleAccountControls.subscribed(before.root, change.id) ?: throw IOException("YouTube's subscription state could not be read; no change sent")
+                val old = subscriptionState(before.root, change.id, session) ?: throw IOException("YouTube's subscription state could not be read; no change sent")
                 val desired = change.desired ?: !old
                 if (old == desired) return@withContext GoogleChangeResult("YouTube already has this subscription state; verified without another write.", subscribed = desired)
                 send(if (desired) "subscription/subscribe" else "subscription/unsubscribe", before.context, buildJsonObject { putJsonArray("channelIds") { add(change.id) } })
                 checkPermission()
-                if (!verify(path) { GoogleAccountControls.subscribed(it, change.id) == desired }) throw IOException("Subscription change could not be verified; check YouTube before retrying")
+                if (!verify(path) { subscriptionState(it, change.id, session) == desired }) throw IOException("Subscription change could not be verified; check YouTube before retrying")
                 GoogleChangeResult(if (desired) "Subscribed, verified by a fresh read." else "Unsubscribed, verified by a fresh read.", subscribed = desired)
             }
             GoogleChangeKind.CREATE_PLAYLIST -> {

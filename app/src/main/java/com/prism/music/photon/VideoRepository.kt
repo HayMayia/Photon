@@ -185,7 +185,8 @@ class VideoRepository {
         val info = org.schabi.newpipe.extractor.channel.ChannelInfo.getInfo(ServiceList.YouTube, url)
         val tab = info.tabs.firstOrNull { it.contentFilters.contains(if (shorts) "shorts" else "videos") }
             ?: error(if (shorts) "This channel has no Shorts tab" else "This channel has no Videos tab")
-        val channel = Channel(info.url, info.name, info.avatars.maxByOrNull { it.height }?.url.orEmpty(), info.subscriberCount)
+        val canonical = info.id.takeIf { it.matches(Regex("UC[A-Za-z0-9_-]{20,30}")) }?.let { "https://www.youtube.com/channel/$it" } ?: info.url
+        val channel = Channel(canonical, info.name, info.avatars.maxByOrNull { it.height }?.url.orEmpty(), info.subscriberCount)
         if (next == null) {
             val result = org.schabi.newpipe.extractor.channel.tabs.ChannelTabInfo.getInfo(ServiceList.YouTube, tab)
             CollectionPage(info.name, info.description.orEmpty(), result.relatedItems.filterIsInstance<StreamInfoItem>().mapNotNull(::preview).distinctBy { it.id }, result.nextPage?.takeIf { Page.isValid(it) }, channel)

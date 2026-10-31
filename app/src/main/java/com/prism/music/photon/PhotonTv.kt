@@ -62,8 +62,9 @@ internal fun PhotonTvScreen(model: PhotonViewModel, selected: Int, select: (Int)
             if (selected == 0) PhotonUpdateCard()
             when (selected) {
                 3 -> settings()
-                2 -> if (library.youtubeHome) AccountLibraryScreen(model, library.youtubeSessionRevision, library.youtubeSessionReady, open, channel) else YouTubeHomeConnection(model)
+                2 -> if (library.youtubeHome) AccountLibraryScreen(model, library.youtubeSessionRevision, library.youtubeSessionReady, open, channel, subscriptions = { model.subscriptionsFeed(); select(5) }) else YouTubeHomeConnection(model)
                 else -> {
+                    if (selected == 5) SubscriptionChannels(model, channel)
                     if (selected == 1) Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                         OutlinedTextField(query, { query = it }, label = { Text("Search videos and music") }, singleLine = true,
                             modifier = Modifier.weight(1f).remoteFocus(), keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Search),

@@ -25,7 +25,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.platform.testTag
 
 @Composable
-internal fun AccountLibraryScreen(model: PhotonViewModel, revision: Long, ready: Boolean, open: (Video) -> Unit, channel: (String) -> Unit) {
+internal fun AccountLibraryScreen(model: PhotonViewModel, revision: Long, ready: Boolean, open: (Video) -> Unit, channel: (String) -> Unit, subscriptions: () -> Unit = model::subscriptionsFeed) {
     val television = androidx.compose.ui.platform.LocalContext.current.isPhotonTv()
     var creating by remember { mutableStateOf(false) }
     var name by remember { mutableStateOf("") }
@@ -44,7 +44,7 @@ internal fun AccountLibraryScreen(model: PhotonViewModel, revision: Long, ready:
         item(span = { GridItemSpan(2) }) {
             AccountLibraryHeader(state, ready, onShelf = { model.openAccountShelf(it) },
                 onCreate = { creating = true }, onBack = { model.openAccountShelf(AccountShelf.PLAYLISTS) },
-                onRefresh = { model.loadGoogleLikedIndex(force = true); model.openAccountShelf(state.shelf, state.playlist, state.title) })
+                onSubscriptions = subscriptions, onRefresh = { model.loadGoogleLikedIndex(force = true); model.openAccountShelf(state.shelf, state.playlist, state.title) })
         }
         items(state.page?.items.orEmpty(), key = AccountLibraryRows::key,
             span = { entry -> GridItemSpan(AccountGridPolicy.span(entry)) }) { entry ->
@@ -103,9 +103,10 @@ internal fun ChannelAvatar(entry: AccountEntry, model: PhotonViewModel) {
 /** A grid item must emit one layout root: siblings otherwise stack at the same origin. */
 @Composable
 internal fun AccountLibraryHeader(state: AccountLibraryState, ready: Boolean,
-    onShelf: (AccountShelf) -> Unit = {}, onCreate: () -> Unit = {}, onBack: () -> Unit = {}, onRefresh: () -> Unit = {}) {
+    onShelf: (AccountShelf) -> Unit = {}, onSubscriptions: () -> Unit = {}, onCreate: () -> Unit = {}, onBack: () -> Unit = {}, onRefresh: () -> Unit = {}) {
     Column(Modifier.fillMaxWidth().padding(vertical = 12.dp).testTag("library-header"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).testTag("library-tabs"), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TextButton(onClick = onSubscriptions, modifier = Modifier.remoteFocus()) { Text("Subscriptions") }
             AccountShelf.entries.forEach { shelf ->
                 FilterChip(selected = state.shelf == shelf && state.playlist == null, onClick = { onShelf(shelf) }, label = { Text(shelf.label) }, modifier = Modifier.remoteFocus())
             }

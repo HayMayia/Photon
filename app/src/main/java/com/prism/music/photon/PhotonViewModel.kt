@@ -181,6 +181,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
             searchJob?.cancel()
             mutableBrowse.value = BrowseState(query = "Google subscriptions", error = "Account changed. Reload the Google subscriptions feed for the current account.")
         }
+        subscriptionChannelsJob?.cancel(); subscriptionChannels.value = AccountLibraryState(shelf = AccountShelf.CHANNELS, title = "Subscribed channels")
         googleChangeJob?.cancel(); googleChange.value = GoogleChangeState()
         likesIndexJob?.cancel(); likesIndexRevision = null
         videoPresentation.value = emptyMap(); presentationRevisions.clear()
@@ -241,6 +242,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                         page.copy(items = items, continuation = if (more) oldPage?.continuation else null),
                         busy = !more, moreBusy = more, generation = generation)
                 }
+                if (shelf == AccountShelf.CHANNELS) googleSubscriptions.value = googleSubscriptions.value + accountLibrary.value.page?.items.orEmpty().filter { it.kind == AccountEntryKind.CHANNEL }.associate { it.id to true }
                 if (more) accountLibraryTokens += oldPage!!.continuation!!
                 accountLibrary.value = AccountLibraryState(shelf, playlist, title,
                     page.copy(items = accountLibrary.value.page?.items.orEmpty(), continuation = page.continuation?.takeUnless { it in accountLibraryTokens }), generation = generation)
@@ -427,7 +429,41 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    val subscriptionChannels = MutableStateFlow(AccountLibraryState(shelf = AccountShelf.CHANNELS, title = "Subscribed channels"))
+    private var subscriptionChannelsJob: Job? = null
+    fun loadSubscriptionChannels(more: Boolean = false) {
+        if (subscriptionChannels.value.busy || more && subscriptionChannels.value.page?.continuation == null) return
+        subscriptionChannelsJob?.cancel()
+        val previous = subscriptionChannels.value
+        val revision = library.value.youtubeSessionRevision
+        subscriptionChannelsJob = viewModelScope.launch {
+            subscriptionChannels.value = previous.copy(busy = true, error = null)
+            try {
+                val session = app.youtubeHistory.session()
+                val page = if (more) app.accountLibrary.more(session, previous.page!!, AccountEntryKind.CHANNEL) else app.accountLibrary.load(session, AccountShelf.CHANNELS)
+                if (revision != library.value.youtubeSessionRevision || !library.value.youtubeSessionReady) return@launch
+                val rows = AccountLibraryRows.append(if (more) previous.page?.items.orEmpty() else emptyList(), page.items)
+                googleSubscriptions.value = googleSubscriptions.value + rows.filter { it.kind == AccountEntryKind.CHANNEL }.associate { it.id to true }
+                subscriptionChannels.value = previous.copy(page = page.copy(items = rows), busy = false)
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { if (revision == library.value.youtubeSessionRevision) subscriptionChannels.value = previous.copy(busy = false, error = "Channels could not load. Retry.") }
+        }
+    }
+    private val subscriptionReads = mutableSetOf<String>()
+    fun resolveSubscription(channel: Channel) {
+        val id = channel.url.substringAfterLast('/')
+        if (!id.matches(Regex("UC[A-Za-z0-9_-]{20,30}")) || !subscriptionReads.add(id)) return
+        val revision = library.value.youtubeSessionRevision
+        viewModelScope.launch {
+            try {
+                val state = app.accountActions.subscriptionState(id, app.youtubeHistory.session())
+                if (state != null && revision == library.value.youtubeSessionRevision && library.value.youtubeSessionReady) googleSubscriptions.value = googleSubscriptions.value + (id to state)
+            } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { /* Keep known directory proof; unknown is not false. */ }
+            finally { subscriptionReads.remove(id) }
+        }
+    }
     fun subscriptionsFeed() {
+        loadSubscriptionChannels()
         searchJob?.cancel()
         searchJob = viewModelScope.launch {
             page = null
@@ -515,6 +551,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 val details = app.videos.details(video.id)
                 // Metadata may finish while stream extraction is suspended; use the latest proof, not the opening snapshot.
                 val presentation = videoPresentation.value[video.id] ?: video
+                details.channel?.let(::resolveSubscription)
                 val max = library.value.defaultHeight
                 val quality = details.qualities.firstOrNull { it.height <= max } ?: details.qualities.last()
                 mutableWatch.value = WatchState(details.video.copy(short = video.short || presentation.short || details.video.short, thumbnail = if (presentation.short && presentation.thumbnail.isNotBlank()) presentation.thumbnail else details.video.thumbnail), details, quality, request = System.nanoTime(), startPositionMs = library.value.progress[video.id]?.resumeMs() ?: 0, openedAtMs = opened, webRevision = revision)
@@ -595,6 +632,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
             collectionBusy.value = true; collectionError.value = null
             try {
                 val result = if (channel) app.videos.channel(url, previous?.next, shorts) else app.videos.playlist(url, previous?.next)
+                result.channel?.let(::resolveSubscription)
                 collection.value = if (previous == null) result else previous.copy(videos = (previous.videos + result.videos).distinctBy { it.id }, next = result.next)
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (error: Exception) { collectionError.value = error.message ?: "Could not load this page" }

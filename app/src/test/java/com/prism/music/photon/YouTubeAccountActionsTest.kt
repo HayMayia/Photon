@@ -168,4 +168,37 @@ class YouTubeAccountActionsTest {
         catch (_: IllegalArgumentException) { }
         assertEquals(0, requests)
     }
+
+    @Test fun modernSubscriptionEntityBindsToChannelNotButtonVariants() {
+        val root = Json.parseToJsonElement("""{"subscribeButtonViewModel":{"subscriptionStateEntityKey":"bound","subscribeButtonContent":{"subscribeState":{"subscribed":false},"onTapCommand":{"subscribeEndpoint":{"channelIds":["$channel"]}}},"unsubscribeButtonContent":{"subscribeState":{"subscribed":true}}},"frameworkUpdates":{"entityBatchUpdate":{"mutations":[{"payload":{"subscriptionStateEntity":{"key":"bound","subscribed":true}}}]}}}""").jsonObject
+        assertEquals(true, GoogleAccountControls.subscribed(root, channel))
+        assertNull(GoogleAccountControls.subscribed(root, "UCzzzzzzzzzzzzzzzzzzzzzz"))
+    }
+    @Test fun variantStatesAloneNeverGuessCurrentSubscription() {
+        val root = Json.parseToJsonElement("""{"subscribeButtonViewModel":{"channelId":"$channel","subscribeButtonContent":{"subscribeState":{"subscribed":false}},"unsubscribeButtonContent":{"subscribeState":{"subscribed":true}}}}""").jsonObject
+        assertNull(GoogleAccountControls.subscribed(root, channel))
+    }
+    @Test fun authenticatedDirectoryVerifiesExistingSubscriptionWithoutWriting() = runBlocking {
+        var writes = 0
+        val service = api { req ->
+            if (req.method == "POST") { writes++; "{}" }
+            else if (req.url.encodedPath == "/feed/channels") doc().replace("\"contents\":{}", "\"contents\":{\"channelRenderer\":{\"channelId\":\"$channel\",\"title\":{\"simpleText\":\"Creator\"}}}")
+            else doc()
+        }
+        assertEquals(true, service.execute(GoogleChange(GoogleChangeKind.SUBSCRIBE, channel, "Creator", desired = true), session) { true }.subscribed)
+        assertEquals(0, writes)
+    }
+    @Test fun directoryReadbackVerifiesUnsubscribeWithOneWrite() = runBlocking {
+        var subscribed = true
+        var writes = 0
+        val service = api { req ->
+            if (req.method == "POST") { writes++; subscribed = false; "{}" }
+            else if (req.url.encodedPath == "/feed/channels") {
+                val listed = if (subscribed) channel else "UCzzzzzzzzzzzzzzzzzzzzzz"
+                doc().replace("\"contents\":{}", "\"contents\":{\"channelRenderer\":{\"channelId\":\"$listed\",\"title\":{\"simpleText\":\"Creator\"}}}")
+            } else doc()
+        }
+        assertEquals(false, service.execute(GoogleChange(GoogleChangeKind.SUBSCRIBE, channel, "Creator", desired = false), session) { true }.subscribed)
+        assertEquals(1, writes)
+    }
 }

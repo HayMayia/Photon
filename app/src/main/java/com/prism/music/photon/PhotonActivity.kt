@@ -438,7 +438,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                                 if (watch.details == null && watch.localPath == null && !watch.busy) ActionChip("Reload details", PrismIcons.Refresh) { model.open(video) }
                                 watch.details?.channel?.let { channel ->
                                     ActionChip("Channel", PrismIcons.Person) { collectionBackToPlayer = true; expanded = false; model.openCollection(channel.url, true) }
-                                    ActionChip(if (googleSubscriptions[channel.url.substringAfterLast('/')] == true) "Unsubscribe" else "Subscribe", PrismIcons.PersonAdd) { model.subscribe(channel) }
+                                    ActionChip(if (googleSubscriptions[channel.url.substringAfterLast('/')] == true) "Subscribed" else "Subscribe", PrismIcons.PersonAdd) { model.subscribe(channel) }
                                 }
                                 ActionChip("Comments", PrismIcons.Info) { model.loadComments(video); commentsSheet = true }
                                 ActionChip("Cast", PrismIcons.Cast) { activity.withLanPermission { casting.discover(); castSheet = true } }
@@ -573,7 +573,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                             }
                             if (!localLibrary) {
                                 if (library.youtubeHome) AccountLibraryScreen(model, library.youtubeSessionRevision, library.youtubeSessionReady,
-                                    open = { open(it) }, channel = ::openChannel)
+                                    open = { open(it) }, channel = ::openChannel, subscriptions = { model.subscriptionsFeed(); navigateTo(4) })
                                 else Column { PageHeading("Your YouTube library", "Sign in with Google. No local-only library is used."); YouTubeHomeConnection(model) }
                             } else LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
                                 items(work.filter { !it.state.isFinished || it.state == WorkInfo.State.FAILED }, key = { it.id.toString() }) { info ->
@@ -591,6 +591,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                         3 -> SettingsPage(library, model, notifications)
                         4 -> LazyColumn(Modifier.fillMaxSize()) {
                             item { YouTubeLayoutHeader("Subscriptions", search = { navigateTo(1) }, settings = { navigateTo(3) }) }
+                            item { SubscriptionChannels(model, ::openChannel) }
                             item { Row {
                                 TextButton(onClick = model::subscriptionsFeed) { Text("Refresh") }
                                 TextButton(onClick = { model.openAccountShelf(AccountShelf.CHANNELS); localLibrary = false; navigateTo(2) }) { Text("All channels") }

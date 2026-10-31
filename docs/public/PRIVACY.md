@@ -1,6 +1,6 @@
 # Photon Privacy Policy
 
-Effective date: 29 October 2026
+Effective date: 31 October 2026
 
 Photon is an independent, open-source Android YouTube client maintained through [HayMayia/Photon](https://github.com/HayMayia/Photon). It is not affiliated with or endorsed by Google or YouTube. This policy describes the current Photon implementation, including optional Google account features.
 
@@ -23,6 +23,12 @@ Casting can communicate with devices on your local network. Media and associated
 The Photon implementation does not operate a developer-run account-data backend, sell Google user data, use Google account data for advertising, or transfer it to data brokers. Information you deliberately share through another app or post in a public support issue is handled by that destination. Do not publish passwords, cookies, tokens, private signing keys or sensitive account details in support reports.
 
 Photon's use and transfer of information received from Google APIs will adhere to the [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy), including its Limited Use requirements. This statement is a developer commitment, not a claim of Google verification or endorsement.
+
+## Updates and optional Prism download
+
+Home and Settings contact GitHub's public Photon release endpoints to check versions, including Beta releases. Requests disclose your IP/network metadata and a user-agent containing Photon's app version to GitHub; no Google session cookies, account tokens or library contents are sent by the updater. At your request it downloads an APK into private cache, checks package/version/signing identity and opens Android's installer for your approval. Android may require permission to install from Photon. Cached update files can remain until overwritten, cache management, clearing app storage or uninstalling. See [GitHub's Privacy Statement](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement).
+
+The optional Music Photon, "Prism" Settings entry opens the official upstream APK download through a receiving browser/app. Prism is a separate application by Yigder; its own permissions, data handling and terms apply. It is not installed silently or bundled into Photon.
 
 ## Storage, retention and deletion
 

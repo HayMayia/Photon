@@ -4,14 +4,14 @@
 [Yigder's Prism](https://github.com/Yigder/Prism), retaining its real Compose theme,
 fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
 
-> **0.13.0 alpha — automatic Android TV interface and shared player settings.**
-> **[Download 0.13 APK ZIP](https://github.com/HayMayia/Photon/actions/runs/41216748013/artifacts/13048367111)**
-> — extract `app-debug.apk` and install over the existing app on TV or phone; do not uninstall.
-> [Build 41216748013](https://github.com/HayMayia/Photon/actions/runs/41216748013) **PASS in 4m56s**, source `887f368`: APK assembly, focused Photon tests (174 test methods in source), permanent signing-certificate check and upload.
-> TVs automatically get sidebar/grid browsing, visible remote focus and fullscreen → details → browse Back flow. The phone layout remains available on phones.
-> The player gear now groups quality, 0.1–10× speed, repeat and captions. Caption language/appearance and 25–200% sizing are available with presets and fine sliders; CC remains outside the gear too. Hold badge says only 2×. Routine action labels no longer say “on YouTube”; actual account-change confirmations remain.
-> **Build/unit verified, not physically TV/remote certified or guaranteed on every TV.** [TV/player settings scope and pending checks](docs/TV_AND_PLAYER_SETTINGS.md).
-> Existing real Google account actions, hold boost, visible screen-awake behavior, fullscreen, offline downloads and playback protections remain in place.
+> **v1.0.0 Beta — Home updates, foreground-only TV playback and the Prism music link.**
+> **[Public Beta release](https://github.com/HayMayia/Photon/releases/tag/v1.0.0-beta)** · [One-time installer](https://github.com/HayMayia/Photon/releases/download/v1.0.0-beta/Photon.apk)
+> Existing 0.13 has no Photon updater: install this version once over it, without uninstalling. Future newer releases are offered on **Home → Update**, on TV and mobile; Android still requires installation approval and may require install-source permission. No silent installation or retroactive updater injection is claimed.
+> Home and Settings check public Photon releases (including Betas), download the selected official APK, check package/version/signing identity and launch Android's installer. This is direct distribution, not Google Play in-app updates.
+> TV playback pauses when returning to browsing or leaving Photon; TV PiP is disabled and background media commands cannot resume it. Mobile background playback remains unchanged.
+> **Settings → Music Photon, "Prism"** opens Yigder's official direct Prism APK download, with clear separate-app attribution. Prism is not bundled, renamed or installed silently.
+> [Build 41217937477](https://github.com/HayMayia/Photon/actions/runs/41217937477) **PASS in 6m59s**, source `5b03bc6`: debug/release assembly, focused Photon tests (176 methods in source), permanent certificate checks and publication. Release APK: 25,303,364 bytes, version code 17.
+> Existing automatic TV UI, shared quality/speed/repeat/caption settings and playback/account features remain. [TV/player scope](docs/TV_AND_PLAYER_SETTINGS.md) · [Beta notes](docs/RELEASE_1_0_0_BETA.md). Native installation, future-version upgrade and physical TV lifecycle checks remain pending; this is not universal-TV or Google approval certification.
 > Back retraces tabs/pages/player before asking to leave at the root; fullscreen uses FIT and safe insets.
 > **Settings → Switch to YouTube layout** changes native presentation; **You → Settings → Switch to Photon** returns. Same player/accounts/downloads, no website-player replacement.
 > This is **not pixel-identical or the official YouTube interface**; some controls remain shared, and Android/Google permission screens keep the real app identity. [Scope and device checks](docs/INTERFACE_MODES.md).

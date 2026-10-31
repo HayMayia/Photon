@@ -589,19 +589,9 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                             }
                         }
                         3 -> SettingsPage(library, model, notifications)
-                        4 -> LazyColumn(Modifier.fillMaxSize()) {
-                            item { YouTubeLayoutHeader("Subscriptions", search = { navigateTo(1) }, settings = { navigateTo(3) }) }
-                            item { SubscriptionChannels(model, ::openChannel) }
-                            item { Row {
-                                TextButton(onClick = model::subscriptionsFeed) { Text("Refresh") }
-                                TextButton(onClick = { model.openAccountShelf(AccountShelf.CHANNELS); localLibrary = false; navigateTo(2) }) { Text("All channels") }
-                            } }
-                            if (browse.query == "Google subscriptions") {
-                                if (browse.busy) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
-                                browse.error?.let { error -> item { Text(error, Modifier.padding(16.dp), color = MaterialTheme.colorScheme.error) } }
-                                items(browse.videos, key = { it.id }) { video -> YouTubeLayoutVideo(video, { open(video) }, { model.save(video) }, { openChannel(video.channelUrl) }) }
-                            } else item { TextButton(onClick = model::subscriptionsFeed) { Text("Load subscribed videos") } }
-                        }
+                        4 -> SubscriptionsScreen(model, browse, ::open, ::openChannel,
+                            search = { navigateTo(1) }, settings = { navigateTo(3) },
+                            allChannels = { model.openAccountShelf(AccountShelf.CHANNELS); localLibrary = false; navigateTo(2) })
                     }
                 }
             }

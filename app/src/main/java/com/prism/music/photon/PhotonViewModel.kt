@@ -94,6 +94,10 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 // Retain positive presentation on the dataset even if the global 512-item LRU evicts it.
                 val shelf = accountLibrary.value
                 shelf.page?.let { page -> accountLibrary.value = shelf.copy(page = page.copy(items = AccountLibraryRows.metadata(page.items, resolved))) }
+                val feed = mutableBrowse.value
+                if (feed.query == "Google subscriptions") mutableBrowse.value = feed.copy(videos = feed.videos.map {
+                    if (it.id == resolved.id) ShortsPresentation.merge(it, resolved) else it
+                })
                 videoPresentation.value = (videoPresentation.value + (video.id to resolved)).entries.toList().takeLast(512).associate { it.toPair() }
             } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { /* Unknown stays unknown; no duration guesses. */ }
             finally { presentationPending.remove(presentationKey) }

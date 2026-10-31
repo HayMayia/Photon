@@ -49,8 +49,8 @@ internal fun PhotonTvScreen(model: PhotonViewModel, selected: Int, select: (Int)
     Row(Modifier.fillMaxSize().safeDrawingPadding().padding(24.dp), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
         Column(Modifier.width(150.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("Photon", style = MaterialTheme.typography.headlineMedium)
-            listOf(0 to "Home", 1 to "Search", 5 to "Subscriptions", 2 to "Library", 4 to "Downloads", 3 to "Settings").forEachIndexed { index, (tab, label) ->
-                FilledTonalButton(onClick = { focusedVideo = null; select(tab); if (tab == 0) model.home(); if (tab == 5) model.subscriptionsFeed() },
+            listOf(0 to "Home", 1 to "Search", 5 to "Subscriptions", 6 to "Shorts", 2 to "Library", 4 to "Downloads", 3 to "Settings").forEachIndexed { index, (tab, label) ->
+                FilledTonalButton(onClick = { focusedVideo = null; select(tab); if (tab == 0) model.home(); if (tab == 5) model.subscriptionsFeed(); if (tab == 6) model.shorts() },
                     modifier = Modifier.fillMaxWidth().then(if (index == 0) Modifier.focusRequester(navFocus) else Modifier).remoteFocus()) {
                     Text(if (tab == selected) "• $label" else label)
                 }

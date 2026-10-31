@@ -219,7 +219,6 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
     var expanded by rememberSaveable { mutableStateOf(false) }
     var fullscreen by rememberSaveable { mutableStateOf(false) }
     var search by rememberSaveable { mutableStateOf("") }
-    var syncRealPlays by rememberSaveable { mutableStateOf(false) }
     var libraryTab by rememberSaveable { mutableIntStateOf(0) }
     var localLibrary by rememberSaveable { mutableStateOf(false) }
     val tv = LocalContext.current.isPhotonTv()
@@ -247,7 +246,6 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
             tabHistory = ArrayList(tabHistory.map { if (it == 4) 1 else it })
         }
     }
-    LaunchedEffect(library.youtubeSessionRevision) { syncRealPlays = false }
     LaunchedEffect(library.youtubeHome, library.youtubeSessionRevision, library.youtubeSessionReady) { model.loadGoogleLikedIndex() }
     val context = LocalContext.current
     val activity = context as PhotonActivity
@@ -264,11 +262,13 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
         activity.lifecycle.addObserver(observer); updateAwake()
         onDispose { activity.lifecycle.removeObserver(observer); activity.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
     }
+    val latestPreferences by rememberUpdatedState(library)
     DisposableEffect(controller) {
         val listener = object : Player.Listener {
             override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) { playIntent = playWhenReady }
             override fun onIsPlayingChanged(value: Boolean) { isPlaying = value }
             override fun onPlaybackStateChanged(state: Int) { buffering = state == Player.STATE_BUFFERING; if (state == Player.STATE_ENDED) model.next() }
+            override fun onTracksChanged(tracks: androidx.media3.common.Tracks) { controller?.let { ensureCaptionTrack(it, latestPreferences) } }
             override fun onPlayerError(error: PlaybackException) { playerError = "Playback failed: ${error.errorCodeName}. Try reopening the video or choosing another quality." }
         }
         controller?.addListener(listener)
@@ -376,6 +376,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                 .setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_TEXT, !library.captionsEnabled)
                 .setPreferredTextLanguages(*listOf(library.captionLanguage).filter { it.isNotBlank() }.toTypedArray())
                 .setSelectUndeterminedTextLanguage(true).build()
+            ensureCaptionTrack(player, library)
         }
     }
     CompositionLocalProvider(LocalPlayerMenus provides PlayerMenuActions(
@@ -616,14 +617,10 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                 if (change.kind == GoogleChangeKind.DELETE_PLAYLIST) Text("Delete this playlist permanently? Videos are not deleted.", color = MaterialTheme.colorScheme.error)
 
             }
-            if (googleChange.pending != null && !library.accountHistorySync) Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(checked = syncRealPlays, enabled = !googleChange.busy, onCheckedChange = { syncRealPlays = it })
-                Text("Also report real native plays to YouTube history including short plays after at least 1 actual playing second. Google paused/unknown state blocks reporting. Enabling removes the extra local playback pause.", style = MaterialTheme.typography.bodySmall)
-            }
             googleChange.message?.let { Text(it) }
             if (googleChange.busy) LinearProgressIndicator()
         } },
-        confirmButton = { TextButton(enabled = !googleChange.busy, onClick = { if (googleChange.pending == null) model.dismissGoogleChange() else { if (syncRealPlays) model.includeShortPlays(true); model.confirmGoogleChange() } }) { Text(if (googleChange.pending == null) "Close" else "Confirm") } },
+        confirmButton = { TextButton(enabled = !googleChange.busy, onClick = { if (googleChange.pending == null) model.dismissGoogleChange() else { model.confirmGoogleChange() } }) { Text(if (googleChange.pending == null) "Close" else "Confirm") } },
         dismissButton = { if (googleChange.pending != null) TextButton(enabled = !googleChange.busy, onClick = model::dismissGoogleChange) { Text("Cancel") } }
     )
     if (castSheet) ModalBottomSheet(onDismissRequest = { castSheet = false; casting.stopDiscovery() }) {

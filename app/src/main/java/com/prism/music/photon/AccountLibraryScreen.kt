@@ -22,7 +22,7 @@ import coil3.compose.AsyncImage
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.prism.music.ui.components.SectionHeader
+import androidx.compose.ui.platform.testTag
 
 @Composable
 internal fun AccountLibraryScreen(model: PhotonViewModel, revision: Long, ready: Boolean, open: (Video) -> Unit, channel: (String) -> Unit) {
@@ -43,20 +43,9 @@ internal fun AccountLibraryScreen(model: PhotonViewModel, revision: Long, ready:
     LazyVerticalGrid(columns = GridCells.Fixed(2), modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         item(span = { GridItemSpan(2) }) {
-            if (!LocalYouTubeLayout.current) SectionHeader("Your YouTube library", strapline = "FROM YOUR CONNECTED GOOGLE ACCOUNT")
-            Row(Modifier.padding(horizontal = 22.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                AccountShelf.entries.forEach { shelf ->
-                    FilterChip(selected = state.shelf == shelf && state.playlist == null, onClick = { model.openAccountShelf(shelf) }, label = { Text(shelf.label) })
-                }
-            }
-            if (state.shelf == AccountShelf.PLAYLISTS && state.playlist == null) TextButton(onClick = { creating = true }, modifier = Modifier.padding(horizontal = 16.dp)) { Text("New playlist") }
-            if (state.playlist != null) TextButton(onClick = { model.openAccountShelf(AccountShelf.PLAYLISTS) }, modifier = Modifier.padding(horizontal = 16.dp)) { Text("Back to playlists") }
-            Text(state.title, Modifier.padding(horizontal = 22.dp, vertical = 12.dp), style = MaterialTheme.typography.titleLarge)
-            TextButton(enabled = ready && !state.busy && !state.moreBusy, onClick = { model.loadGoogleLikedIndex(force = true); model.openAccountShelf(state.shelf, state.playlist, state.title) }, modifier = Modifier.padding(horizontal = 16.dp)) { Text("Refresh") }
-            if (!ready) Text("Finish Google sign-in to read account lists.", Modifier.padding(22.dp))
-            if (state.busy) LinearProgressIndicator(Modifier.fillMaxWidth().padding(horizontal = 22.dp))
-            state.error?.let { Text(it, Modifier.padding(22.dp), color = MaterialTheme.colorScheme.error) }
-            state.page?.message?.let { Text(it, Modifier.padding(22.dp)) }
+            AccountLibraryHeader(state, ready, onShelf = { model.openAccountShelf(it) },
+                onCreate = { creating = true }, onBack = { model.openAccountShelf(AccountShelf.PLAYLISTS) },
+                onRefresh = { model.loadGoogleLikedIndex(force = true); model.openAccountShelf(state.shelf, state.playlist, state.title) })
         }
         items(state.page?.items.orEmpty(), key = { "${it.kind}:${it.id}" }, span = { entry ->
             val video = entry.video?.let { ShortsPresentation.merge(it, presentation[it.id]) }
@@ -91,8 +80,10 @@ internal fun AccountLibraryScreen(model: PhotonViewModel, revision: Long, ready:
             )
         }
         item(span = { GridItemSpan(2) }) {
-            if (state.moreBusy) CircularProgressIndicator(Modifier.padding(22.dp))
-            else if (state.page?.continuation != null) TextButton(onClick = model::moreAccountShelf, modifier = Modifier.padding(horizontal = 16.dp)) { Text("More") }
+            Column(Modifier.fillMaxWidth()) {
+                if (state.moreBusy) CircularProgressIndicator(Modifier.padding(22.dp))
+                else if (state.page?.continuation != null) TextButton(onClick = model::moreAccountShelf, modifier = Modifier.padding(horizontal = 16.dp)) { Text("More") }
+            }
         }
     }
 }
@@ -108,5 +99,26 @@ internal fun ChannelAvatar(entry: AccountEntry, model: PhotonViewModel) {
         Text(entry.title.take(1).uppercase(), style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
         if (image.isNotBlank()) AsyncImage(image, entry.title, Modifier.fillMaxSize(), contentScale = ContentScale.Crop,
             onError = { failed = true })
+    }
+}
+
+/** A grid item must emit one layout root: siblings otherwise stack at the same origin. */
+@Composable
+internal fun AccountLibraryHeader(state: AccountLibraryState, ready: Boolean,
+    onShelf: (AccountShelf) -> Unit = {}, onCreate: () -> Unit = {}, onBack: () -> Unit = {}, onRefresh: () -> Unit = {}) {
+    Column(Modifier.fillMaxWidth().padding(vertical = 12.dp).testTag("library-header"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).testTag("library-tabs"), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            AccountShelf.entries.forEach { shelf ->
+                FilterChip(selected = state.shelf == shelf && state.playlist == null, onClick = { onShelf(shelf) }, label = { Text(shelf.label) }, modifier = Modifier.remoteFocus())
+            }
+        }
+        if (state.shelf == AccountShelf.PLAYLISTS && state.playlist == null) TextButton(onClick = onCreate, modifier = Modifier.remoteFocus()) { Text("New playlist") }
+        if (state.playlist != null) TextButton(onClick = onBack, modifier = Modifier.remoteFocus()) { Text("Back to playlists") }
+        Text(state.title, Modifier.fillMaxWidth().testTag("library-title"), style = MaterialTheme.typography.titleLarge)
+        TextButton(enabled = ready && !state.busy && !state.moreBusy, onClick = onRefresh, modifier = Modifier.remoteFocus().testTag("library-refresh")) { Text("Refresh") }
+        if (!ready) Text("Finish Google sign-in to read account lists.", Modifier.fillMaxWidth())
+        if (state.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+        state.error?.let { Text(it, Modifier.fillMaxWidth().testTag("library-error"), color = MaterialTheme.colorScheme.error) }
+        state.page?.message?.let { Text(it, Modifier.fillMaxWidth().testTag("library-message")) }
     }
 }

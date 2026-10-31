@@ -33,3 +33,8 @@ internal object PlayerLayoutPolicy {
     fun immersive(manual: Boolean, landscape: Boolean, expanded: Boolean, pip: Boolean, shorts: Boolean): Boolean =
         expanded && (manual || landscape) && !pip && !shorts
 }
+
+/** Only confirmed Shorts share rows; normal videos and library collections stay full width. */
+internal object AccountGridPolicy {
+    fun span(video: Boolean, short: Boolean): Int = if (video && short) 1 else 2
+}

@@ -4,8 +4,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,9 +26,11 @@ import com.prism.music.ui.components.SectionHeader
 
 @Composable
 internal fun AccountLibraryScreen(model: PhotonViewModel, revision: Long, ready: Boolean, open: (Video) -> Unit, channel: (String) -> Unit) {
+    val television = androidx.compose.ui.platform.LocalContext.current.isPhotonTv()
     var creating by remember { mutableStateOf(false) }
     var name by remember { mutableStateOf("") }
     val likes by model.googleLikes.collectAsStateWithLifecycle()
+    val presentation by model.videoPresentation.collectAsStateWithLifecycle()
     val state by model.accountLibrary.collectAsStateWithLifecycle()
     LaunchedEffect(revision, ready) {
         if (ready && state.page == null && !state.busy && state.error == null) model.openAccountShelf(state.shelf, state.playlist, state.title)
@@ -35,8 +40,9 @@ internal fun AccountLibraryScreen(model: PhotonViewModel, revision: Long, ready:
         text = { OutlinedTextField(name, { name = it }, label = { Text("Playlist name") }, singleLine = true) },
         confirmButton = { TextButton(enabled = name.isNotBlank(), onClick = { model.createGooglePlaylist(name); name = ""; creating = false }) { Text("Continue") } },
         dismissButton = { TextButton(onClick = { creating = false }) { Text("Cancel") } })
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
-        item {
+    LazyVerticalGrid(columns = GridCells.Fixed(2), modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        item(span = { GridItemSpan(2) }) {
             if (!LocalYouTubeLayout.current) SectionHeader("Your YouTube library", strapline = "FROM YOUR CONNECTED GOOGLE ACCOUNT")
             Row(Modifier.padding(horizontal = 22.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 AccountShelf.entries.forEach { shelf ->
@@ -52,15 +58,21 @@ internal fun AccountLibraryScreen(model: PhotonViewModel, revision: Long, ready:
             state.error?.let { Text(it, Modifier.padding(22.dp), color = MaterialTheme.colorScheme.error) }
             state.page?.message?.let { Text(it, Modifier.padding(22.dp)) }
         }
-        items(state.page?.items.orEmpty(), key = { "${it.kind}:${it.id}" }) { entry ->
+        items(state.page?.items.orEmpty(), key = { "${it.kind}:${it.id}" }, span = { entry ->
+            val video = entry.video?.let { ShortsPresentation.merge(it, presentation[it.id]) }
+            GridItemSpan(AccountGridPolicy.span(video != null, video?.short == true))
+        }) { entry ->
             if (entry.video != null) {
                 val video = resolvedVideo(entry.video)
-                Column(Modifier.fillMaxWidth().remoteFocus().clickable { open(video) }.padding(horizontal = 22.dp, vertical = 10.dp)) {
-                    VideoThumbnail(video, entry.title, (if (video.short) Modifier.width(160.dp) else Modifier.fillMaxWidth()).aspectRatio(VideoArtworkShape.ratio(video.short)))
-                    Text(entry.title, Modifier.padding(top = 8.dp), fontWeight = FontWeight.SemiBold)
+                Column(Modifier.fillMaxWidth().remoteFocus().clickable { open(video) }.padding(horizontal = 6.dp, vertical = 10.dp)) {
+                    VideoThumbnail(video, entry.title, if (television && video.short)
+                        Modifier.height(180.dp).aspectRatio(VideoArtworkShape.ratio(true)).align(androidx.compose.ui.Alignment.CenterHorizontally)
+                        else Modifier.fillMaxWidth().aspectRatio(VideoArtworkShape.ratio(video.short)))
+                    Text(entry.title, Modifier.fillMaxWidth().padding(top = 8.dp), fontWeight = FontWeight.SemiBold,
+                        maxLines = 3, overflow = TextOverflow.Ellipsis)
                     if (state.playlist != null) TextButton(onClick = { model.removeFromPlaylist(state.playlist!!, video) }) { Text("Remove") }
                     IconButton(onClick = { model.save(video) }) { Icon(if (likes[video.id] == true) PrismIcons.HeartFilled else PrismIcons.Heart, if (likes[video.id] == true) "Remove like" else "Like", tint = if (likes[video.id] == true) androidx.compose.ui.graphics.Color(0xFFFF3355) else MaterialTheme.colorScheme.onSurfaceVariant) }
-                    Text(video.channel, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                    Text(video.channel, maxLines = 1, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                 }
             } else ListItem(
                 headlineContent = { Text(entry.title, fontWeight = FontWeight.SemiBold) },
@@ -78,7 +90,7 @@ internal fun AccountLibraryScreen(model: PhotonViewModel, revision: Long, ready:
                 }
             )
         }
-        item {
+        item(span = { GridItemSpan(2) }) {
             if (state.moreBusy) CircularProgressIndicator(Modifier.padding(22.dp))
             else if (state.page?.continuation != null) TextButton(onClick = model::moreAccountShelf, modifier = Modifier.padding(horizontal = 16.dp)) { Text("More") }
         }

@@ -19,6 +19,7 @@ import java.security.MessageDigest
 internal data class PhotonRelease(val version: String, val url: String)
 internal data class PhotonUpdateState(val release: PhotonRelease? = null, val busy: Boolean = false, val message: String = "", val permission: Boolean = false)
 internal object PhotonReleasePolicy {
+    fun displayVersion(version: String): String = "v" + version.removePrefix("v").replace("-beta", " Beta", ignoreCase = true)
     fun newer(remote: String, local: String): Boolean {
         fun parts(s: String) = Regex("\\d+").findAll(s).take(3).map { it.value.toIntOrNull() ?: 0 }.toList().let { it + List((3 - it.size).coerceAtLeast(0)) { 0 } }
         val a = parts(remote); val b = parts(local)
@@ -42,7 +43,12 @@ internal class PhotonUpdates(private val context: Context) {
     val state = MutableStateFlow(PhotonUpdateState())
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val http = OkHttpClient.Builder().callTimeout(5, java.util.concurrent.TimeUnit.MINUTES).build()
+    private val preferences = context.getSharedPreferences("photon_updates", Context.MODE_PRIVATE)
     private var lastCheck = 0L
+    fun dismiss() {
+        state.value.release?.let { preferences.edit().putString("dismissed", it.version).apply() }
+        state.value = PhotonUpdateState()
+    }
     fun check(force: Boolean = false) {
         if (state.value.busy || !force && System.currentTimeMillis() - lastCheck < 6 * 3_600_000L) return
         state.value = state.value.copy(busy = true, message = "Checking…", permission = false)
@@ -62,7 +68,7 @@ internal class PhotonUpdates(private val context: Context) {
                             val version = r["tag_name"]?.jsonPrimitive?.content ?: return@mapNotNull null
                             val asset = r["assets"]?.jsonArray?.firstOrNull { it.jsonObject["name"]?.jsonPrimitive?.content == "Photon.apk" }?.jsonObject
                             val url = asset?.get("browser_download_url")?.jsonPrimitive?.content ?: return@mapNotNull null
-                            PhotonRelease(version, url).takeIf { PhotonReleasePolicy.trusted(url) && PhotonReleasePolicy.newer(version, BuildConfig.VERSION_NAME) }
+                            PhotonRelease(version, url).takeIf { PhotonReleasePolicy.trusted(url) && version != preferences.getString("dismissed", null) && PhotonReleasePolicy.newer(version, BuildConfig.VERSION_NAME) }
                         }.firstOrNull()
                     }
                 }

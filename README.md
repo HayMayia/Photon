@@ -4,14 +4,13 @@
 [Yigder's Prism](https://github.com/Yigder/Prism), retaining its real Compose theme,
 fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
 
-> **v1.0.0 Beta — Home updates, foreground-only TV playback and the Prism music link.**
-> **[Public Beta release](https://github.com/HayMayia/Photon/releases/tag/v1.0.0-beta)** · [One-time installer](https://github.com/HayMayia/Photon/releases/download/v1.0.0-beta/Photon.apk)
-> Existing 0.13 has no Photon updater: install this version once over it, without uninstalling. Future newer releases are offered on **Home → Update**, on TV and mobile; Android still requires installation approval and may require install-source permission. No silent installation or retroactive updater injection is claimed.
-> Home and Settings check public Photon releases (including Betas), download the selected official APK, check package/version/signing identity and launch Android's installer. This is direct distribution, not Google Play in-app updates.
-> TV playback pauses when returning to browsing or leaving Photon; TV PiP is disabled and background media commands cannot resume it. Mobile background playback remains unchanged.
-> **Settings → Music Photon, "Prism"** opens Yigder's official direct Prism APK download, with clear separate-app attribution. Prism is not bundled, renamed or installed silently.
-> [Build 41217937477](https://github.com/HayMayia/Photon/actions/runs/41217937477) **PASS in 6m59s**, source `5b03bc6`: debug/release assembly, focused Photon tests (176 methods in source), permanent certificate checks and publication. Release APK: 25,303,364 bytes, version code 17.
-> Existing automatic TV UI, shared quality/speed/repeat/caption settings and playback/account features remain. [TV/player scope](docs/TV_AND_PLAYER_SETTINGS.md) · [Beta notes](docs/RELEASE_1_0_0_BETA.md). Native installation, future-version upgrade and physical TV lifecycle checks remain pending; this is not universal-TV or Google approval certification.
+> **v1.0.1 Beta — paired Library Shorts and quiet Prism-style update banners.**
+> [Release notes](docs/RELEASE_1_0_1_BETA.md). Installed **v1.0.0 Beta** can get this through **Home → Check for updates → Update**, with Android installation approval. No separate manual APK/ZIP step is needed for that migration.
+> Account-library Shorts now occupy up to two cells per row, with portrait thumbnails and titles wrapping beneath each image. Ordinary videos, collections and headers remain full-width, with Google ordering preserved. TV Short thumbnails have a height cap.
+> In **v1.0.1**, the permanent version/check card is gone: automatic checks stay quiet unless an actual newer release is available. A glass/spectrum Prism-style banner then reads **Update to v[version] Beta**; it supports tap-to-update, dismiss and install-permission return. It disappears when current.
+> [Build 41219254742](https://github.com/HayMayia/Photon/actions/runs/41219254742) **PASS in 9m23s**, source `ad24a63`: debug/release assembly, focused Photon tests (179 methods in source), permanent certificate checks and Beta publication. Code 18, same package/signing identity.
+> Existing TV foreground-only playback, mobile background playback, Prism download entry and shared player settings remain unchanged. Physical layout/TV/native-install checks remain pending; no universal-TV or Google approval certification is claimed.
+> Older 0.13 has no updater and still requires its one-time updater-enabled migration; updater-enabled versions do not require a manual file download for subsequent releases.
 > Back retraces tabs/pages/player before asking to leave at the root; fullscreen uses FIT and safe insets.
 > **Settings → Switch to YouTube layout** changes native presentation; **You → Settings → Switch to Photon** returns. Same player/accounts/downloads, no website-player replacement.
 > This is **not pixel-identical or the official YouTube interface**; some controls remain shared, and Android/Google permission screens keep the real app identity. [Scope and device checks](docs/INTERFACE_MODES.md).

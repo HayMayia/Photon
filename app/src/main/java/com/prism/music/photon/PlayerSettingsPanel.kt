@@ -29,6 +29,8 @@ internal fun PlayerSettingsPanel(model: PhotonViewModel, controller: MediaContro
     val initialFocus = remember { androidx.compose.ui.focus.FocusRequester() }
     LaunchedEffect(Unit) { initialFocus.requestFocus() }
     val library by model.library.collectAsStateWithLifecycle()
+    var speedDraft by remember(library.playbackSpeed) { mutableFloatStateOf(PlayerOptions.speed(library.playbackSpeed)) }
+    var sizeDraft by remember(library.captionSizePercent) { mutableIntStateOf(PlayerOptions.subtitleSize(library.captionSizePercent)) }
     val watch by model.watch.collectAsStateWithLifecycle()
     var tracks by remember(controller) { mutableStateOf(controller?.currentTracks ?: Tracks.EMPTY) }
     DisposableEffect(controller) {
@@ -54,7 +56,7 @@ internal fun PlayerSettingsPanel(model: PhotonViewModel, controller: MediaContro
                             }
                         } }
                         if (watch.details == null) item { Text(if (watch.localPath != null) "Downloaded quality" else "Quality unavailable") }
-                        item { Text("Speed · ${"%.2f".format(Locale.US, library.playbackSpeed).trimEnd('0').trimEnd('.')}×", style = MaterialTheme.typography.titleMedium) }
+                        item { Text("Speed · ${"%.2f".format(Locale.US, speedDraft).trimEnd('0').trimEnd('.')}×", style = MaterialTheme.typography.titleMedium) }
                         item { LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(PlayerOptions.speeds) { speed ->
                                 FilterChip(selected = kotlin.math.abs(library.playbackSpeed - speed) < .001f,
@@ -62,8 +64,8 @@ internal fun PlayerSettingsPanel(model: PhotonViewModel, controller: MediaContro
                                     label = { Text(if (speed == 1f) "1× (normal)" else "${speed}×") }, modifier = Modifier.remoteFocus())
                             }
                         } }
-                        item { Slider(value = PlayerOptions.speed(library.playbackSpeed), onValueChange = { v -> update { it.copy(playbackSpeed = kotlin.math.round(v * 10) / 10f) } },
-                            enabled = speedEnabled, valueRange = .1f..10f, steps = 98, modifier = Modifier.remoteFocus()) }
+                        item { Slider(value = speedDraft, onValueChange = { v -> speedDraft = kotlin.math.round(v * 10) / 10f },
+                            onValueChangeFinished = { update { it.copy(playbackSpeed = speedDraft) } }, enabled = speedEnabled, valueRange = .1f..10f, steps = 98, modifier = Modifier.remoteFocus()) }
                         if (!speedEnabled) item { Text("Speed changes are unavailable for this playback.") }
                         item { Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("Repeat video")
@@ -94,14 +96,14 @@ internal fun PlayerSettingsPanel(model: PhotonViewModel, controller: MediaContro
                         }
                     }
                     if (tracks.groups.none { it.type == C.TRACK_TYPE_TEXT }) item { Text("No captions available for this video.") }
-                    item { Text("Size · ${library.captionSizePercent}%", style = MaterialTheme.typography.titleMedium) }
+                    item { Text("Size · ${sizeDraft}%", style = MaterialTheme.typography.titleMedium) }
                     item { LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(PlayerOptions.subtitleSizes) { size ->
                             FilterChip(selected = library.captionSizePercent == size, onClick = { update { it.copy(captionSizePercent = size) } }, label = { Text("$size%") }, modifier = Modifier.remoteFocus())
                         }
                     } }
-                    item { Slider(value = PlayerOptions.subtitleSize(library.captionSizePercent).toFloat(), onValueChange = { v -> update { it.copy(captionSizePercent = v.toInt()) } },
-                        valueRange = 25f..200f, steps = 174, modifier = Modifier.remoteFocus()) }
+                    item { Slider(value = sizeDraft.toFloat(), onValueChange = { v -> sizeDraft = v.toInt() },
+                        onValueChangeFinished = { update { it.copy(captionSizePercent = sizeDraft) } }, valueRange = 25f..200f, steps = 174, modifier = Modifier.remoteFocus()) }
                     item { Text("Appearance", style = MaterialTheme.typography.titleMedium) }
                     item { LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(listOf("White on black", "Yellow on black", "White with outline")) { style ->

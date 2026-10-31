@@ -84,7 +84,7 @@ internal fun PhotonTvScreen(model: PhotonViewModel, selected: Int, select: (Int)
                             }, modifier = Modifier.fillMaxWidth().focusRequester(focus).remoteFocus()) {
                                 Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                     Box(Modifier.fillMaxWidth().height(145.dp), contentAlignment = Alignment.Center) {
-                                        VideoThumbnail(video, null, Modifier.fillMaxHeight().aspectRatio(VideoArtworkShape.ratio(video.short)))
+                                        VideoThumbnail(video, if (selected == 4) library.downloads.firstOrNull { it.video.id == video.id }?.thumbnailPath else null, Modifier.fillMaxHeight().aspectRatio(VideoArtworkShape.ratio(video.short)))
                                     }
                                     Text(video.title, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleMedium)
                                     Text(video.channel, maxLines = 1, overflow = TextOverflow.Ellipsis)

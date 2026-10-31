@@ -1,0 +1,120 @@
+name: Build Photon APK
+on:
+  push:
+    branches: ["arena/c217a41b-photon"]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: write
+  checks: write
+jobs:
+  apk:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
+      - name: Install Android SDK
+        shell: bash
+        run: |
+          set -o pipefail
+          {
+            export ANDROID_HOME="${ANDROID_HOME:-$RUNNER_TEMP/android-sdk}"
+            SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+            if [ ! -x "$SDKMANAGER" ]; then
+              mkdir -p "$ANDROID_HOME/cmdline-tools"
+              curl --fail --location --retry 3 https://dl.google.com/android/repository/commandlinetools-linux-13114758_latest.zip -o "$RUNNER_TEMP/android-tools.zip"
+              unzip -q "$RUNNER_TEMP/android-tools.zip" -d "$RUNNER_TEMP/android-tools"
+              mv "$RUNNER_TEMP/android-tools/cmdline-tools" "$ANDROID_HOME/cmdline-tools/latest"
+            fi
+            echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
+            echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
+            yes | "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --licenses >/dev/null || true
+            "$SDKMANAGER" --sdk_root="$ANDROID_HOME" 'platforms;android-37.2' 'build-tools;36.0.0'
+          } 2>&1 | tee sdk.log
+      - name: Restore permanent signing key for trusted builds
+        if: github.event_name != 'pull_request' && hashFiles('signing/photon-signing.p12.enc') != ''
+        env:
+          PHOTON_SIGNING_PASSWORD: ${{ secrets.PHOTON_SIGNING_PASSWORD }}
+        run: python3 signing/ci-signing.py restore
+      - name: Build installable debug APK
+        shell: bash
+        run: |
+          set -o pipefail
+          chmod +x gradlew
+          ./gradlew :app:assembleDebug --stacktrace 2>&1 | tee build.log
+      - name: Photon unit tests
+        shell: bash
+        run: |
+          set -o pipefail
+          ./gradlew :app:testDebugUnitTest --tests 'com.prism.music.photon.*' --stacktrace 2>&1 | tee tests.log
+      - name: Stage APK and verify registered signing certificate
+        run: |
+          mkdir -p "$RUNNER_TEMP/photon-artifact"
+          cp app/build/outputs/apk/debug/*.apk "$RUNNER_TEMP/photon-artifact/"
+          if [ "$GITHUB_EVENT_NAME" != 'pull_request' ] && [ -f signing/ANDROID_OAUTH.txt ]; then
+            "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs app/build/outputs/apk/debug/app-debug.apk > "$RUNNER_TEMP/photon-apk-certificate.txt"
+            python3 - <<'PYVERIFY'
+          import os, pathlib, re
+          expected = re.search(r'SHA-1 certificate fingerprint: ([A-Fa-f0-9:]+)', pathlib.Path('signing/ANDROID_OAUTH.txt').read_text()).group(1).replace(':', '').lower()
+          actual = re.search(r'Signer #1 certificate SHA-1 digest: ([A-Fa-f0-9]+)', (pathlib.Path(os.environ['RUNNER_TEMP']) / 'photon-apk-certificate.txt').read_text()).group(1).lower()
+          if actual != expected:
+              raise SystemExit('APK certificate differs from the registered permanent signing identity')
+          print('APK certificate matches permanent OAuth identity.')
+          PYVERIFY
+            cp signing/ANDROID_OAUTH.txt "$RUNNER_TEMP/photon-artifact/"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: Photon-Android-APK
+          path: ${{ runner.temp }}/photon-artifact/*
+          if-no-files-found: error
+          retention-days: 90
+      - name: Build and publish v1.0.10 Beta
+        if: github.event_name == 'push' && contains(github.event.head_commit.message, '[publish-beta]')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./gradlew :app:assembleRelease --stacktrace
+          APK=app/build/outputs/apk/release/app-release.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs "$APK" > "$RUNNER_TEMP/photon-release-certificate.txt"
+          python3 - <<'PYRELEASE'
+          import os, pathlib, re
+          expected = re.search(r'SHA-1 certificate fingerprint: ([A-Fa-f0-9:]+)', pathlib.Path('signing/ANDROID_OAUTH.txt').read_text()).group(1).replace(':', '').lower()
+          actual = re.search(r'Signer #1 certificate SHA-1 digest: ([A-Fa-f0-9]+)', (pathlib.Path(os.environ['RUNNER_TEMP']) / 'photon-release-certificate.txt').read_text()).group(1).lower()
+          assert actual == expected, 'Release signing identity mismatch'
+          PYRELEASE
+          cp "$APK" "$RUNNER_TEMP/Photon.apk"
+          gh release create v1.0.10-beta "$RUNNER_TEMP/Photon.apk" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --title "v1.0.10 Beta" --notes-file docs/RELEASE_1_0_10_BETA.md
+      - name: Publish build diagnostics
+        if: failure() && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib
+          logs = []
+          for name in ['sdk.log', 'build.log', 'tests.log']:
+              path = pathlib.Path(name)
+              if path.exists():
+                  lines = path.read_text(errors='replace').splitlines()
+                  errors = [x for x in lines if x.startswith('e: ') or 'error:' in x.lower() or 'Could not' in x or 'FAILURE' in x]
+                  logs.append(name + '\n' + '\n'.join(errors[:80]) + '\n' + '\n'.join(lines[-100:]))
+          text = '\n\n'.join(logs)[-60000:] or 'Build failed before command logs were created. See Actions step results.'
+          pathlib.Path('diagnostics.json').write_text(json.dumps({'name': 'Photon build diagnostics', 'head_sha': os.environ['GITHUB_SHA'], 'status': 'completed', 'conclusion': 'failure', 'output': {'title': 'Build failure details', 'summary': '```text\n' + text + '\n```'}}))
+          PY
+          gh api "repos/$GITHUB_REPOSITORY/check-runs" --method POST --input diagnostics.json
+
+      - name: Remove plaintext signing key and properties
+        if: always() && github.event_name != 'pull_request'
+        run: rm -f "$RUNNER_TEMP/photon-signing.p12" keystore.properties

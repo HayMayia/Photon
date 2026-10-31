@@ -1,0 +1,22 @@
+.gradle/
+.kotlin/
+build/
+local.properties
+.idea/
+*.iml
+.DS_Store
+captures/
+*.apk
+*.aab
+*.jks
+*.keystore
+.claude/settings.local.json
+keystore.properties
+CLAUDE.md
+
+# Plaintext signing material must never enter Git; encrypted backup (.p12.enc) is intentional.
+*.p12
+*.pfx
+
+__pycache__/
+*.pyc

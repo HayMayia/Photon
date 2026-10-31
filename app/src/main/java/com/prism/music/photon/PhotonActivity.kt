@@ -263,6 +263,9 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
         activity.lifecycle.addObserver(observer); updateAwake()
         onDispose { activity.lifecycle.removeObserver(observer); activity.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
     }
+    LaunchedEffect(tv, expanded, controller) {
+        if (tv && !expanded) controller?.pause()
+    }
     val latestPreferences by rememberUpdatedState(library)
     DisposableEffect(controller) {
         val listener = object : Player.Listener {
@@ -469,7 +472,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
             tvState.SaveableStateProvider("television") {
                 PhotonTvScreen(model, tab, { navigateTo(it) }, ::open,
                     offline = { expanded = true; fullscreen = true; model.offline(it) }, channel = ::openChannel,
-                    remove = { delete = it }, resume = if (watch.video != null) ({ expanded = true; fullscreen = true }) else null,
+                    remove = { delete = it }, resume = if (watch.video != null) ({ expanded = true; fullscreen = true; controller?.play() }) else null,
                     settings = { SettingsPage(library, model, notifications) })
             }
         } else {

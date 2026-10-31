@@ -52,7 +52,10 @@ internal class PhotonUpdates(private val context: Context) {
                     http.newCall(Request.Builder().url("https://api.github.com/repos/HayMayia/Photon/releases?per_page=30")
                         .header("Accept", "application/vnd.github+json").header("User-Agent", "Photon/${BuildConfig.VERSION_NAME}").build()).execute().use { response ->
                         check(response.isSuccessful) { "Update server returned ${response.code}" }
-                        val releases = Json.parseToJsonElement(response.body.string()).jsonArray
+                        val source = response.body.source()
+                        source.request(2_000_001)
+                        check(source.buffer.size <= 2_000_000)
+                        val releases = Json.parseToJsonElement(source.readUtf8()).jsonArray
                         releases.mapNotNull { element ->
                             val r = element.jsonObject
                             if (r["draft"]?.jsonPrimitive?.booleanOrNull == true) return@mapNotNull null

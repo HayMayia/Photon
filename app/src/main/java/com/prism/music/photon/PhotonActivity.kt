@@ -172,6 +172,7 @@ class PhotonActivity : ComponentActivity() {
         if (android.os.Build.VERSION.SDK_INT >= 33) notificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
     }
     private fun enterPip() {
+        if (isPhotonTv()) return
         if (packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_PICTURE_IN_PICTURE)) {
             enterPictureInPictureMode(PictureInPictureParams.Builder().setAspectRatio(Rational(16, 9)).build())
         }
@@ -814,6 +815,16 @@ private fun SettingsPage(library: PhotonLibrary, model: PhotonViewModel, notific
                 supportingContent = { Text(if (library.youtubeLayout) "YouTube layout" else "Prism layout") },
                 trailingContent = { Switch(library.youtubeLayout, model::youtubeLayout) },
                 modifier = Modifier.clickable { model.youtubeLayout(!library.youtubeLayout) })
+        }
+        item { PhotonUpdateCard() }
+        item {
+            ListItem(headlineContent = { Text("Music Photon, \"Prism\"") },
+                supportingContent = { Text("A dedicated music player by Yigder. Download and install Prism separately.") },
+                trailingContent = { Icon(PrismIcons.Download, null) },
+                modifier = Modifier.remoteFocus().clickable {
+                    runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Yigder/Prism/releases/latest/download/Prism.apk"))) }
+                        .onFailure { android.widget.Toast.makeText(context, "Open github.com/Yigder/Prism/releases/latest to download Prism.", android.widget.Toast.LENGTH_LONG).show() }
+                })
         }
         item { YouTubeAccountCard(model) }
         item {

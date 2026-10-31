@@ -59,6 +59,7 @@ internal fun PhotonTvScreen(model: PhotonViewModel, selected: Int, select: (Int)
             if (resume != null) OutlinedButton(onClick = resume, modifier = Modifier.fillMaxWidth().remoteFocus()) { Text("Now playing") }
         }
         Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (selected == 0) PhotonUpdateCard()
             when (selected) {
                 3 -> settings()
                 2 -> if (library.youtubeHome) AccountLibraryScreen(model, library.youtubeSessionRevision, library.youtubeSessionReady, open, channel) else YouTubeHomeConnection(model)

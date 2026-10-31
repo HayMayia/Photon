@@ -57,6 +57,7 @@ internal fun PhotonHome(model: PhotonViewModel, library: PhotonLibrary, open: (V
     }
     val quick = (library.saved + library.history + shelves.flatMap { it.videos }.take(6)).distinctBy { it.id }.take(6)
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
+        item { PhotonUpdateCard() }
         item {
             Column(Modifier.padding(horizontal = 22.dp, vertical = 22.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -189,6 +190,7 @@ private fun ActualYouTubeHome(model: PhotonViewModel, open: (Video) -> Unit, set
             .distinctUntilChanged().collect { nearEnd -> if (nearEnd) model.moreYouTubeHome() }
     }
     LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(22.dp)) {
+        item { PhotonUpdateCard() }
         item {
             val ui = LocalUi.current
             val scheme = MaterialTheme.colorScheme

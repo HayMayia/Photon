@@ -144,6 +144,7 @@ internal fun YouTubeLayoutHome(model: PhotonViewModel, library: PhotonLibrary, o
     }
     val videos = if (library.youtubeHome) feed.page?.videos.orEmpty() else browse.videos
     LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(bottom = 16.dp)) {
+        item { PhotonUpdateCard() }
         item { YouTubeLayoutHeader(search = search, settings = settings, cast = cast) }
         item {
             Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

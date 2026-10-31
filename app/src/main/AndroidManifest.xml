@@ -12,6 +12,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <application
         android:name=".photon.PhotonApplication"
         android:allowBackup="false"
@@ -22,6 +23,9 @@
         android:banner="@drawable/photon_tv_banner"
         android:supportsRtl="true"
         android:theme="@style/Theme.Prism">
+        <provider android:name="androidx.core.content.FileProvider" android:authorities="${applicationId}.photon.updates" android:exported="false" android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/photon_update_paths" />
+        </provider>
         <activity android:name=".photon.PhotonActivity" android:exported="true"
             android:launchMode="singleTop" android:resizeableActivity="true"
             android:supportsPictureInPicture="true"

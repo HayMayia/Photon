@@ -118,6 +118,9 @@ class PhotonPlaybackService : MediaSessionService() {
                 val opened = player.currentMediaItem?.mediaMetadata?.extras?.getLong("photon_open_elapsed", 0) ?: 0
                 if (opened > 0) PhotonDiagnostics.event("First frame after open: ${android.os.SystemClock.elapsedRealtime() - opened} ms")
             }
+            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                if (isPhotonTv() && playWhenReady && !(application as PhotonApplication).tvForeground.value) player.pause()
+            }
             override fun onPlaybackStateChanged(state: Int) { PhotonDiagnostics.event("Playback state=$state") }
             override fun onPlayerError(error: androidx.media3.common.PlaybackException) { PhotonDiagnostics.event("Playback error=${error.errorCodeName}") }
             override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -126,6 +129,9 @@ class PhotonPlaybackService : MediaSessionService() {
                 lastTick = android.os.SystemClock.elapsedRealtime()
             }
         })
+        if (isPhotonTv()) scope.launch {
+            (application as PhotonApplication).tvForeground.collect { foreground -> if (!foreground) player.pause() }
+        }
         scope.launch {
             while (isActive) { delay(5_000); snapshot() }
         }
@@ -134,6 +140,7 @@ class PhotonPlaybackService : MediaSessionService() {
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = session
 
     override fun onTaskRemoved(rootIntent: Intent?) {
+        if (isPhotonTv()) { session?.player?.pause(); stopSelf(); return }
         // An explicitly paused session can stop; playing media keeps its foreground notification.
         if (session?.player?.playWhenReady != true) stopSelf()
     }

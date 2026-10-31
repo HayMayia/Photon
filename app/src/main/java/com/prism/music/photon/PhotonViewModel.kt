@@ -206,15 +206,48 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 val kind = if (playlist != null || shelf in listOf(AccountShelf.HISTORY, AccountShelf.LIKED)) AccountEntryKind.VIDEO else if (shelf == AccountShelf.CHANNELS) AccountEntryKind.CHANNEL else AccountEntryKind.PLAYLIST
                 val page = if (more) app.accountLibrary.more(session, oldPage!!, kind) else app.accountLibrary.load(session, shelf, playlist)
                 if (revision != library.value.youtubeSessionRevision || !library.value.youtubeSessionReady || generation != accountLibraryGeneration) return@launch
-                if (shelf == AccountShelf.LIKED && playlist == null) googleLikes.value = googleLikes.value + page.items.mapNotNull { it.video?.id }.filter { googleLikes.value[it] != false }.associateWith { true }
+                // Publish only small, fully classified batches. Existing cards never change span.
+                // Incoming order is preserved even when later metadata requests finish first.
+                val existingKeys = if (more) accountLibrary.value.page?.items.orEmpty().map(AccountLibraryRows::key).toSet() else emptySet()
+                val incoming = page.items.distinctBy(AccountLibraryRows::key).filter { AccountLibraryRows.key(it) !in existingKeys }
+                for (batch in incoming.chunked(6)) {
+                    val prepared = AccountLibraryAdmission.prepare(batch) { video ->
+                        metadataReadSlots.withPermit {
+                            val cached = videoPresentation.value[video.id]
+                            val resolved = if (cached?.short == true || cached != null && presentationRevisions[video.id] == revision) ShortsPresentation.merge(video, cached) else {
+                                var result = app.videos.presentation(video)
+                                if (result?.short != true) {
+                                    try {
+                                        val metadata = app.accountActions.presentation(video.id, session)
+                                        if (metadata != null) {
+                                            val base = result ?: video
+                                            result = base.copy(short = base.short || metadata.first,
+                                                thumbnail = if (metadata.first) metadata.second.ifBlank { base.thumbnail } else base.thumbnail)
+                                        }
+                                    } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { /* Public proof remains usable. */ }
+                                }
+                                result ?: throw java.io.IOException("Video format is unavailable")
+                            }
+                            if (revision != library.value.youtubeSessionRevision || generation != accountLibraryGeneration) throw CancellationException("Account dataset changed")
+                            presentationRevisions[video.id] = revision
+                            videoPresentation.value = (videoPresentation.value + (video.id to resolved)).entries.toList().takeLast(512).associate { it.toPair() }
+                            resolved
+                        }
+                    }
+                    if (revision != library.value.youtubeSessionRevision || !library.value.youtubeSessionReady || generation != accountLibraryGeneration) return@launch
+                    val items = AccountLibraryRows.append(accountLibrary.value.page?.items.orEmpty(), prepared)
+                    if (shelf == AccountShelf.LIKED && playlist == null) googleLikes.value = googleLikes.value + prepared.mapNotNull { it.video?.id }.filter { googleLikes.value[it] != false }.associateWith { true }
+                    accountLibrary.value = AccountLibraryState(shelf, playlist, title,
+                        page.copy(items = items, continuation = if (more) oldPage?.continuation else null),
+                        busy = !more, moreBusy = more, generation = generation)
+                }
                 if (more) accountLibraryTokens += oldPage!!.continuation!!
-                val existing = if (more) accountLibrary.value.page?.items.orEmpty() else emptyList()
-                val items = AccountLibraryRows.append(existing, page.items, videoPresentation.value)
                 accountLibrary.value = AccountLibraryState(shelf, playlist, title,
-                    page.copy(items = items, continuation = page.continuation?.takeUnless { it in accountLibraryTokens }), generation = generation)
+                    page.copy(items = accountLibrary.value.page?.items.orEmpty(), continuation = page.continuation?.takeUnless { it in accountLibraryTokens }), generation = generation)
+
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) {
-                if (revision == library.value.youtubeSessionRevision && generation == accountLibraryGeneration) accountLibrary.value = if (more) accountLibrary.value.copy(moreBusy = false, error = "More account items could not load. Existing rows are retained; retry explicitly.") else AccountLibraryState(shelf, playlist, title, error = "Could not read this YouTube account list. Retry or check the connected account. No local items were substituted.", generation = generation)
+                if (revision == library.value.youtubeSessionRevision && generation == accountLibraryGeneration) accountLibrary.value = if (more) accountLibrary.value.copy(moreBusy = false, error = "More account items could not load. Existing rows are retained; retry explicitly.") else accountLibrary.value.copy(busy = false, error = "Some video formats could not load. Loaded rows are retained; Refresh to retry. No unknown-format cards were guessed as landscape.")
             }
         }
     }

@@ -13,6 +13,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.unit.dp
@@ -79,5 +80,42 @@ class AccountLibraryScrollTest {
             assertEquals(before, positions())
         }
         before.keys.forEach { key -> compose.onAllNodesWithTag(key as String).assertCountEquals(1) }
+    }
+    @Test fun idleFormatEffectKeepsTrailerFullWidthAndPairsOnlyProvenShorts() {
+        val original = (0..2).map { index -> AccountEntry("mixed-$index", "Video $index", AccountEntryKind.VIDEO,
+            Video("mixed-$index", "Video $index", "Creator")) }
+        val rows = mutableStateOf(AccountLibraryRows.append(emptyList(), original))
+        compose.setContent {
+            MaterialTheme {
+                val grid = rememberLazyGridState()
+                AccountLibraryFormatEffect(grid, rows.value) { rows.value = AccountLibraryRows.commitFormats(rows.value) }
+                LazyVerticalGrid(GridCells.Fixed(2), Modifier.width(360.dp).height(700.dp), state = grid) {
+                    items(rows.value, key = AccountLibraryRows::key, span = { GridItemSpan(AccountGridPolicy.span(it)) }) { row ->
+                        Box(Modifier.fillMaxWidth().aspectRatio(AccountGridPolicy.ratio(row)).testTag(AccountLibraryRows.key(row))) { Text(row.title) }
+                    }
+                }
+            }
+        }
+        compose.waitForIdle()
+        fun bounds(index: Int) = compose.onNodeWithTag(AccountLibraryRows.key(original[index])).fetchSemanticsNode().boundsInRoot
+        val fullWidth = bounds(0).width
+        compose.runOnIdle {
+            var updated = AccountLibraryRows.metadata(rows.value, original[1].video!!.copy(short = true))
+            updated = AccountLibraryRows.metadata(updated, original[2].video!!.copy(short = true))
+            rows.value = updated
+        }
+        compose.waitForIdle()
+        assertEquals(fullWidth, bounds(0).width, 0.1f)
+        assertEquals(fullWidth / 2f, bounds(1).width, 0.1f)
+        assertEquals(fullWidth / 2f, bounds(2).width, 0.1f)
+        assertEquals(bounds(1).top, bounds(2).top, 0.1f)
+        assertTrue(bounds(1).right <= bounds(2).left)
+        compose.runOnIdle {
+            assertEquals(listOf(2, 1, 1), rows.value.map(AccountGridPolicy::span))
+            rows.value = AccountLibraryRows.append(rows.value, original, emptyMap())
+        }
+        compose.waitForIdle()
+        assertEquals(fullWidth, bounds(0).width, 0.1f)
+        assertEquals(bounds(1).top, bounds(2).top, 0.1f)
     }
 }

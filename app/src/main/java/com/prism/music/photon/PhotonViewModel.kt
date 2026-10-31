@@ -214,33 +214,17 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 val kind = if (playlist != null || shelf in listOf(AccountShelf.HISTORY, AccountShelf.LIKED)) AccountEntryKind.VIDEO else if (shelf == AccountShelf.CHANNELS) AccountEntryKind.CHANNEL else AccountEntryKind.PLAYLIST
                 val page = if (more) app.accountLibrary.more(session, oldPage!!, kind) else app.accountLibrary.load(session, shelf, playlist)
                 if (revision != library.value.youtubeSessionRevision || !library.value.youtubeSessionReady || generation != accountLibraryGeneration) return@launch
-                // Publish only small, fully classified batches. Existing cards never change span.
+                // Admit account rows without waiting for optional metadata. Existing cards never change span.
                 // Incoming order is preserved even when later metadata requests finish first.
                 val existingKeys = if (more) accountLibrary.value.page?.items.orEmpty().map(AccountLibraryRows::key).toSet() else emptySet()
                 val incoming = page.items.distinctBy(AccountLibraryRows::key).filter { AccountLibraryRows.key(it) !in existingKeys }
                 for (batch in incoming.chunked(6)) {
                     val prepared = AccountLibraryAdmission.prepare(batch) { video ->
-                        metadataReadSlots.withPermit {
-                            val cached = videoPresentation.value[video.id]
-                            val resolved = if (cached?.short == true || cached != null && presentationRevisions[video.id] == revision) ShortsPresentation.merge(video, cached) else {
-                                var result = app.videos.presentation(video)
-                                if (result?.short != true) {
-                                    try {
-                                        val metadata = app.accountActions.presentation(video.id, session)
-                                        if (metadata != null) {
-                                            val base = result ?: video
-                                            result = base.copy(short = base.short || metadata.first,
-                                                thumbnail = if (metadata.first) metadata.second.ifBlank { base.thumbnail } else base.thumbnail)
-                                        }
-                                    } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { /* Public proof remains usable. */ }
-                                }
-                                result ?: throw java.io.IOException("Video format is unavailable")
-                            }
-                            if (revision != library.value.youtubeSessionRevision || generation != accountLibraryGeneration) throw CancellationException("Account dataset changed")
-                            presentationRevisions[video.id] = revision
-                            videoPresentation.value = (videoPresentation.value + (video.id to resolved)).entries.toList().takeLast(512).associate { it.toPair() }
-                            resolved
-                        }
+                        // Cached proof is optional. Network metadata resolves after cards are visible.
+                        val cached = videoPresentation.value[video.id]
+                            ?.takeIf { it.short || presentationRevisions[video.id] == revision }
+                            ?: throw java.io.IOException("Format not cached")
+                        ShortsPresentation.merge(video, cached)
                     }
                     if (revision != library.value.youtubeSessionRevision || !library.value.youtubeSessionReady || generation != accountLibraryGeneration) return@launch
                     val items = AccountLibraryRows.append(accountLibrary.value.page?.items.orEmpty(), prepared)
@@ -256,7 +240,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
 
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) {
-                if (revision == library.value.youtubeSessionRevision && generation == accountLibraryGeneration) accountLibrary.value = if (more) accountLibrary.value.copy(moreBusy = false, error = "More account items could not load. Existing rows are retained; retry explicitly.") else accountLibrary.value.copy(busy = false, error = "Some video formats could not load. Loaded rows are retained; Refresh to retry. No unknown-format cards were guessed as landscape.")
+                if (revision == library.value.youtubeSessionRevision && generation == accountLibraryGeneration) accountLibrary.value = if (more) accountLibrary.value.copy(moreBusy = false, error = "More account items could not load. Existing rows are retained; retry explicitly.") else accountLibrary.value.copy(busy = false, error = "Could not load this account list. Refresh to retry.")
             }
         }
     }

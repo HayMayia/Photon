@@ -51,7 +51,7 @@ internal object AccountLibraryRows {
         incoming.forEach { row ->
             if (key(row) !in rows) {
                 val video = row.video?.let { ShortsPresentation.merge(it, metadata[it.id]) }
-                rows[key(row)] = row.copy(video = video, layoutShort = video?.short == true)
+                rows[key(row)] = row.copy(video = video, layoutShort = row.layoutShort ?: (video?.short == true))
             }
         }
         return rows.values.toList()

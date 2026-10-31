@@ -54,7 +54,7 @@ internal fun AccountLibraryScreen(model: PhotonViewModel, revision: Long, ready:
                     VideoThumbnail(video, entry.title, if (television && AccountGridPolicy.portrait(entry))
                         Modifier.height(180.dp).aspectRatio(VideoArtworkShape.ratio(true)).align(androidx.compose.ui.Alignment.CenterHorizontally)
                         else Modifier.fillMaxWidth().aspectRatio(AccountGridPolicy.ratio(entry)),
-                        contentScale = if (video.short && !AccountGridPolicy.portrait(entry)) ContentScale.Fit else ContentScale.Crop)
+                        contentScale = if (video.short != AccountGridPolicy.portrait(entry)) ContentScale.Fit else ContentScale.Crop)
                     Text(entry.title, Modifier.fillMaxWidth().padding(top = 8.dp), fontWeight = FontWeight.SemiBold,
                         maxLines = 3, overflow = TextOverflow.Ellipsis)
                     if (state.playlist != null) TextButton(onClick = { model.removeFromPlaylist(state.playlist!!, video) }) { Text("Remove") }

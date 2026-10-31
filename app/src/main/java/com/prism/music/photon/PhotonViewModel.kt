@@ -141,12 +141,18 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     }
     val googleLikes = MutableStateFlow<Map<String, Boolean>>(emptyMap())
     val googleSubscriptions = MutableStateFlow<Map<String, Boolean>>(emptyMap())
+    private var subscriptionStateGeneration = 0L
     private var googleChangeJob: Job? = null
     private fun requestGoogleChange(change: GoogleChange) {
         if (googleChange.value.pending != null || googleChange.value.busy) return
         if (!library.value.youtubeHome || !library.value.youtubeSessionReady) {
             googleChange.value = GoogleChangeState(message = "Sign in with the primary Google button first. This action was not saved locally or sent to another account.")
             return
+        }
+        if (change.kind == GoogleChangeKind.SUBSCRIBE) {
+            ++subscriptionStateGeneration
+            subscriptionChannelsJob?.cancel()
+            subscriptionChannels.value = subscriptionChannels.value.copy(busy = false)
         }
         googleChange.value = GoogleChangeState(pending = change, revision = library.value.youtubeSessionRevision)
         confirmGoogleChange()
@@ -166,7 +172,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 val result = app.accountActions.execute(change, session, ::permitted)
                 if (!permitted()) return@launch
                 result.liked?.let { googleLikes.value = googleLikes.value + (change.id to it) }
-                result.subscribed?.let { googleSubscriptions.value = googleSubscriptions.value + (change.id to it) }
+                result.subscribed?.let { googleSubscriptions.value = googleSubscriptions.value + (change.id to it); loadSubscriptionChannels() }
                 googleChange.value = GoogleChangeState()
                 val shelf = accountLibrary.value
                 if (shelf.page != null) openAccountShelf(shelf.shelf, shelf.playlist, shelf.title)
@@ -181,6 +187,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
             searchJob?.cancel()
             mutableBrowse.value = BrowseState(query = "Google subscriptions", error = "Account changed. Reload the Google subscriptions feed for the current account.")
         }
+        ++subscriptionStateGeneration
         subscriptionChannelsJob?.cancel(); subscriptionChannels.value = AccountLibraryState(shelf = AccountShelf.CHANNELS, title = "Subscribed channels")
         googleChangeJob?.cancel(); googleChange.value = GoogleChangeState()
         likesIndexJob?.cancel(); likesIndexRevision = null
@@ -435,29 +442,31 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
         if (subscriptionChannels.value.busy || more && subscriptionChannels.value.page?.continuation == null) return
         subscriptionChannelsJob?.cancel()
         val previous = subscriptionChannels.value
+        val epoch = subscriptionStateGeneration
         val revision = library.value.youtubeSessionRevision
         subscriptionChannelsJob = viewModelScope.launch {
             subscriptionChannels.value = previous.copy(busy = true, error = null)
             try {
                 val session = app.youtubeHistory.session()
                 val page = if (more) app.accountLibrary.more(session, previous.page!!, AccountEntryKind.CHANNEL) else app.accountLibrary.load(session, AccountShelf.CHANNELS)
-                if (revision != library.value.youtubeSessionRevision || !library.value.youtubeSessionReady) return@launch
+                if (epoch != subscriptionStateGeneration || revision != library.value.youtubeSessionRevision || !library.value.youtubeSessionReady) return@launch
                 val rows = AccountLibraryRows.append(if (more) previous.page?.items.orEmpty() else emptyList(), page.items)
                 googleSubscriptions.value = googleSubscriptions.value + rows.filter { it.kind == AccountEntryKind.CHANNEL }.associate { it.id to true }
                 subscriptionChannels.value = previous.copy(page = page.copy(items = rows), busy = false)
             } catch (cancelled: CancellationException) { throw cancelled }
-            catch (_: Exception) { if (revision == library.value.youtubeSessionRevision) subscriptionChannels.value = previous.copy(busy = false, error = "Channels could not load. Retry.") }
+            catch (_: Exception) { if (epoch == subscriptionStateGeneration && revision == library.value.youtubeSessionRevision) subscriptionChannels.value = previous.copy(busy = false, error = "Channels could not load. Retry.") }
         }
     }
     private val subscriptionReads = mutableSetOf<String>()
     fun resolveSubscription(channel: Channel) {
         val id = channel.url.substringAfterLast('/')
         if (!id.matches(Regex("UC[A-Za-z0-9_-]{20,30}")) || !subscriptionReads.add(id)) return
+        val epoch = subscriptionStateGeneration
         val revision = library.value.youtubeSessionRevision
         viewModelScope.launch {
             try {
                 val state = app.accountActions.subscriptionState(id, app.youtubeHistory.session())
-                if (state != null && revision == library.value.youtubeSessionRevision && library.value.youtubeSessionReady) googleSubscriptions.value = googleSubscriptions.value + (id to state)
+                if (state != null && epoch == subscriptionStateGeneration && revision == library.value.youtubeSessionRevision && library.value.youtubeSessionReady) googleSubscriptions.value = googleSubscriptions.value + (id to state)
             } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { /* Keep known directory proof; unknown is not false. */ }
             finally { subscriptionReads.remove(id) }
         }

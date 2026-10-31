@@ -47,7 +47,7 @@ internal fun CollectionScreen(model: PhotonViewModel, library: PhotonLibrary, op
                         if (channel.subscribers >= 0) Text("${channel.subscribers} subscribers")
                         Text("Subscription changes are sent to YouTube", style = MaterialTheme.typography.labelSmall)
                     }
-                    FilledTonalButton(onClick = { model.subscribe(channel) }) { Text(if (googleSubscriptions[channel.url.substringAfterLast('/')] == true) "Subscribed" else if (googleSubscriptions.containsKey(channel.url.substringAfterLast('/'))) "Subscribe" else "Check subscription") }
+                    FilledTonalButton(onClick = { if (googleSubscriptions.containsKey(channel.url.substringAfterLast('/'))) model.subscribe(channel) else model.resolveSubscription(channel) }) { Text(if (googleSubscriptions[channel.url.substringAfterLast('/')] == true) "Subscribed" else if (googleSubscriptions.containsKey(channel.url.substringAfterLast('/'))) "Subscribe" else "Check subscription") }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(onClick = { model.channelTab(false) }) { Text("Videos") }

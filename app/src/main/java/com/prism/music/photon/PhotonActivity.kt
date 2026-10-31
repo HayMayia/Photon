@@ -34,6 +34,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -221,6 +222,10 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
     var syncRealPlays by rememberSaveable { mutableStateOf(false) }
     var libraryTab by rememberSaveable { mutableIntStateOf(0) }
     var localLibrary by rememberSaveable { mutableStateOf(false) }
+    val tv = LocalContext.current.isPhotonTv()
+    val tvState = rememberSaveableStateHolder()
+    var playerSettings by remember { mutableStateOf(false) }
+    var captionSettings by remember { mutableStateOf(false) }
     var qualitySheet by remember { mutableStateOf(false) }
     var downloadSheet by remember { mutableStateOf(false) }
     var playerError by remember { mutableStateOf<String?>(null) }
@@ -234,8 +239,8 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
     var shortsMode by rememberSaveable { mutableStateOf(false) }
     var castSheet by remember { mutableStateOf(false) }
     val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
-    val immersive = PlayerLayoutPolicy.immersive(fullscreen, landscape, expanded, pip, shortsMode)
-    fun leaveFullscreen() { fullscreen = false; if (landscape) expanded = false }
+    val immersive = PlayerOptions.fullscreen(tv, fullscreen, landscape, expanded, pip, shortsMode)
+    fun leaveFullscreen() { fullscreen = false; if (landscape && !tv) expanded = false }
     LaunchedEffect(library.youtubeLayout) {
         if (!library.youtubeLayout) {
             if (tab == 4) tab = 1
@@ -289,15 +294,15 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
         controller.prepare()
         controller.playWhenReady = play
     }
-    LaunchedEffect(watch.video?.id) { if (watch.video != null) expanded = true }
+    LaunchedEffect(watch.video?.id) { if (watch.video != null) { expanded = true; if (tv) fullscreen = true } }
     LaunchedEffect(watch.video?.id, watch.busy, controller) {
         if (watch.video != null && watch.busy) { controller?.stop(); controller?.clearMediaItems() }
     }
     // Physical rotation and the fullscreen button share exactly the same layout/insets path.
     DisposableEffect(fullscreen, watch.video?.short) {
         val previous = activity.requestedOrientation
-        if (fullscreen) activity.requestedOrientation = if (watch.video?.short == true) ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT else ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-        onDispose { if (fullscreen) activity.requestedOrientation = previous }
+        if (fullscreen && !tv) activity.requestedOrientation = if (watch.video?.short == true) ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT else ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        onDispose { if (fullscreen && !tv) activity.requestedOrientation = previous }
     }
     DisposableEffect(immersive) {
         val decor = activity.window.decorView
@@ -337,8 +342,9 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
 
     fun open(source: Video) {
         val video = ShortsPresentation.merge(source, model.videoPresentation.value[source.id])
-        fullscreen = false
-        if (video.short) { shortsMode = true; model.presentShort(video) }
+        fullscreen = tv
+        if (tv) { shortsMode = false; expanded = true; model.open(video) }
+        else if (video.short) { shortsMode = true; model.presentShort(video) }
         else { expanded = true; model.open(video) }
     }
     fun openChannel(url: String) {
@@ -361,6 +367,20 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
         context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, video.url), "Share video"))
     }
 
+    LaunchedEffect(controller, library.playbackSpeed, library.repeatVideo, library.captionsEnabled, library.captionLanguage) {
+        controller?.let { player ->
+            if (player.isCommandAvailable(Player.COMMAND_SET_SPEED_AND_PITCH) && !player.isCurrentMediaItemLive)
+                player.setPlaybackSpeed(PlayerOptions.speed(library.playbackSpeed))
+            if (player.isCommandAvailable(Player.COMMAND_SET_REPEAT_MODE)) player.repeatMode = if (library.repeatVideo) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
+            if (player.isCommandAvailable(Player.COMMAND_SET_TRACK_SELECTION_PARAMETERS)) player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+                .setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_TEXT, !library.captionsEnabled)
+                .setPreferredTextLanguages(*listOf(library.captionLanguage).filter { it.isNotBlank() }.toTypedArray())
+                .setSelectUndeterminedTextLanguage(true).build()
+        }
+    }
+    CompositionLocalProvider(LocalPlayerMenus provides PlayerMenuActions(
+        settings = { playerSettings = true }, captions = { captionSettings = true },
+        back = { if (immersive) leaveFullscreen() else expanded = false })) {
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         if (pip) {
             VideoSurface(controller, Modifier.fillMaxSize(), controls = false)
@@ -371,6 +391,10 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
             }
         } else if (collection != null && !expanded) {
             CollectionScreen(model, library, { open(it) }, ::closeCollection)
+        } else if (tv && expanded && watch.video != null && !immersive) {
+            TvVideoDetails(model, controller, watch, fullscreen = { fullscreen = true }, close = { expanded = false },
+                comments = { model.loadComments(watch.video!!); commentsSheet = true },
+                download = { downloadSheet = true }, save = { playlistSheet = true })
         } else if (expanded && watch.video != null) {
             val video = watch.video!!
             Column(Modifier.fillMaxSize().background(if (immersive) Color.Black else MaterialTheme.colorScheme.background)
@@ -402,7 +426,8 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 ActionChip(if ((googleLikes[video.id] == true)) "Unlike" else "Like", if (googleLikes[video.id] == true) PrismIcons.HeartFilled else PrismIcons.Heart) { model.save(video) }
                                 if (watch.details != null) {
-                                    ActionChip(watch.quality?.label ?: "Quality", PrismIcons.Settings) { qualitySheet = true }
+                                    ActionChip("Settings", PrismIcons.Settings) { playerSettings = true }
+                                    ActionChip("Captions", PrismIcons.Info) { captionSettings = true }
                                     if (!watch.details!!.live) ActionChip("Download", PrismIcons.Download) { downloadSheet = true }
                                 }
                                 if (watch.details == null && watch.localPath == null && !watch.busy) ActionChip("Reload details", PrismIcons.Refresh) { model.open(video) }
@@ -435,6 +460,13 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                         VideoRow(related, { open(related) }, { model.save(related) }, (googleLikes[related.id] == true))
                     }
                 }
+            }
+        } else if (tv) {
+            tvState.SaveableStateProvider("television") {
+                PhotonTvScreen(model, tab, { navigateTo(it) }, ::open,
+                    offline = { expanded = true; fullscreen = true; model.offline(it) }, channel = ::openChannel,
+                    resume = if (watch.video != null) ({ expanded = true; fullscreen = true }) else null,
+                    settings = { SettingsPage(library, model, notifications) })
             }
         } else {
             Scaffold(
@@ -571,19 +603,18 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
     }
     if (googleChange.pending != null || googleChange.message != null) AlertDialog(
         onDismissRequest = model::dismissGoogleChange,
-        title = { Text(if (googleChange.pending == null) "YouTube account result" else "Change your YouTube account?") },
+        title = { Text(if (googleChange.pending == null) "Result" else "Confirm change?") },
         text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             googleChange.pending?.let { change ->
                 val verb = when (change.kind) {
-                    GoogleChangeKind.LIKE -> if (change.desired == false) "Remove YouTube like" else "Like"
+                    GoogleChangeKind.LIKE -> if (change.desired == false) "Unlike" else "Like"
                     GoogleChangeKind.SUBSCRIBE -> if (change.desired == false) "Unsubscribe" else "Subscribe"
                     else -> change.kind.name.lowercase().replace('_', ' ')
                 }
                 Text("$verb: ${change.title}")
-                if (change.kind == GoogleChangeKind.LIKE && change.desired == false) Text("This removes the video from your YouTube Liked videos. Nothing changes until you confirm.")
-                if (change.kind == GoogleChangeKind.DELETE_PLAYLIST) Text("Permanently deletes this selected YouTube playlist. The videos themselves are not deleted. This cannot be undone.", color = MaterialTheme.colorScheme.error)
-                if (change.id.isNotBlank()) Text("Target: ${change.id}", style = MaterialTheme.typography.bodySmall)
-                Text("This changes the Google account connected to Home, not a local list or the separate comment account. Likes/subscriptions are read before changing and verified afterward. New playlists are private. A failed/ambiguous request is not automatically retried.")
+                if (change.kind == GoogleChangeKind.LIKE && change.desired == false) Text("Remove this video from Liked videos?")
+                if (change.kind == GoogleChangeKind.DELETE_PLAYLIST) Text("Delete this playlist permanently? Videos are not deleted.", color = MaterialTheme.colorScheme.error)
+
             }
             if (googleChange.pending != null && !library.accountHistorySync) Row(verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(checked = syncRealPlays, enabled = !googleChange.busy, onCheckedChange = { syncRealPlays = it })
@@ -592,7 +623,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
             googleChange.message?.let { Text(it) }
             if (googleChange.busy) LinearProgressIndicator()
         } },
-        confirmButton = { TextButton(enabled = !googleChange.busy, onClick = { if (googleChange.pending == null) model.dismissGoogleChange() else { if (syncRealPlays) model.includeShortPlays(true); model.confirmGoogleChange() } }) { Text(if (googleChange.pending == null) "Close" else "Confirm on YouTube") } },
+        confirmButton = { TextButton(enabled = !googleChange.busy, onClick = { if (googleChange.pending == null) model.dismissGoogleChange() else { if (syncRealPlays) model.includeShortPlays(true); model.confirmGoogleChange() } }) { Text(if (googleChange.pending == null) "Close" else "Confirm") } },
         dismissButton = { if (googleChange.pending != null) TextButton(enabled = !googleChange.busy, onClick = model::dismissGoogleChange) { Text("Cancel") } }
     )
     if (castSheet) ModalBottomSheet(onDismissRequest = { castSheet = false; casting.stopDiscovery() }) {
@@ -638,21 +669,44 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
         text = { Text("You are already on the first screen. Leave the app in the background? Playback follows your background-playback setting.") },
         confirmButton = { TextButton(onClick = { confirmLeave = false; activity.moveTaskToBack(true) }) { Text("Leave") } },
         dismissButton = { TextButton(onClick = { confirmLeave = false }) { Text("Stay") } })
+    if (playerSettings || captionSettings) PlayerSettingsPanel(model, controller, captionSettings) { playerSettings = false; captionSettings = false }
     delete?.let { download ->
         AlertDialog(onDismissRequest = { delete = null }, title = { Text("Delete downloaded video?") }, text = { Text("This removes the ${download.height}p offline copy of “${download.video.title}” from this device.") },
             confirmButton = { TextButton(onClick = { model.remove(download); delete = null }) { Text("Delete") } }, dismissButton = { TextButton(onClick = { delete = null }) { Text("Keep") } })
     }
+}
 }
 
 @Composable
 @UnstableApi
 internal fun VideoSurface(controller: MediaController?, modifier: Modifier, controls: Boolean) {
     val youtubeLayout = LocalYouTubeLayout.current
+    val menus = LocalPlayerMenus.current
+    val model: PhotonViewModel = viewModel()
+    val preferences by model.library.collectAsStateWithLifecycle()
+    fun configure(view: PhotonPlayerView) {
+        view.remoteBack = menus.back
+        view.findViewById<android.view.View>(androidx.media3.ui.R.id.exo_settings)?.setOnClickListener { menus.settings() }
+        view.findViewById<android.view.View>(androidx.media3.ui.R.id.exo_subtitle)?.setOnClickListener { menus.captions() }
+        view.subtitleView?.apply {
+            setApplyEmbeddedStyles(false)
+            setApplyEmbeddedFontSizes(false)
+            setFractionalTextSize(androidx.media3.ui.SubtitleView.DEFAULT_TEXT_SIZE_FRACTION * PlayerOptions.subtitleSize(preferences.captionSizePercent) / 100f)
+            val outline = preferences.captionStyle == "White with outline"
+            setStyle(androidx.media3.ui.CaptionStyleCompat(
+                if (preferences.captionStyle == "Yellow on black") android.graphics.Color.YELLOW else android.graphics.Color.WHITE,
+                if (outline) android.graphics.Color.TRANSPARENT else 0xCC000000.toInt(), android.graphics.Color.TRANSPARENT,
+                if (outline) androidx.media3.ui.CaptionStyleCompat.EDGE_TYPE_OUTLINE else androidx.media3.ui.CaptionStyleCompat.EDGE_TYPE_NONE,
+                android.graphics.Color.BLACK, null))
+        }
+    }
     AndroidView(factory = { context -> PhotonPlayerView(context).apply { player = controller; useController = controls; resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT; setShowSubtitleButton(true); setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
+        configure(this)
+        if (context.isPhotonTv() && controls) { isFocusable = true; isFocusableInTouchMode = true; requestFocus(); showController() }
         if (youtubeLayout) findViewById<androidx.media3.ui.DefaultTimeBar>(androidx.media3.ui.R.id.exo_progress)?.setPlayedColor(android.graphics.Color.rgb(255, 0, 51))
     } },
         modifier = modifier.background(Color.Black),
-        update = { it.player = controller; it.useController = controls; it.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT },
+        update = { it.player = controller; it.useController = controls; it.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT; configure(it) },
         onRelease = { it.player = null })
 }
 
@@ -799,7 +853,7 @@ private fun SettingsPage(library: PhotonLibrary, model: PhotonViewModel, notific
                 ListItem(headlineContent = { Text("Share device test report") }, supportingContent = { Text("Device/API, app version and URL-free playback events. Review before sending.") }, leadingContent = { Icon(PrismIcons.Share, null) }, modifier = Modifier.clickable {
                     context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, PhotonDiagnostics.report()), "Share test report"))
                 })
-                ListItem(headlineContent = { Text("Google account on YouTube (browser)") }, supportingContent = { Text("Opens official YouTube. This does not connect the in-app account.") }, trailingContent = { Icon(PrismIcons.OpenInNew, null) }, modifier = Modifier.clickable { context.startActivity(browserIntent("https://www.youtube.com/")) })
+                ListItem(headlineContent = { Text("Google account (browser)") }, supportingContent = { Text("Opens official YouTube. This does not connect the in-app account.") }, trailingContent = { Icon(PrismIcons.OpenInNew, null) }, modifier = Modifier.clickable { context.startActivity(browserIntent("https://www.youtube.com/")) })
                 ListItem(headlineContent = { Text("Source code & issues") }, supportingContent = { Text(if (library.youtubeLayout) "GPL-3.0-or-later" else "HayMayia/Photon · GPL-3.0-or-later") }, trailingContent = { Icon(PrismIcons.ArrowForward, null) }, modifier = Modifier.clickable { link("https://github.com/HayMayia/Photon") })
                 ListItem(headlineContent = { Text(if (library.youtubeLayout) "Upstream foundation by Yigder" else "Built on Prism by Yigder") }, supportingContent = { Text("Original design, icons, typography and Android foundation · GPL-3.0-or-later") }, trailingContent = { Icon(PrismIcons.ArrowForward, null) }, modifier = Modifier.clickable { link("https://github.com/Yigder/Prism") })
                 ListItem(headlineContent = { Text("NewPipe Extractor") }, supportingContent = { Text("YouTube extraction · GPL-3.0-or-later") }, trailingContent = { Icon(PrismIcons.ArrowForward, null) }, modifier = Modifier.clickable { link("https://github.com/TeamNewPipe/NewPipeExtractor") })

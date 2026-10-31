@@ -363,6 +363,11 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
 
     init { home(); if (!library.value.youtubeHome && !library.value.historyPaused) refreshShelves() }
 
+    fun playerOptions(transform: (PhotonLibrary) -> PhotonLibrary) = app.library.update { old ->
+        val next = transform(old)
+        next.copy(playbackSpeed = PlayerOptions.speed(next.playbackSpeed), captionSizePercent = PlayerOptions.subtitleSize(next.captionSizePercent))
+    }
+
     fun home() {
         if (library.value.youtubeHome) { refreshYouTubeHome(); return }
         if (library.value.historyPaused) {

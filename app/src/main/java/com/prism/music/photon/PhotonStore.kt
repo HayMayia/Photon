@@ -41,6 +41,12 @@ data class PhotonLibrary(
     val accountHistorySync: Boolean = false,
     val includeShortPlays: Boolean = false,
     val youtubeLayout: Boolean = false,
+    val playbackSpeed: Float = 1f,
+    val repeatVideo: Boolean = false,
+    val captionsEnabled: Boolean = true,
+    val captionLanguage: String = "",
+    val captionSizePercent: Int = 100,
+    val captionStyle: String = "White on black",
 )
 
 /** One application-scoped store; updates from workers and UI are serialized together. */

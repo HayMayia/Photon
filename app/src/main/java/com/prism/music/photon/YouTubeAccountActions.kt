@@ -121,7 +121,7 @@ internal class YouTubeAccountActionsApi(client: OkHttpClient = OkHttpClient()) {
                 send(if (desired) "like/like" else "like/removelike", before.context, buildJsonObject { putJsonObject("target") { put("videoId", change.id) } })
                 checkPermission()
                 if (!verify(path) { GoogleAccountControls.liked(it, change.id) == desired }) throw IOException("Like change could not be verified; check YouTube before retrying")
-                GoogleChangeResult(if (desired) "Liked on YouTube, verified by a fresh read." else "Like removed on YouTube, verified by a fresh read.", liked = desired)
+                GoogleChangeResult(if (desired) "Liked, verified by a fresh read." else "Like removed, verified by a fresh read.", liked = desired)
             }
             GoogleChangeKind.SUBSCRIBE -> {
                 require(change.id.matches(Regex("UC[A-Za-z0-9_-]{20,30}")))
@@ -133,7 +133,7 @@ internal class YouTubeAccountActionsApi(client: OkHttpClient = OkHttpClient()) {
                 send(if (desired) "subscription/subscribe" else "subscription/unsubscribe", before.context, buildJsonObject { putJsonArray("channelIds") { add(change.id) } })
                 checkPermission()
                 if (!verify(path) { GoogleAccountControls.subscribed(it, change.id) == desired }) throw IOException("Subscription change could not be verified; check YouTube before retrying")
-                GoogleChangeResult(if (desired) "Subscribed on YouTube, verified by a fresh read." else "Unsubscribed on YouTube, verified by a fresh read.", subscribed = desired)
+                GoogleChangeResult(if (desired) "Subscribed, verified by a fresh read." else "Unsubscribed, verified by a fresh read.", subscribed = desired)
             }
             GoogleChangeKind.CREATE_PLAYLIST -> {
                 require(change.title.isNotBlank() && change.title.length <= 150)

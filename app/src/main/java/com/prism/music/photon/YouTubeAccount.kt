@@ -25,7 +25,7 @@ object YouTubeErrors {
     fun message(status: Int, reason: String): String = when {
         status == 401 -> "Your Google authorization expired. Reconnect your account; your draft has been kept."
         reason == "commentsDisabled" -> "The creator has disabled comments on this video."
-        reason == "youtubeSignupRequired" || reason == "channelNotFound" -> "Create a YouTube channel for this Google account on YouTube, then reconnect."
+        reason == "youtubeSignupRequired" || reason == "channelNotFound" -> "Create a YouTube channel for this Google account, then reconnect."
         reason == "accessNotConfigured" || reason == "SERVICE_DISABLED" -> "Enable YouTube Data API v3 in the Google Cloud project used for this app. See Google sign-in setup."
         reason == "quotaExceeded" || reason == "dailyLimitExceeded" -> "The Google Cloud project's YouTube API quota is exhausted. Your draft has been kept."
         reason == "insufficientPermissions" -> "YouTube commenting permission was not granted. Reconnect and review Google's consent screen."

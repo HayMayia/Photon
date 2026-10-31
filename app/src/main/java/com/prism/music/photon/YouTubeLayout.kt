@@ -116,14 +116,14 @@ internal fun YouTubeLayoutVideo(source: Video, open: () -> Unit, like: () -> Uni
             }
             IconButton(onClick = like, modifier = Modifier.size(30.dp)) {
                 Icon(if (likes[video.id] == true) com.prism.music.ui.theme.PrismIcons.HeartFilled else com.prism.music.ui.theme.PrismIcons.Heart,
-                    if (likes[video.id] == true) "Unlike on YouTube" else "Like on YouTube", Modifier.size(20.dp),
+                    if (likes[video.id] == true) "Unlike" else "Like", Modifier.size(20.dp),
                     tint = if (likes[video.id] == true) Color(0xFFFF3355) else MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Box {
                 IconButton(onClick = { menu = true }, modifier = Modifier.size(28.dp)) { Icon(YouTubeLayoutIcons.More, "Video actions", Modifier.size(20.dp)) }
                 DropdownMenu(menu, { menu = false }) {
                     DropdownMenuItem(text = { Text("Play") }, onClick = { menu = false; open() })
-                    DropdownMenuItem(text = { Text(if (likes[video.id] == true) "Remove like on YouTube" else "Like on YouTube") }, onClick = { menu = false; like() })
+                    DropdownMenuItem(text = { Text(if (likes[video.id] == true) "Remove like" else "Like") }, onClick = { menu = false; like() })
                     if (video.channelUrl.isNotBlank()) DropdownMenuItem(text = { Text("View channel") }, onClick = { menu = false; channel() })
                 }
             }

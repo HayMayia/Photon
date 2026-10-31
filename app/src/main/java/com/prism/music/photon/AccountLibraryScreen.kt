@@ -55,11 +55,11 @@ internal fun AccountLibraryScreen(model: PhotonViewModel, revision: Long, ready:
         items(state.page?.items.orEmpty(), key = { "${it.kind}:${it.id}" }) { entry ->
             if (entry.video != null) {
                 val video = resolvedVideo(entry.video)
-                Column(Modifier.fillMaxWidth().clickable { open(video) }.padding(horizontal = 22.dp, vertical = 10.dp)) {
+                Column(Modifier.fillMaxWidth().remoteFocus().clickable { open(video) }.padding(horizontal = 22.dp, vertical = 10.dp)) {
                     VideoThumbnail(video, entry.title, (if (video.short) Modifier.width(160.dp) else Modifier.fillMaxWidth()).aspectRatio(VideoArtworkShape.ratio(video.short)))
                     Text(entry.title, Modifier.padding(top = 8.dp), fontWeight = FontWeight.SemiBold)
                     if (state.playlist != null) TextButton(onClick = { model.removeFromPlaylist(state.playlist!!, video) }) { Text("Remove") }
-                    IconButton(onClick = { model.save(video) }) { Icon(if (likes[video.id] == true) PrismIcons.HeartFilled else PrismIcons.Heart, if (likes[video.id] == true) "Remove like on YouTube" else "Like on YouTube", tint = if (likes[video.id] == true) androidx.compose.ui.graphics.Color(0xFFFF3355) else MaterialTheme.colorScheme.onSurfaceVariant) }
+                    IconButton(onClick = { model.save(video) }) { Icon(if (likes[video.id] == true) PrismIcons.HeartFilled else PrismIcons.Heart, if (likes[video.id] == true) "Remove like" else "Like", tint = if (likes[video.id] == true) androidx.compose.ui.graphics.Color(0xFFFF3355) else MaterialTheme.colorScheme.onSurfaceVariant) }
                     Text(video.channel, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                 }
             } else ListItem(
@@ -71,8 +71,8 @@ internal fun AccountLibraryScreen(model: PhotonViewModel, revision: Long, ready:
                     else Icon(if (entry.kind == AccountEntryKind.CHANNEL) PrismIcons.Person else PrismIcons.Library, null, Modifier.size(48.dp))
                 },
                 supportingContent = { Text(if (entry.kind == AccountEntryKind.CHANNEL) "Channel" else "Playlist") },
-                trailingContent = { if (entry.kind == AccountEntryKind.PLAYLIST) TextButton(onClick = { model.deletePlaylist(entry.id, entry.title) }) { Text("Delete on YouTube") } },
-                modifier = Modifier.clickable {
+                trailingContent = { if (entry.kind == AccountEntryKind.PLAYLIST) TextButton(onClick = { model.deletePlaylist(entry.id, entry.title) }) { Text("Delete") } },
+                modifier = Modifier.remoteFocus().clickable {
                     if (entry.kind == AccountEntryKind.CHANNEL) channel("https://www.youtube.com/channel/${entry.id}")
                     else model.openAccountShelf(AccountShelf.PLAYLISTS, entry.id, entry.title)
                 }

@@ -16,8 +16,17 @@ import androidx.media3.ui.PlayerView
 /** Observe native touch routing rather than covering PlayerView with a gesture-stealing overlay. */
 @UnstableApi
 internal class PhotonPlayerView(context: Context) : PlayerView(context) {
+    var remoteBack: (() -> Unit)? = null
+    private val television = context.isPhotonTv()
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+        if (television && event.keyCode == android.view.KeyEvent.KEYCODE_BACK && remoteBack != null) {
+            if (event.action == android.view.KeyEvent.ACTION_UP) remoteBack?.invoke()
+            return true
+        }
+        return super.dispatchKeyEvent(event)
+    }
     private val boostBadge = android.widget.TextView(context).apply {
-        text = "2× speed"; textSize = 14f; setTextColor(android.graphics.Color.WHITE)
+        text = "2×"; textSize = 14f; setTextColor(android.graphics.Color.WHITE)
         val density = resources.displayMetrics.density
         setPadding((14 * density).toInt(), (6 * density).toInt(), (14 * density).toInt(), (6 * density).toInt())
         background = android.graphics.drawable.GradientDrawable().apply { setColor(0xCC000000.toInt()); cornerRadius = 18 * density }

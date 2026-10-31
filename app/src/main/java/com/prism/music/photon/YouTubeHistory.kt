@@ -204,7 +204,7 @@ class YouTubeHistoryCoordinator(private val store: PhotonStore, client: OkHttpCl
             val (url, context) = withContext(Dispatchers.IO) { YouTubePlaybackUrls.forVideo(watch, videoId, watchedMs) }
             if (!permitted() || !AccountHistoryPolicy.active(state.value, revision, now())) return@withLock
             transport.playback(url, session, context) { permitted() && AccountHistoryPolicy.active(state.value, revision, now()) } // One real-play registration, never a watchtime/engagement fabrication.
-            if (same(session)) mutable.value = state.value.copy(message = "Playback report accepted by YouTube. History/recommendation updates may take time; verify on YouTube.")
+            if (same(session)) mutable.value = state.value.copy(message = "Playback report accepted by YouTube. History/recommendation updates may take time; verify.")
         } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
         catch (_: Exception) { if (same(session)) mutable.value = GoogleHistoryState(revision = revision,
             message = "Playback report could not be confirmed. No automatic retry or offline replay will be sent.") }

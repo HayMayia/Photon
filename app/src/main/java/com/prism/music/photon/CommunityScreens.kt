@@ -45,7 +45,7 @@ internal fun CollectionScreen(model: PhotonViewModel, library: PhotonLibrary, op
                         if (channel.subscribers >= 0) Text("${channel.subscribers} subscribers")
                         Text("Subscription changes are sent to YouTube", style = MaterialTheme.typography.labelSmall)
                     }
-                    FilledTonalButton(onClick = { model.subscribe(channel) }) { Text(if (googleSubscriptions[channel.url.substringAfterLast('/')] == true) "Unsubscribe on YouTube" else "Subscribe on YouTube") }
+                    FilledTonalButton(onClick = { model.subscribe(channel) }) { Text(if (googleSubscriptions[channel.url.substringAfterLast('/')] == true) "Unsubscribe" else "Subscribe") }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(onClick = { model.channelTab(false) }) { Text("Videos") }
@@ -79,12 +79,12 @@ internal fun PlaylistPicker(library: PhotonLibrary, video: Video, model: PhotonV
         Text("Add to YouTube playlist", style = MaterialTheme.typography.headlineSmall)
         Text("This changes the same Google account as Home. New playlists are private; no local fallback.", style = MaterialTheme.typography.bodySmall)
         OutlinedTextField(name, { name = it }, label = { Text("New YouTube playlist name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-        FilledTonalButton(enabled = name.isNotBlank(), onClick = { model.createGooglePlaylist(name, video); done() }) { Text("Create on YouTube and add") }
+        FilledTonalButton(enabled = name.isNotBlank(), onClick = { model.createGooglePlaylist(name, video); done() }) { Text("Create and add") }
         if (state.busy) LinearProgressIndicator()
         state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         LazyColumn(Modifier.heightIn(max = 340.dp)) {
             items(state.page?.items.orEmpty().filter { it.kind == AccountEntryKind.PLAYLIST }, key = { it.id }) { playlist ->
-                ListItem(headlineContent = { Text(playlist.title) }, modifier = Modifier.clickable { model.addToPlaylist(playlist.id, video); done() })
+                ListItem(headlineContent = { Text(playlist.title) }, modifier = Modifier.remoteFocus().clickable { model.addToPlaylist(playlist.id, video); done() })
             }
             if (state.page?.continuation != null) item { TextButton(onClick = model::moreAccountShelf) { Text("More YouTube playlists") } }
         }
@@ -116,7 +116,7 @@ internal fun CommentsPanel(model: PhotonViewModel, video: Video) {
         Text(if (replies) "Replies" else "Comments", style = MaterialTheme.typography.headlineSmall)
         Row {
             TextButton(onClick = { replies = false; model.loadComments(video) }) { Text(if (replies) "Back to comments" else "Refresh") }
-            TextButton(onClick = { context.startActivity(browserIntent(video.url)) }) { Text("Post on YouTube") }
+            TextButton(onClick = { context.startActivity(browserIntent(video.url)) }) { Text("Post") }
         }
         LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(vertical = 16.dp)) {
             item {
@@ -162,7 +162,7 @@ internal fun CommentsPanel(model: PhotonViewModel, video: Video) {
         text = { Text("Google's own screen will request youtube.force-ssl permission to identify your channel and post comments you explicitly confirm. The app does not read your password. Your draft is kept; authorization alone will not publish it. Return here to review and post after authorization.") },
         confirmButton = { TextButton(onClick = { authorizeComment = false; (context as? PhotonActivity)?.signInToYouTube() }) { Text("Continue to Google") } },
         dismissButton = { TextButton(onClick = { authorizeComment = false }) { Text("Cancel") } })
-    if (confirming) AlertDialog(onDismissRequest = { confirming = false }, title = { Text("Post publicly on YouTube?") },
+    if (confirming) AlertDialog(onDismissRequest = { confirming = false }, title = { Text("Post publicly?") },
         text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Channel: ${account.identity?.name.orEmpty()}")
             Text("Video: ${video.title} (${video.id})")
@@ -198,7 +198,7 @@ internal fun ShortsScreen(browse: BrowseState, watch: WatchState, controller: Me
                 Row(Modifier.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(video.channel, Modifier.weight(1f), maxLines = 1)
                     IconButton(onClick = { model.save(video) }) { Icon(if (googleLikes[video.id] == true) PrismIcons.HeartFilled else PrismIcons.Heart,
-                        if (googleLikes[video.id] == true) "Unlike on YouTube" else "Like on YouTube", tint = if (googleLikes[video.id] == true) androidx.compose.ui.graphics.Color(0xFFFF3355) else MaterialTheme.colorScheme.onSurface) }
+                        if (googleLikes[video.id] == true) "Unlike" else "Like", tint = if (googleLikes[video.id] == true) androidx.compose.ui.graphics.Color(0xFFFF3355) else MaterialTheme.colorScheme.onSurface) }
                     IconButton(onClick = fullscreen) { Icon(PrismIcons.Fullscreen, "Full screen") }
                 }
                 if (index == pager.currentPage && watch.busy) LinearProgressIndicator(Modifier.fillMaxWidth())

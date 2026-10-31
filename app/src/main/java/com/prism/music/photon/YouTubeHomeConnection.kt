@@ -53,7 +53,7 @@ internal fun YouTubeHomeConnection(model: PhotonViewModel) {
                 TextButton(onClick = model::refreshGoogleHistory) { Text("Check Google history") }
                 if (history.status != GoogleHistoryStatus.UNKNOWN) TextButton(enabled = !history.checking,
                     onClick = { changePause = history.status == GoogleHistoryStatus.ENABLED }) {
-                    Text(if (history.status == GoogleHistoryStatus.ENABLED) "Pause on YouTube" else "Resume on YouTube")
+                    Text(if (history.status == GoogleHistoryStatus.ENABLED) "Pause" else "Resume")
                 }
             }
             Row {
@@ -80,7 +80,7 @@ internal fun YouTubeHomeConnection(model: PhotonViewModel) {
         confirmButton = { TextButton(onClick = { confirmSync = false; model.enableAccountHistory(true) }) { Text("Enable playback reporting") } },
         dismissButton = { TextButton(onClick = { confirmSync = false }) { Text("Cancel") } })
     changePause?.let { paused -> AlertDialog(onDismissRequest = { changePause = null }, title = { Text(if (paused) "Pause YouTube watch history?" else "Resume YouTube watch history?") },
-        text = { Text("This changes the connected YouTube WEBSITE account's Google/YouTube watch-history setting, not just this app. That website account may differ from your Google comment account; review it on YouTube first if unsure. Existing history is not deleted. The app will verify the resulting state; an unconfirmed change will block tracking, not trigger an automatic retry.") },
+        text = { Text("This changes the connected YouTube WEBSITE account's Google/YouTube watch-history setting, not just this app. That website account may differ from your Google comment account; review it first if unsure. Existing history is not deleted. The app will verify the resulting state; an unconfirmed change will block tracking, not trigger an automatic retry.") },
         confirmButton = { TextButton(onClick = { changePause = null; model.setGoogleHistoryPaused(paused) }) { Text(if (paused) "Pause account history" else "Resume account history") } },
         dismissButton = { TextButton(onClick = { changePause = null }) { Text("Cancel") } }) }
     if (signingIn) YouTubeSessionDialog(done = { index -> signingIn = false; model.connectYouTubeHome(index) }, close = { signingIn = false })

@@ -68,7 +68,7 @@ internal fun VideoHeart(video: Video) {
     LaunchedEffect(video.id, library.youtubeSessionRevision) { model.resolveVideoPresentation(video) }
     androidx.compose.material3.IconButton(onClick = { model.save(video) }) {
         androidx.compose.material3.Icon(if (likes[video.id] == true) com.prism.music.ui.theme.PrismIcons.HeartFilled else com.prism.music.ui.theme.PrismIcons.Heart,
-            if (likes[video.id] == true) "Remove like on YouTube" else "Like on YouTube",
+            if (likes[video.id] == true) "Remove like" else "Like",
             tint = if (likes[video.id] == true) androidx.compose.ui.graphics.Color(0xFFFF3355) else androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

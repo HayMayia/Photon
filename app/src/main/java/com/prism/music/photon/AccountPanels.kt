@@ -47,22 +47,16 @@ internal fun GoogleAccountActions(model: PhotonViewModel) {
     val state by model.account.collectAsStateWithLifecycle()
     val posting by model.commentPosting.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    var consent by remember { mutableStateOf(false) }
     var setup by remember { mutableStateOf(false) }
     state.identity?.let { Text("Comments authorized as ${it.name}", fontWeight = FontWeight.SemiBold) }
         ?: Text("Connect Google to post real YouTube comments.", style = MaterialTheme.typography.bodyMedium)
     if (state.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
     state.error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        FilledTonalButton(enabled = !state.busy && !posting, onClick = { consent = true }) { Text(if (state.identity == null) "Authorize comments" else "Reconnect comments") }
+        FilledTonalButton(enabled = !state.busy && !posting, onClick = { (context as? PhotonActivity)?.signInToYouTube() }) { Text(if (state.identity == null) "Authorize comments" else "Reconnect comments") }
         if (state.identity != null || state.busy) TextButton(enabled = !posting, onClick = model::disconnectAccount) { Text("Disconnect") }
     }
     TextButton(onClick = { setup = true }) { Text("Google sign-in setup / troubleshooting") }
-    if (consent) AlertDialog(onDismissRequest = { consent = false },
-        title = { Text("Authorize YouTube commenting?") },
-        text = { Text("Google will show its own account and permission screen. The YouTube API requires the broad youtube.force-ssl scope for commenting; This app currently uses it to identify your channel and submit comments you explicitly confirm. The app does not collect your password, store access tokens on disk, or automatically post after sign-in. This permission is separate from the Google account connected to Home.") },
-        confirmButton = { TextButton(onClick = { consent = false; (context as? PhotonActivity)?.signInToYouTube() }) { Text("Continue to Google") } },
-        dismissButton = { TextButton(onClick = { consent = false }) { Text("Cancel") } })
     if (setup) AlertDialog(onDismissRequest = { setup = false },
         title = { Text("Register this build with Google") },
         text = { Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {

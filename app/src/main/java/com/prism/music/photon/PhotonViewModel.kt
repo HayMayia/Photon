@@ -149,6 +149,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
             return
         }
         googleChange.value = GoogleChangeState(pending = change, revision = library.value.youtubeSessionRevision)
+        confirmGoogleChange()
     }
     fun dismissGoogleChange() { if (!googleChange.value.busy) googleChange.value = GoogleChangeState() }
     fun confirmGoogleChange() {
@@ -166,7 +167,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 if (!permitted()) return@launch
                 result.liked?.let { googleLikes.value = googleLikes.value + (change.id to it) }
                 result.subscribed?.let { googleSubscriptions.value = googleSubscriptions.value + (change.id to it) }
-                googleChange.value = GoogleChangeState(message = result.message)
+                googleChange.value = GoogleChangeState()
                 val shelf = accountLibrary.value
                 if (shelf.page != null) openAccountShelf(shelf.shelf, shelf.playlist, shelf.title)
             } catch (cancelled: CancellationException) { throw cancelled }

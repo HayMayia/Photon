@@ -212,7 +212,6 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
     var createPlaylist by rememberSaveable { mutableStateOf(false) }
     var playlistName by rememberSaveable { mutableStateOf("") }
     var collectionBackToPlayer by rememberSaveable { mutableStateOf(false) }
-    var confirmLeave by rememberSaveable { mutableStateOf(false) }
     fun navigateTo(target: Int) {
         tabHistory = ArrayList(PhotonNavigation.record(tabHistory, tab, target))
         tab = target
@@ -232,7 +231,6 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
     var isPlaying by remember { mutableStateOf(false) }
     var playIntent by remember { mutableStateOf(false) }
     var buffering by remember { mutableStateOf(false) }
-    var delete by remember { mutableStateOf<SavedDownload?>(null) }
     val collection by model.collection.collectAsStateWithLifecycle()
     var commentsSheet by remember { mutableStateOf(false) }
     var playlistSheet by remember { mutableStateOf(false) }
@@ -329,7 +327,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
     // Registered first: sheets, collections and the player take precedence over tab navigation.
     BackHandler(!pip) {
         val previous = PhotonNavigation.previous(tabHistory, tab)
-        if (previous == null) confirmLeave = true
+        if (previous == null) activity.moveTaskToBack(true)
         else {
             tab = previous
             tabHistory = ArrayList(tabHistory.dropLast(1))
@@ -357,7 +355,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
     }
     fun backTab() {
         val previous = PhotonNavigation.previous(tabHistory, tab)
-        if (previous == null) confirmLeave = true else { tab = previous; tabHistory = ArrayList(tabHistory.dropLast(1)) }
+        if (previous == null) activity.moveTaskToBack(true) else { tab = previous; tabHistory = ArrayList(tabHistory.dropLast(1)) }
     }
     @Composable fun nativeNavigation(selected: Int) {
         YouTubeLayoutNavigation(selected,
@@ -472,7 +470,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
             tvState.SaveableStateProvider("television") {
                 PhotonTvScreen(model, tab, { navigateTo(it) }, ::open,
                     offline = { expanded = true; fullscreen = true; model.offline(it) }, channel = ::openChannel,
-                    remove = { delete = it }, resume = if (watch.video != null) ({ expanded = true; fullscreen = true; controller?.play() }) else null,
+                    remove = { model.remove(it) }, resume = if (watch.video != null) ({ expanded = true; fullscreen = true; controller?.play() }) else null,
                     settings = { SettingsPage(library, model, notifications) })
             }
         } else {
@@ -584,7 +582,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                                 if (library.downloads.isEmpty() && work.none { !it.state.isFinished }) item { EmptyState("Ready when you are", "Open a video and tap Download. Available HD qualities include sound, merged on your phone.", PrismIcons.Download) }
                                 items(library.downloads, key = { it.path }) { download ->
                                     Column {
-                                        VideoRow(download.video, { expanded = true; model.offline(download) }, { delete = download }, false, PrismIcons.Delete)
+                                        VideoRow(download.video, { expanded = true; model.offline(download) }, { model.remove(download) }, false, PrismIcons.Delete)
                                         Text("${download.height}p · ${download.bytes / 1024 / 1024} MB · available offline", Modifier.padding(start = 22.dp, bottom = 12.dp), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                                     }
                                 }
@@ -608,27 +606,12 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
             }
         }
     }
-    if (googleChange.pending != null || googleChange.message != null) AlertDialog(
-        onDismissRequest = model::dismissGoogleChange,
-        title = { Text(if (googleChange.pending == null) "Result" else "Confirm change?") },
-        text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            googleChange.pending?.let { change ->
-                val verb = when (change.kind) {
-                    GoogleChangeKind.LIKE -> if (change.desired == false) "Unlike" else "Like"
-                    GoogleChangeKind.SUBSCRIBE -> if (change.desired == false) "Unsubscribe" else "Subscribe"
-                    else -> change.kind.name.lowercase().replace('_', ' ')
-                }
-                Text("$verb: ${change.title}")
-                if (change.kind == GoogleChangeKind.LIKE && change.desired == false) Text("Remove this video from Liked videos?")
-                if (change.kind == GoogleChangeKind.DELETE_PLAYLIST) Text("Delete this playlist permanently? Videos are not deleted.", color = MaterialTheme.colorScheme.error)
-
-            }
-            googleChange.message?.let { Text(it) }
-            if (googleChange.busy) LinearProgressIndicator()
-        } },
-        confirmButton = { TextButton(enabled = !googleChange.busy, onClick = { if (googleChange.pending == null) model.dismissGoogleChange() else { model.confirmGoogleChange() } }) { Text(if (googleChange.pending == null) "Close" else "Confirm") } },
-        dismissButton = { if (googleChange.pending != null) TextButton(enabled = !googleChange.busy, onClick = model::dismissGoogleChange) { Text("Cancel") } }
-    )
+    LaunchedEffect(googleChange.message) {
+        googleChange.message?.let { message ->
+            android.widget.Toast.makeText(activity, message, android.widget.Toast.LENGTH_LONG).show()
+            model.dismissGoogleChange()
+        }
+    }
     if (castSheet) ModalBottomSheet(onDismissRequest = { castSheet = false; casting.stopDiscovery() }) {
         DisposableEffect(Unit) { onDispose { casting.stopDiscovery() } }
         CastPanel(casting, watch) { controller?.pause() }
@@ -667,27 +650,24 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
         text = { OutlinedTextField(playlistName, { playlistName = it.take(100) }, label = { Text("Playlist name") }, singleLine = true) },
         confirmButton = { TextButton(enabled = playlistName.isNotBlank(), onClick = { model.createGooglePlaylist(playlistName.trim()); createPlaylist = false; playlistName = "" }) { Text("Continue") } },
         dismissButton = { TextButton(onClick = { createPlaylist = false }) { Text("Cancel") } })
-    if (confirmLeave) AlertDialog(onDismissRequest = { confirmLeave = false },
-        title = { Text(if (library.youtubeLayout) "Leave app?" else "Leave Photon?") },
-        text = { Text("You are already on the first screen. Leave the app in the background? Playback follows your background-playback setting.") },
-        confirmButton = { TextButton(onClick = { confirmLeave = false; activity.moveTaskToBack(true) }) { Text("Leave") } },
-        dismissButton = { TextButton(onClick = { confirmLeave = false }) { Text("Stay") } })
     if (playerSettings || captionSettings) PlayerSettingsPanel(model, controller, captionSettings) { playerSettings = false; captionSettings = false }
-    delete?.let { download ->
-        AlertDialog(onDismissRequest = { delete = null }, title = { Text("Delete downloaded video?") }, text = { Text("This removes the ${download.height}p offline copy of “${download.video.title}” from this device.") },
-            confirmButton = { TextButton(onClick = { model.remove(download); delete = null }) { Text("Delete") } }, dismissButton = { TextButton(onClick = { delete = null }) { Text("Keep") } })
-    }
+
 }
 }
 
 @Composable
 @UnstableApi
-internal fun VideoSurface(controller: MediaController?, modifier: Modifier, controls: Boolean) {
+internal fun VideoSurface(controller: MediaController?, modifier: Modifier, controls: Boolean, visibilityChanged: ((Boolean) -> Unit)? = null) {
     val youtubeLayout = LocalYouTubeLayout.current
     val menus = LocalPlayerMenus.current
     val model: PhotonViewModel = viewModel()
     val preferences by model.library.collectAsStateWithLifecycle()
+    val onVisibility by rememberUpdatedState(visibilityChanged)
     fun configure(view: PhotonPlayerView) {
+        view.setControllerVisibilityListener(if (visibilityChanged == null) null as PlayerView.ControllerVisibilityListener? else
+            PlayerView.ControllerVisibilityListener { visible -> onVisibility?.invoke(visible == android.view.View.VISIBLE) })
+        view.controllerAutoShow = visibilityChanged == null
+
         view.remoteBack = menus.back
         view.findViewById<android.view.View>(androidx.media3.ui.R.id.exo_settings)?.setOnClickListener { menus.settings() }
         view.findViewById<android.view.View>(androidx.media3.ui.R.id.exo_subtitle)?.setOnClickListener { menus.captions() }
@@ -705,12 +685,13 @@ internal fun VideoSurface(controller: MediaController?, modifier: Modifier, cont
     }
     AndroidView(factory = { context -> PhotonPlayerView(context).apply { player = controller; useController = controls; resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT; setShowSubtitleButton(true); setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
         configure(this)
+        if (visibilityChanged != null) hideController()
         if (context.isPhotonTv() && controls) { isFocusable = true; isFocusableInTouchMode = true; requestFocus(); showController() }
         if (youtubeLayout) findViewById<androidx.media3.ui.DefaultTimeBar>(androidx.media3.ui.R.id.exo_progress)?.setPlayedColor(android.graphics.Color.rgb(255, 0, 51))
     } },
         modifier = modifier.background(Color.Black),
         update = { it.player = controller; it.useController = controls; it.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT; configure(it) },
-        onRelease = { it.player = null })
+        onRelease = { it.setControllerVisibilityListener(null as PlayerView.ControllerVisibilityListener?); it.player = null })
 }
 
 @Composable
@@ -808,7 +789,6 @@ private fun DownloadJob(info: WorkInfo, cancel: () -> Unit) {
 @Composable
 private fun SettingsPage(library: PhotonLibrary, model: PhotonViewModel, notifications: () -> Unit) {
     val context = LocalContext.current
-    var clear by remember { mutableStateOf(false) }
     var about by remember { mutableStateOf(false) }
     fun link(url: String) { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
@@ -856,7 +836,7 @@ private fun SettingsPage(library: PhotonLibrary, model: PhotonViewModel, notific
         }
         item {
             SettingsGroup("YOUR DATA") {
-                ListItem(headlineContent = { Text("Clear device playback cache") }, supportingContent = { Text("Does not delete Google watch history, likes or playlists") }, leadingContent = { Icon(PrismIcons.History, null) }, modifier = Modifier.clickable { clear = true })
+                ListItem(headlineContent = { Text("Clear device playback cache") }, supportingContent = { Text("Does not delete Google watch history, likes or playlists") }, leadingContent = { Icon(PrismIcons.History, null) }, modifier = Modifier.clickable { model.clearHistory() })
             }
         }
         item { ListItem(headlineContent = { Text("About & help") }, trailingContent = { Icon(PrismIcons.Info, null) }, modifier = Modifier.clickable { about = !about }) }
@@ -874,7 +854,7 @@ private fun SettingsPage(library: PhotonLibrary, model: PhotonViewModel, notific
             }
         }
     }
-    if (clear) AlertDialog(onDismissRequest = { clear = false }, title = { Text("Clear device playback cache?") }, text = { Text("This clears only cached device history/resume positions, not your Google activity.") }, confirmButton = { TextButton(onClick = { model.clearHistory(); clear = false }) { Text("Clear history") } }, dismissButton = { TextButton(onClick = { clear = false }) { Text("Cancel") } })
+
 }
 
 @Composable

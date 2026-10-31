@@ -2,6 +2,8 @@ package com.prism.music.photon
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -102,8 +104,6 @@ internal fun CommentsPanel(model: PhotonViewModel, video: Video) {
     val postError by model.commentPostError.collectAsStateWithLifecycle()
     val published by model.lastPublished.collectAsStateWithLifecycle()
     var draft by rememberSaveable(video.id) { mutableStateOf("") }
-    var confirming by remember { mutableStateOf(false) }
-    var authorizeComment by remember { mutableStateOf(false) }
     var seenId by remember(video.id) { mutableStateOf(model.lastPublished.value?.comment?.id) }
     LaunchedEffect(published) {
         if (published?.videoId == video.id && published?.comment?.id != seenId) {
@@ -116,7 +116,7 @@ internal fun CommentsPanel(model: PhotonViewModel, video: Video) {
         Text(if (replies) "Replies" else "Comments", style = MaterialTheme.typography.headlineSmall)
         Row {
             TextButton(onClick = { replies = false; model.loadComments(video) }) { Text(if (replies) "Back to comments" else "Refresh") }
-            TextButton(onClick = { context.startActivity(browserIntent(video.url)) }) { Text("Post") }
+            TextButton(onClick = { context.startActivity(browserIntent(video.url)) }) { Text("Open in browser") }
         }
         LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(vertical = 16.dp)) {
             item {
@@ -124,10 +124,10 @@ internal fun CommentsPanel(model: PhotonViewModel, video: Video) {
                 OutlinedTextField(value = draft, onValueChange = { draft = it.take(10_001) }, enabled = !posting,
                     label = { Text("Public comment") }, modifier = Modifier.fillMaxWidth(), minLines = 2, maxLines = 5,
                     supportingText = { Text("${draft.trim().length}/10000 · Top-level comments only; replies remain read-only.") })
-                Button(onClick = { if (account.identity == null) authorizeComment = true else confirming = true },
+                Button(onClick = { if (account.identity == null) (context as? PhotonActivity)?.signInToYouTube() else model.postComment(video, draft) },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = CommentComposerPolicy.canReview(draft, posting, account.busy, page?.disabled == true)) {
-                    Text(if (posting) "Posting…" else if (account.identity == null) "Authorize and review comment" else "Review and post")
+                    Text(if (posting) "Posting…" else if (account.identity == null) "Authorize comments" else "Post")
                 }
                 CommentComposerPolicy.reason(draft, posting, account.busy, page?.disabled == true)?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
                 if (account.identity == null && CommentComposerPolicy.validDraft(draft)) Text("Your Home login is connected separately. Google comment permission is needed before publishing; your draft will be kept and nothing posts automatically.", style = MaterialTheme.typography.bodySmall)
@@ -158,27 +158,17 @@ internal fun CommentsPanel(model: PhotonViewModel, video: Video) {
             }
         }
     }
-    if (authorizeComment) AlertDialog(onDismissRequest = { authorizeComment = false }, title = { Text("Authorize YouTube commenting?") },
-        text = { Text("Google's own screen will request youtube.force-ssl permission to identify your channel and post comments you explicitly confirm. The app does not read your password. Your draft is kept; authorization alone will not publish it. Return here to review and post after authorization.") },
-        confirmButton = { TextButton(onClick = { authorizeComment = false; (context as? PhotonActivity)?.signInToYouTube() }) { Text("Continue to Google") } },
-        dismissButton = { TextButton(onClick = { authorizeComment = false }) { Text("Cancel") } })
-    if (confirming) AlertDialog(onDismissRequest = { confirming = false }, title = { Text("Post publicly?") },
-        text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Channel: ${account.identity?.name.orEmpty()}")
-            Text("Video: ${video.title} (${video.id})")
-            Text(draft.take(1000) + if (draft.length > 1000) "…" else "", maxLines = 12, overflow = TextOverflow.Ellipsis)
-            (CommentComposerPolicy.reason(draft, posting, account.busy, page?.disabled == true)
-                ?: if (account.identity == null) "Comment permission is missing. Cancel this review and authorize commenting; your draft stays." else null)?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            Text("This submits your full draft to YouTube, not a local note. Check for an existing comment before retrying after a network error.", style = MaterialTheme.typography.bodySmall)
-        } },
-        confirmButton = { Button(enabled = account.identity != null && CommentComposerPolicy.canReview(draft, posting, account.busy, page?.disabled == true), onClick = { confirming = false; model.postComment(video, draft) }) { Text("Post publicly") } },
-        dismissButton = { TextButton(onClick = { confirming = false }) { Text("Cancel") } })
+
 }
 
 @Composable
 @UnstableApi
+@OptIn(ExperimentalMaterial3Api::class)
 internal fun ShortsScreen(browse: BrowseState, watch: WatchState, controller: MediaController?, model: PhotonViewModel, fullscreen: () -> Unit, close: () -> Unit) {
     val googleLikes by model.googleLikes.collectAsStateWithLifecycle()
+    val library by model.library.collectAsStateWithLifecycle()
+    val subscriptions by model.googleSubscriptions.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     val pager = rememberPagerState(pageCount = { browse.videos.size })
     LaunchedEffect(browse.videos) {
         snapshotFlow { pager.currentPage }.distinctUntilChanged().collect { index ->
@@ -191,21 +181,37 @@ internal fun ShortsScreen(browse: BrowseState, watch: WatchState, controller: Me
         if (!browse.busy && browse.videos.isEmpty()) Text(browse.error ?: "No Shorts returned. Try refreshing.", Modifier.align(Alignment.Center).padding(24.dp))
         VerticalPager(pager, Modifier.fillMaxSize()) { index ->
             val video = browse.videos[index]
-            Column(Modifier.fillMaxSize()) {
-                if (index == pager.currentPage) VideoSurface(controller, Modifier.weight(1f).fillMaxWidth(), true)
-                else VideoThumbnail(video, video.title, Modifier.weight(1f).fillMaxWidth())
-                Text(video.title, Modifier.padding(horizontal = 20.dp), fontWeight = FontWeight.Bold, maxLines = 2)
-                Row(Modifier.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(video.channel, Modifier.weight(1f), maxLines = 1)
-                    IconButton(onClick = { model.save(video) }) { Icon(if (googleLikes[video.id] == true) PrismIcons.HeartFilled else PrismIcons.Heart,
-                        if (googleLikes[video.id] == true) "Unlike" else "Like", tint = if (googleLikes[video.id] == true) androidx.compose.ui.graphics.Color(0xFFFF3355) else MaterialTheme.colorScheme.onSurface) }
-                    IconButton(onClick = fullscreen) { Icon(PrismIcons.Fullscreen, "Full screen") }
+            var overlay by remember(video.id) { mutableStateOf(false) }
+            var comments by remember(video.id) { mutableStateOf(false) }
+            var information by remember(video.id) { mutableStateOf(false) }
+            var save by remember(video.id) { mutableStateOf(false) }
+            val details = watch.details.takeIf { watch.video?.id == video.id }
+            val display = details?.video ?: video
+            val channel = details?.channel
+            Box(Modifier.fillMaxSize()) {
+                if (index == pager.currentPage) VideoSurface(controller, Modifier.fillMaxSize(), true, visibilityChanged = { overlay = it })
+                else VideoThumbnail(video, video.title, Modifier.fillMaxSize())
+                ShortsOverlay(overlay && index == pager.currentPage, display, googleLikes[video.id] == true,
+                    modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 100.dp),
+                    like = { model.save(video) }, comments = { model.loadComments(video); comments = true },
+                    information = { information = true }, fullscreen = fullscreen,
+                    channel = { if (display.channelUrl.isNotBlank()) { model.openCollection(display.channelUrl, true); close() } },
+                    save = { save = true }, share = { context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, video.url), "Share")) },
+                    subscribe = channel?.let { { model.subscribe(it) } }, subscribed = subscriptions[channel?.url.orEmpty().substringAfterLast('/')] == true)
+                if (index == pager.currentPage && watch.busy) LinearProgressIndicator(Modifier.fillMaxWidth().align(Alignment.TopCenter))
+                if (index == pager.currentPage) watch.error?.let { Text(it, Modifier.align(Alignment.Center).padding(16.dp), color = MaterialTheme.colorScheme.error) }
+            }
+            if (comments && index == pager.currentPage) ModalBottomSheet(onDismissRequest = { comments = false }) { CommentsPanel(model, video) }
+            if (save && index == pager.currentPage) ModalBottomSheet(onDismissRequest = { save = false }) { PlaylistPicker(library, video, model) { save = false } }
+            if (information && index == pager.currentPage) ModalBottomSheet(onDismissRequest = { information = false }) {
+                Column(Modifier.fillMaxWidth().fillMaxHeight(0.8f).verticalScroll(rememberScrollState()).padding(22.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(video.title, style = MaterialTheme.typography.titleLarge)
+                    Text(listOf(display.channel, viewLabel(display.views), display.published).filter { it.isNotBlank() }.joinToString(" · "))
+                    Text(details?.description?.takeIf { it.isNotBlank() } ?: if (watch.busy) "Loading details…" else "No description returned.")
                 }
-                if (index == pager.currentPage && watch.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-                if (index == browse.videos.lastIndex && browse.hasMore) TextButton(onClick = model::loadMore) { Text("Load more Shorts") }
-                if (index == pager.currentPage) watch.error?.let { Text(it, Modifier.padding(16.dp), color = MaterialTheme.colorScheme.error) }
             }
         }
+
         IconButton(onClick = close, modifier = Modifier.align(Alignment.TopStart)) { Icon(PrismIcons.ArrowBack, "Exit Shorts") }
     }
 }

@@ -25,16 +25,12 @@ internal fun YouTubeHomeConnection(model: PhotonViewModel) {
     val library by model.library.collectAsStateWithLifecycle()
     val feed by model.youtubeHome.collectAsStateWithLifecycle()
     val history by model.googleHistory.collectAsStateWithLifecycle()
-    var confirmShortPlays by remember { mutableStateOf(false) }
-    var confirmSync by remember { mutableStateOf(false) }
-    var changePause by remember { mutableStateOf<Boolean?>(null) }
-    var disclosure by remember { mutableStateOf(false) }
     var historySettings by remember { mutableStateOf(false) }
     var signingIn by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Google account", style = MaterialTheme.typography.titleMedium)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilledTonalButton(modifier = Modifier.weight(1f), onClick = { disclosure = true }) { Text(if (library.youtubeHome) "Switch Google account" else "Sign in with Google") }
+            FilledTonalButton(modifier = Modifier.weight(1f), onClick = { model.beginYouTubeWebChange(); signingIn = true }) { Text(if (library.youtubeHome) "Switch Google account" else "Sign in with Google") }
             TextButton(modifier = Modifier.weight(0.6f), onClick = model::disconnectYouTubeHome) { Text("Sign out") }
         }
         if (feed.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
@@ -52,37 +48,21 @@ internal fun YouTubeHomeConnection(model: PhotonViewModel) {
             Row {
                 TextButton(onClick = model::refreshGoogleHistory) { Text("Check Google history") }
                 if (history.status != GoogleHistoryStatus.UNKNOWN) TextButton(enabled = !history.checking,
-                    onClick = { changePause = history.status == GoogleHistoryStatus.ENABLED }) {
+                    onClick = { model.setGoogleHistoryPaused(history.status == GoogleHistoryStatus.ENABLED) }) {
                     Text(if (history.status == GoogleHistoryStatus.ENABLED) "Pause" else "Resume")
                 }
             }
             Row {
                 Text("Save plays to YouTube history", Modifier.weight(1f))
-                Switch(library.accountHistorySync, { enabled -> if (enabled) confirmSync = true else model.enableAccountHistory(false) }, enabled = library.youtubeSessionReady)
+                Switch(library.accountHistorySync, model::enableAccountHistory, enabled = library.youtubeSessionReady)
             }
             Row {
                 Text("Include short plays", Modifier.weight(1f))
-                Switch(library.includeShortPlays, { enabled -> if (enabled) confirmShortPlays = true else model.includeShortPlays(false) }, enabled = library.youtubeSessionReady)
+                Switch(library.includeShortPlays, model::includeShortPlays, enabled = library.youtubeSessionReady)
             }
         }
         }
     }
-    if (disclosure) AlertDialog(onDismissRequest = { disclosure = false }, title = { Text("Sign in with Google for Home?") },
-        text = { Text("This app opens Google's own login page and handles the resulting YouTube authentication internally. After sign-in it loads your account Home automatically; there is no second session-connect step. Optional comment authorization below is separate. Google's pages handle your login; The app does not read password fields. WebView keeps sensitive session cookies in this app's private storage (app backup is disabled), and the app uses these cookies only with allowlisted YouTube hosts to read Home and history controls. Confirmed Google pause/resume, likes, subscriptions and playlist changes go directly to the Google account connected to Home, never a local fallback. Separately opted-in real playback reports also make authenticated YouTube requests. Disconnect clears this app's web cookies, not Google's native authorization.\n\nThis unofficial integration can stop working. If Google blocks embedded sign-in, the app will not disguise its login browser or ask you to paste cookies. Home shows YouTube's returned cards/messages without a generated fallback, Google watch-history controls are read separately; unknown state blocks tracking. Optional playback reports require another explicit opt-in and a confirmed active history setting. Website interactions are handled by YouTube itself.", Modifier.heightIn(max = 400.dp).verticalScroll(rememberScrollState())) },
-        confirmButton = { TextButton(onClick = { disclosure = false; model.beginYouTubeWebChange(); signingIn = true }) { Text("Continue with Google") } },
-        dismissButton = { TextButton(onClick = { disclosure = false }) { Text("Cancel") } })
-    if (confirmShortPlays) AlertDialog(onDismissRequest = { confirmShortPlays = false }, title = { Text("Include short plays in YouTube history?") },
-        text = { Text("This enables real-play reporting after at least one actual playing second, including Shorts and downloaded videos played while connected. It can change Google history and recommendations. Pauses, buffering and seek distance do not count. Google paused/unknown state still blocks reports. This does not backfill offline/past views. It also removes the extra local pause.") },
-        confirmButton = { TextButton(onClick = { confirmShortPlays = false; model.includeShortPlays(true) }) { Text("Enable short-play reporting") } },
-        dismissButton = { TextButton(onClick = { confirmShortPlays = false }) { Text("Cancel") } })
-    if (confirmSync) AlertDialog(onDismissRequest = { confirmSync = false }, title = { Text("Add real plays to YouTube history?") },
-        text = { Text("The app will report a video once after at least ${if (library.includeShortPlays) 1 else 15} seconds of real playback, for the connected website account. It checks Google's history setting before sending; paused or unknown state blocks reporting. This can change your account's history and future recommendations. A downloaded video played now can be reported while online and verified; past local history and offline plays are not backfilled. Additional local pause will be turned off when you enable this; Google's pause is never overridden. Switching/reviewing web accounts disables reporting until you opt in again.") },
-        confirmButton = { TextButton(onClick = { confirmSync = false; model.enableAccountHistory(true) }) { Text("Enable playback reporting") } },
-        dismissButton = { TextButton(onClick = { confirmSync = false }) { Text("Cancel") } })
-    changePause?.let { paused -> AlertDialog(onDismissRequest = { changePause = null }, title = { Text(if (paused) "Pause YouTube watch history?" else "Resume YouTube watch history?") },
-        text = { Text("This changes the connected YouTube WEBSITE account's Google/YouTube watch-history setting, not just this app. That website account may differ from your Google comment account; review it first if unsure. Existing history is not deleted. The app will verify the resulting state; an unconfirmed change will block tracking, not trigger an automatic retry.") },
-        confirmButton = { TextButton(onClick = { changePause = null; model.setGoogleHistoryPaused(paused) }) { Text(if (paused) "Pause account history" else "Resume account history") } },
-        dismissButton = { TextButton(onClick = { changePause = null }) { Text("Cancel") } }) }
     if (signingIn) YouTubeSessionDialog(done = { index -> signingIn = false; model.connectYouTubeHome(index) }, close = { signingIn = false })
 }
 

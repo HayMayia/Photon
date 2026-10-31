@@ -7,3 +7,8 @@ New pages arrive in small, ordered, fully classified batches. Existing rows reta
 Direct Google actions, tap-to-show Shorts playback overlays, wrapped card titles, header bounds and permanent signing remain unchanged. Regression tests cover initially unclassified Shorts, out-of-order metadata completion, unavailable-format failure and stable geometry. Physical/live-account validation remains pending.
 
 After publication use **Home → Update to v1.0.5 Beta**. If cached, force-stop/reopen and visit Home. No uninstall, storage clearing or manual APK delivery.
+
+
+## Published build record
+
+Source `bd7867fec313d57a2cbd59d58811078121cdcad3`, code 22. [Build 41223617263](https://github.com/HayMayia/Photon/actions/runs/41223617263) passed in 7m37s: debug/release assembly, 188-method focused suite, permanent signing checks and publication. Tag targets that source; asset 25,303,368 bytes. Physical/live-account verification remains pending.

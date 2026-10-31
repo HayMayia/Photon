@@ -4,12 +4,12 @@
 [Yigder's Prism](https://github.com/Yigder/Prism), retaining its real Compose theme,
 fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
 
-> **v1.0.2 Beta — library header overlap hotfix.**
-> [Release notes](docs/RELEASE_1_0_2_BETA.md). Use the existing **Home → Update to v1.0.2 Beta** banner; no manual APK/ZIP step. If a recent automatic check is cached, force-stop and reopen Photon, then open Home to fetch a fresh check. Do not clear storage or uninstall.
-> Fixes v1.0.1's overlapping library tabs/title/Refresh/status messages: the grid header now has a single full-width Column root. Each element takes its own vertical space. Removes the redundant oversized heading/strapline and keeps two Shorts per row with wrapped titles.
-> [Build 41220324972](https://github.com/HayMayia/Photon/actions/runs/41220324972) **PASS in 9m17s**, source `7e98bc6`: debug/release assembly, focused tests (181 methods in source), permanent certificate checks and Beta publication. Code 19, same package/key.
-> Includes actual Robolectric Compose bounds regressions at normal and 180% font scale, using the header in a two-column grid. Physical phone/TV and native installation remain unverified. Returned empty/error messages stay truthful; the UI fix does not invent account content.
-> Quiet Prism-style available-update banners, TV foreground-only playback, mobile background playback, Prism download entry and shared player settings remain unchanged. Older pre-updater installations still need their one-time migration.
+> **v1.0.3 Beta — stable library scrolling and duplicate-page protection.**
+> [Release notes](docs/RELEASE_1_0_3_BETA.md). Use **Home → Update to v1.0.3 Beta**. If an automatic check is cached, force-stop/reopen then visit Home. Do not clear storage or uninstall.
+> Library cards now retain committed spans and thumbnail-frame sizes while browsing, independent of late Shorts metadata or global cache eviction. Known Shorts keep paired portrait cells. Later-discovered Shorts fit their reserved frame and use correct playback metadata; an explicit Refresh can repack a new dataset rather than moving rows mid-scroll.
+> Continuations merge by actual video ID, preserve first-seen order and current metadata, and reject stale dataset generations. Resolved presentation stays on the dataset so lazy remounts cannot lose it when the global cache evicts an entry.
+> [Build 41221594855](https://github.com/HayMayia/Photon/actions/runs/41221594855) **PASS in 9m36s**, source `d0a5021`: debug/release assembly, focused tests (185 methods), permanent certificates and Beta publication. Code 20, same package/key. Includes an actual Compose scroll/remount/overlapping-page regression using the production row/span/frame policy, plus pure stability tests. Physical/live-account verification remains pending.
+> Header overlap fix, wrapped titles, quiet Prism update banner, TV foreground-only playback, mobile background playback and player settings remain unchanged.
 > Back retraces tabs/pages/player before asking to leave at the root; fullscreen uses FIT and safe insets.
 > **Settings → Switch to YouTube layout** changes native presentation; **You → Settings → Switch to Photon** returns. Same player/accounts/downloads, no website-player replacement.
 > This is **not pixel-identical or the official YouTube interface**; some controls remain shared, and Android/Google permission screens keep the real app identity. [Scope and device checks](docs/INTERFACE_MODES.md).

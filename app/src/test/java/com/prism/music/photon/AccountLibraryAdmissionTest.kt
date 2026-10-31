@@ -32,7 +32,7 @@ class AccountLibraryAdmissionTest {
         val admitted = AccountLibraryRows.append(emptyList(), prepared)
         assertEquals(source.map { it.id }, admitted.map { it.id })
         assertTrue(admitted.none { it.video!!.short })
-        assertEquals(listOf(1, 1, 1), admitted.map(AccountGridPolicy::span))
+        assertEquals(listOf(2, 2, 2), admitted.map(AccountGridPolicy::span))
         assertEquals(source.map { it.video }, admitted.map { it.video })
         val normal = AccountLibraryRows.metadata(admitted, admitted.first().video!!.copy(short = false))
         val short = AccountLibraryRows.metadata(normal, admitted[1].video!!.copy(short = true))
@@ -47,12 +47,27 @@ class AccountLibraryAdmissionTest {
         val next = AccountLibraryAdmission.prepare(listOf(row("b"), row("d"))) { throw java.io.IOException("Unavailable") }
         val all = AccountLibraryRows.append(first, next)
         assertEquals(listOf("a", "b", "c", "d"), all.map { it.id })
-        assertEquals(listOf(1, 1, 2, 1), all.map(AccountGridPolicy::span))
+        assertEquals(listOf(1, 2, 2, 2), all.map(AccountGridPolicy::span))
     }
     @Test fun accountCancellationIsNeverSwallowedAsAMetadataFailure() = runBlocking {
         try {
             AccountLibraryAdmission.prepare(listOf(row("a"))) { throw CancellationException("Account changed") }
             fail("Cancellation must propagate")
         } catch (_: CancellationException) { }
+    }
+    @Test fun onlyProvenShortsBecomePortraitAndNormalVideosStayFullWidth() = runBlocking {
+        val source = listOf(row("trailer"), row("short-a"), row("short-b"))
+        val admitted = AccountLibraryRows.append(emptyList(), AccountLibraryAdmission.prepare(source) { throw java.io.IOException("Unavailable") })
+        assertEquals(listOf(2, 2, 2), admitted.map(AccountGridPolicy::span))
+        var proven = AccountLibraryRows.metadata(admitted, admitted[1].video!!.copy(short = true))
+        proven = AccountLibraryRows.metadata(proven, admitted[2].video!!.copy(short = true))
+        assertEquals(listOf(2, 2, 2), proven.map(AccountGridPolicy::span))
+        val committed = AccountLibraryRows.commitFormats(proven)
+        assertEquals(listOf(2, 1, 1), committed.map(AccountGridPolicy::span))
+        assertEquals(listOf(16f/9f, 9f/16f, 9f/16f), committed.map(AccountGridPolicy::ratio))
+        val remounted = AccountLibraryRows.append(committed, source, emptyMap())
+        assertEquals(committed, remounted)
+        val stale = AccountLibraryRows.metadata(remounted, admitted[1].video!!.copy(short = false))
+        assertEquals(committed, AccountLibraryRows.commitFormats(stale))
     }
 }

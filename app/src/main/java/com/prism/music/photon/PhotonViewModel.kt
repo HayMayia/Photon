@@ -244,6 +244,12 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
             }
         }
     }
+    fun commitAccountLibraryFormats(generation: Long) {
+        val state = accountLibrary.value
+        val page = state.page ?: return
+        if (state.generation != generation || !AccountLibraryRows.needsFormatCommit(page.items)) return
+        accountLibrary.value = state.copy(page = page.copy(items = AccountLibraryRows.commitFormats(page.items)))
+    }
     fun moreAccountShelf() { val state = accountLibrary.value; openAccountShelf(state.shelf, state.playlist, state.title, more = true) }
     private fun invalidateAccountLibrary() {
         accountLibraryJob?.cancel(); ++accountLibraryGeneration; accountLibraryTokens.clear(); accountLibrary.value = AccountLibraryState()

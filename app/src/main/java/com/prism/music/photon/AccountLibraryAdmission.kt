@@ -5,7 +5,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 
-/** Optional metadata must never gate real account rows. Unknown frames are paired, not fake Shorts. */
+/** Optional metadata must never gate real account rows. Unknown format never implies Shorts. */
 internal object AccountLibraryAdmission {
     suspend fun prepare(rows: List<AccountEntry>, classify: suspend (Video) -> Video): List<AccountEntry> = coroutineScope {
         rows.map { row -> async {
@@ -16,8 +16,8 @@ internal object AccountLibraryAdmission {
                 row.copy(video = video, layoutShort = video.short)
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) {
-                // Reserve a stable half-width portrait frame without changing actual format/playback.
-                row.copy(layoutShort = true)
+                // Keep the ordinary video frame until positive Shorts evidence exists.
+                row.copy(layoutShort = source.short)
             }
 
         } }.awaitAll()

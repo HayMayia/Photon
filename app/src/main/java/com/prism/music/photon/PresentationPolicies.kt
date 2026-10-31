@@ -56,6 +56,11 @@ internal object AccountLibraryRows {
         }
         return rows.values.toList()
     }
+    fun needsFormatCommit(rows: List<AccountEntry>): Boolean = rows.any { portraitMismatch(it) }
+    private fun portraitMismatch(row: AccountEntry): Boolean = row.video != null && row.layoutShort != row.video.short
+    fun commitFormats(rows: List<AccountEntry>): List<AccountEntry> = rows.map { row ->
+        if (portraitMismatch(row)) row.copy(layoutShort = row.video!!.short) else row
+    }
     fun metadata(rows: List<AccountEntry>, resolved: Video): List<AccountEntry> = rows.map { row ->
         val source = row.video
         if (source?.id != resolved.id) row else row.copy(video = ShortsPresentation.merge(source, resolved),

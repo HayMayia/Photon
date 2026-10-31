@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.*
@@ -39,7 +40,9 @@ internal fun AccountLibraryScreen(model: PhotonViewModel, revision: Long, ready:
         text = { OutlinedTextField(name, { name = it }, label = { Text("Playlist name") }, singleLine = true) },
         confirmButton = { TextButton(enabled = name.isNotBlank(), onClick = { model.createGooglePlaylist(name); name = ""; creating = false }) { Text("Continue") } },
         dismissButton = { TextButton(onClick = { creating = false }) { Text("Cancel") } })
-    LazyVerticalGrid(columns = GridCells.Fixed(2), modifier = Modifier.fillMaxSize(),
+    val grid = rememberLazyGridState()
+    AccountLibraryFormatEffect(grid, state.page?.items.orEmpty()) { model.commitAccountLibraryFormats(state.generation) }
+    LazyVerticalGrid(state = grid, columns = GridCells.Fixed(2), modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         item(span = { GridItemSpan(2) }) {
             AccountLibraryHeader(state, ready, onShelf = { model.openAccountShelf(it) },

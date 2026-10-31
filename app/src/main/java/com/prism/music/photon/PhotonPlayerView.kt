@@ -18,10 +18,22 @@ import androidx.media3.ui.PlayerView
 internal class PhotonPlayerView(context: Context) : PlayerView(context) {
     var remoteBack: (() -> Unit)? = null
     private val television = context.isPhotonTv()
+    private var remoteHoldEligible = false
+    private var remoteBoosted = false
     override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
         if (television && event.keyCode == android.view.KeyEvent.KEYCODE_BACK && remoteBack != null) {
             if (event.action == android.view.KeyEvent.ACTION_UP) remoteBack?.invoke()
             return true
+        }
+        if (television && event.keyCode == android.view.KeyEvent.KEYCODE_DPAD_CENTER) {
+            if (event.action == android.view.KeyEvent.ACTION_DOWN) {
+                if (event.repeatCount == 0) remoteHoldEligible = !isControllerFullyVisible && player?.isPlaying == true
+                if (remoteBoosted) return true
+                if (event.repeatCount > 0 && remoteHoldEligible && beginBoost()) { remoteBoosted = true; return true }
+            } else if (event.action == android.view.KeyEvent.ACTION_UP) {
+                remoteHoldEligible = false
+                if (remoteBoosted) { remoteBoosted = false; endBoost(); return true }
+            }
         }
         return super.dispatchKeyEvent(event)
     }
@@ -43,7 +55,22 @@ internal class PhotonPlayerView(context: Context) : PlayerView(context) {
         override fun onIsPlayingChanged(isPlaying: Boolean) { if (!isPlaying) endBoost() }
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) { endBoost() }
     }
+    private fun beginBoost(): Boolean {
+        val current = player ?: return false
+        if (!isAttachedToWindow || !hasWindowFocus() || !useController || !current.isPlaying || current.isCurrentMediaItemLive || boostPlayer != null ||
+            !current.isCommandAvailable(Player.COMMAND_SET_SPEED_AND_PITCH)) return false
+        priorParameters = current.playbackParameters
+        boostPlayer = current
+        current.addListener(boostListener)
+        current.playbackParameters = PlaybackParameters(2f, current.playbackParameters.pitch)
+        performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+        hideController()
+        feedback?.cancel()
+        boostBadge.visibility = View.VISIBLE
+        return true
+    }
     private fun endBoost() {
+        remoteHoldEligible = false
         val current = boostPlayer ?: return
         val previous = priorParameters
         boostPlayer = null; priorParameters = null
@@ -57,19 +84,9 @@ internal class PhotonPlayerView(context: Context) : PlayerView(context) {
     private val gestures = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
         override fun onDown(event: MotionEvent): Boolean = true
         override fun onLongPress(event: MotionEvent) {
-            val current = player ?: return
-            if (!isAttachedToWindow || !hasWindowFocus() || !useController || !current.isPlaying || current.isCurrentMediaItemLive || boostPlayer != null ||
-                !current.isCommandAvailable(Player.COMMAND_SET_SPEED_AND_PITCH) || hitsControl(this@PhotonPlayerView, event.rawX, event.rawY)) return
-            priorParameters = current.playbackParameters
-            boostPlayer = current
-            current.addListener(boostListener)
-            current.playbackParameters = PlaybackParameters(2f, current.playbackParameters.pitch)
+            if (hitsControl(this@PhotonPlayerView, event.rawX, event.rawY) || !beginBoost()) return
             parent?.requestDisallowInterceptTouchEvent(true)
             cancelNativeTouch(event)
-            performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-            hideController()
-            feedback?.cancel()
-            boostBadge.visibility = View.VISIBLE
         }
         override fun onDoubleTap(event: MotionEvent): Boolean {
             val current = player ?: return false
@@ -126,9 +143,10 @@ internal class PhotonPlayerView(context: Context) : PlayerView(context) {
     }
 
     override fun setPlayer(player: Player?) { if (player !== this.player) endBoost(); super.setPlayer(player) }
-    override fun onWindowFocusChanged(hasWindowFocus: Boolean) { if (!hasWindowFocus) endBoost(); super.onWindowFocusChanged(hasWindowFocus) }
+    override fun onWindowFocusChanged(hasWindowFocus: Boolean) { if (!hasWindowFocus) { endBoost(); remoteBoosted = false }; super.onWindowFocusChanged(hasWindowFocus) }
     override fun onDetachedFromWindow() {
         endBoost()
+        remoteBoosted = false
         feedback?.cancel()
         seekingGesture = false
         super.onDetachedFromWindow()

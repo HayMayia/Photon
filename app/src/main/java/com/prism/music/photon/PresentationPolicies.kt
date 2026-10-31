@@ -37,4 +37,28 @@ internal object PlayerLayoutPolicy {
 /** Only confirmed Shorts share rows; normal videos and library collections stay full width. */
 internal object AccountGridPolicy {
     fun span(video: Boolean, short: Boolean): Int = if (video && short) 1 else 2
+    fun portrait(entry: AccountEntry): Boolean = entry.layoutShort ?: (entry.video?.short == true)
+    fun span(entry: AccountEntry): Int = span(entry.video != null, portrait(entry))
+    fun ratio(entry: AccountEntry): Float = VideoArtworkShape.ratio(portrait(entry))
+}
+
+/** Dataset-scoped immutable geometry, independent of the global presentation LRU. */
+internal object AccountLibraryRows {
+    fun key(entry: AccountEntry): String = "${entry.kind}:${entry.video?.id ?: entry.id}"
+    fun append(existing: List<AccountEntry>, incoming: List<AccountEntry>, metadata: Map<String, Video> = emptyMap()): List<AccountEntry> {
+        val rows = linkedMapOf<String, AccountEntry>()
+        existing.forEach { row -> rows.putIfAbsent(key(row), row.copy(layoutShort = row.layoutShort ?: (row.video?.short == true))) }
+        incoming.forEach { row ->
+            if (key(row) !in rows) {
+                val video = row.video?.let { ShortsPresentation.merge(it, metadata[it.id]) }
+                rows[key(row)] = row.copy(video = video, layoutShort = video?.short == true)
+            }
+        }
+        return rows.values.toList()
+    }
+    fun metadata(rows: List<AccountEntry>, resolved: Video): List<AccountEntry> = rows.map { row ->
+        val source = row.video
+        if (source?.id != resolved.id) row else row.copy(video = ShortsPresentation.merge(source, resolved),
+            layoutShort = row.layoutShort ?: source.short)
+    }
 }

@@ -11,10 +11,10 @@ enum class AccountShelf(val label: String, val path: String) {
     LIKED("Liked videos", "/playlist?list=LL"), CHANNELS("Channels", "/feed/channels")
 }
 enum class AccountEntryKind { VIDEO, PLAYLIST, CHANNEL }
-data class AccountEntry(val id: String, val title: String, val kind: AccountEntryKind, val video: Video? = null, val artwork: String = "")
+data class AccountEntry(val id: String, val title: String, val kind: AccountEntryKind, val video: Video? = null, val artwork: String = "", val layoutShort: Boolean? = null)
 data class AccountLibraryPage(val items: List<AccountEntry>, val continuation: String? = null, val context: JsonObject? = null, val message: String? = null)
 data class AccountLibraryState(val shelf: AccountShelf = AccountShelf.HISTORY, val playlist: String? = null, val title: String = "History",
-    val page: AccountLibraryPage? = null, val busy: Boolean = false, val moreBusy: Boolean = false, val error: String? = null)
+    val page: AccountLibraryPage? = null, val busy: Boolean = false, val moreBusy: Boolean = false, val error: String? = null, val generation: Long = 0)
 
 internal class YouTubeAccountLibraryApi(client: OkHttpClient = OkHttpClient()) {
     private val transport = YouTubeWebTransport(client)

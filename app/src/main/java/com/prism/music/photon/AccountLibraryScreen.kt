@@ -30,7 +30,6 @@ internal fun AccountLibraryScreen(model: PhotonViewModel, revision: Long, ready:
     var creating by remember { mutableStateOf(false) }
     var name by remember { mutableStateOf("") }
     val likes by model.googleLikes.collectAsStateWithLifecycle()
-    val presentation by model.videoPresentation.collectAsStateWithLifecycle()
     val state by model.accountLibrary.collectAsStateWithLifecycle()
     LaunchedEffect(revision, ready) {
         if (ready && state.page == null && !state.busy && state.error == null) model.openAccountShelf(state.shelf, state.playlist, state.title)
@@ -47,16 +46,15 @@ internal fun AccountLibraryScreen(model: PhotonViewModel, revision: Long, ready:
                 onCreate = { creating = true }, onBack = { model.openAccountShelf(AccountShelf.PLAYLISTS) },
                 onRefresh = { model.loadGoogleLikedIndex(force = true); model.openAccountShelf(state.shelf, state.playlist, state.title) })
         }
-        items(state.page?.items.orEmpty(), key = { "${it.kind}:${it.id}" }, span = { entry ->
-            val video = entry.video?.let { ShortsPresentation.merge(it, presentation[it.id]) }
-            GridItemSpan(AccountGridPolicy.span(video != null, video?.short == true))
-        }) { entry ->
+        items(state.page?.items.orEmpty(), key = AccountLibraryRows::key,
+            span = { entry -> GridItemSpan(AccountGridPolicy.span(entry)) }) { entry ->
             if (entry.video != null) {
                 val video = resolvedVideo(entry.video)
                 Column(Modifier.fillMaxWidth().remoteFocus().clickable { open(video) }.padding(horizontal = 6.dp, vertical = 10.dp)) {
-                    VideoThumbnail(video, entry.title, if (television && video.short)
+                    VideoThumbnail(video, entry.title, if (television && AccountGridPolicy.portrait(entry))
                         Modifier.height(180.dp).aspectRatio(VideoArtworkShape.ratio(true)).align(androidx.compose.ui.Alignment.CenterHorizontally)
-                        else Modifier.fillMaxWidth().aspectRatio(VideoArtworkShape.ratio(video.short)))
+                        else Modifier.fillMaxWidth().aspectRatio(AccountGridPolicy.ratio(entry)),
+                        contentScale = if (video.short && !AccountGridPolicy.portrait(entry)) ContentScale.Fit else ContentScale.Crop)
                     Text(entry.title, Modifier.fillMaxWidth().padding(top = 8.dp), fontWeight = FontWeight.SemiBold,
                         maxLines = 3, overflow = TextOverflow.Ellipsis)
                     if (state.playlist != null) TextButton(onClick = { model.removeFromPlaylist(state.playlist!!, video) }) { Text("Remove") }

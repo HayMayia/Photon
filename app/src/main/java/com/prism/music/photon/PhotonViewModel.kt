@@ -91,6 +91,9 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 val current = mutableWatch.value
                 if (current.video?.id == video.id) mutableWatch.value = current.copy(video = current.video.copy(
                     short = current.video.short || resolved.short, thumbnail = if (resolved.short) resolved.thumbnail else current.video.thumbnail))
+                // Retain positive presentation on the dataset even if the global 512-item LRU evicts it.
+                val shelf = accountLibrary.value
+                shelf.page?.let { page -> accountLibrary.value = shelf.copy(page = page.copy(items = AccountLibraryRows.metadata(page.items, resolved))) }
                 videoPresentation.value = (videoPresentation.value + (video.id to resolved)).entries.toList().takeLast(512).associate { it.toPair() }
             } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { /* Unknown stays unknown; no duration guesses. */ }
             finally { presentationPending.remove(presentationKey) }
@@ -185,6 +188,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     val accountLibrary = MutableStateFlow(AccountLibraryState())
     private var accountLibraryJob: Job? = null
     private val accountLibraryTokens = mutableSetOf<String>()
+    private var accountLibraryGeneration = 0L
     fun openAccountShelf(shelf: AccountShelf, playlist: String? = null, title: String = shelf.label, more: Boolean = false) {
         if (more && (accountLibrary.value.busy || accountLibrary.value.moreBusy)) return
         accountLibraryJob?.cancel()
@@ -192,27 +196,30 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
         val oldPage = previous.page
         if (more && (oldPage?.continuation == null || oldPage.continuation in accountLibraryTokens || accountLibraryTokens.size >= 200)) return
         if (!more) accountLibraryTokens.clear()
+        val generation = if (more) previous.generation else ++accountLibraryGeneration
         accountLibraryJob = viewModelScope.launch {
             val revision = library.value.youtubeSessionRevision
-            accountLibrary.value = if (more) previous.copy(moreBusy = true, error = null) else AccountLibraryState(shelf, playlist, title, busy = true)
+            accountLibrary.value = if (more) previous.copy(moreBusy = true, error = null) else AccountLibraryState(shelf, playlist, title, busy = true, generation = generation)
             try {
                 val session = app.youtubeHistory.session()
                 val kind = if (playlist != null || shelf in listOf(AccountShelf.HISTORY, AccountShelf.LIKED)) AccountEntryKind.VIDEO else if (shelf == AccountShelf.CHANNELS) AccountEntryKind.CHANNEL else AccountEntryKind.PLAYLIST
                 val page = if (more) app.accountLibrary.more(session, oldPage!!, kind) else app.accountLibrary.load(session, shelf, playlist)
-                if (revision != library.value.youtubeSessionRevision || !library.value.youtubeSessionReady) return@launch
+                if (revision != library.value.youtubeSessionRevision || !library.value.youtubeSessionReady || generation != accountLibraryGeneration) return@launch
                 if (shelf == AccountShelf.LIKED && playlist == null) googleLikes.value = googleLikes.value + page.items.mapNotNull { it.video?.id }.filter { googleLikes.value[it] != false }.associateWith { true }
                 if (more) accountLibraryTokens += oldPage!!.continuation!!
-                val items = ((if (more) oldPage!!.items else emptyList()) + page.items).distinctBy { it.kind to it.id }
-                accountLibrary.value = AccountLibraryState(shelf, playlist, title, page.copy(items = items, continuation = page.continuation?.takeUnless { it in accountLibraryTokens }))
+                val existing = if (more) accountLibrary.value.page?.items.orEmpty() else emptyList()
+                val items = AccountLibraryRows.append(existing, page.items, videoPresentation.value)
+                accountLibrary.value = AccountLibraryState(shelf, playlist, title,
+                    page.copy(items = items, continuation = page.continuation?.takeUnless { it in accountLibraryTokens }), generation = generation)
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) {
-                if (revision == library.value.youtubeSessionRevision) accountLibrary.value = if (more) previous.copy(moreBusy = false, error = "More account items could not load. Existing rows are retained; retry explicitly.") else AccountLibraryState(shelf, playlist, title, error = "Could not read this YouTube account list. Retry or check the connected account. No local items were substituted.")
+                if (revision == library.value.youtubeSessionRevision && generation == accountLibraryGeneration) accountLibrary.value = if (more) accountLibrary.value.copy(moreBusy = false, error = "More account items could not load. Existing rows are retained; retry explicitly.") else AccountLibraryState(shelf, playlist, title, error = "Could not read this YouTube account list. Retry or check the connected account. No local items were substituted.", generation = generation)
             }
         }
     }
     fun moreAccountShelf() { val state = accountLibrary.value; openAccountShelf(state.shelf, state.playlist, state.title, more = true) }
     private fun invalidateAccountLibrary() {
-        accountLibraryJob?.cancel(); accountLibraryTokens.clear(); accountLibrary.value = AccountLibraryState()
+        accountLibraryJob?.cancel(); ++accountLibraryGeneration; accountLibraryTokens.clear(); accountLibrary.value = AccountLibraryState()
     }
     val googleHistory = app.youtubeHistory.state
     fun refreshGoogleHistory() { viewModelScope.launch { app.youtubeHistory.refresh() } }

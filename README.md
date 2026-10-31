@@ -4,14 +4,14 @@
 [Yigder's Prism](https://github.com/Yigder/Prism), retaining its real Compose theme,
 fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
 
-> **0.12.0 alpha — auto-rotate fullscreen, Shorts metadata, channel pictures and a simpler interface.**
-> **[Download 0.12 APK ZIP](https://github.com/HayMayia/Photon/actions/runs/40908141737/artifacts/12913061133)**
-> — GitHub sign-in required; extract and install `app-debug.apk` over the existing installation. Do not uninstall.
-> APK assembly, the **170-method focused Photon test suite**, and permanent certificate matching
-> passed at revision `6bed3df` ([verified build](https://github.com/HayMayia/Photon/actions/runs/40908141737), 5m4s).
-> Physical landscape rotation now uses the same inset-safe FIT layout as explicit fullscreen. Matching reel commands/player flags can identify Shorts even with a watch canonical URL. Missing/failed channel pictures use a bounded public lookup and visible initial fallback. Daily screens have fewer explanations, compact Home shortcuts, expandable privacy/help and a refreshed launcher icon.
-> **0.11 did not resolve the user's channel-picture, playlist-Shorts or auto-rotate issues. This follow-up is build/unit verified, not phone-verified.** [Scope and checks](docs/PLAYBACK_TOUCHUPS.md#012-follow-up-auto-rotate-metadata-pictures-and-simpler-ui).
-> Hold-for-2×, visible screen-awake behavior, real Google hearts/unlike confirmation and existing playback/account features remain in place.
+> **0.13.0 alpha — automatic Android TV interface and shared player settings.**
+> **[Download 0.13 APK ZIP](https://github.com/HayMayia/Photon/actions/runs/41216748013/artifacts/13048367111)**
+> — extract `app-debug.apk` and install over the existing app on TV or phone; do not uninstall.
+> [Build 41216748013](https://github.com/HayMayia/Photon/actions/runs/41216748013) **PASS in 4m56s**, source `887f368`: APK assembly, focused Photon tests (174 test methods in source), permanent signing-certificate check and upload.
+> TVs automatically get sidebar/grid browsing, visible remote focus and fullscreen → details → browse Back flow. The phone layout remains available on phones.
+> The player gear now groups quality, 0.1–10× speed, repeat and captions. Caption language/appearance and 25–200% sizing are available with presets and fine sliders; CC remains outside the gear too. Hold badge says only 2×. Routine action labels no longer say “on YouTube”; actual account-change confirmations remain.
+> **Build/unit verified, not physically TV/remote certified or guaranteed on every TV.** [TV/player settings scope and pending checks](docs/TV_AND_PLAYER_SETTINGS.md).
+> Existing real Google account actions, hold boost, visible screen-awake behavior, fullscreen, offline downloads and playback protections remain in place.
 > Back retraces tabs/pages/player before asking to leave at the root; fullscreen uses FIT and safe insets.
 > **Settings → Switch to YouTube layout** changes native presentation; **You → Settings → Switch to Photon** returns. Same player/accounts/downloads, no website-player replacement.
 > This is **not pixel-identical or the official YouTube interface**; some controls remain shared, and Android/Google permission screens keep the real app identity. [Scope and device checks](docs/INTERFACE_MODES.md).

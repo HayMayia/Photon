@@ -4,8 +4,12 @@
 [Yigder's Prism](https://github.com/Yigder/Prism), retaining its real Compose theme,
 fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
 
-> **v1.0.5 Beta — paired Shorts without reshuffling.**
-> [Release notes](docs/RELEASE_1_0_5_BETA.md). Use **Home → Update to v1.0.5 Beta**; if cached, force-stop/reopen then Home. No uninstall or storage clearing.
+> **v1.0.7 Beta — account subscriptions, channels and navigation.**
+> [Release notes](docs/RELEASE_1_0_7_BETA.md). Use **Home → Update to v1.0.7 Beta**; if cached, force-stop/reopen then Home. No uninstall or data clearing.
+> Library has a Subscriptions shortcut; the feed now includes an authenticated channel/avatar strip with channel opening and channel pagination, on mobile and TV. Channel pages resolve canonical IDs and show **Subscribed** from actual account evidence. Modern channel-bound entity state and directory membership provide read-back; button variants alone never establish state. Unknown-state checks remain read-only; pre-mutation reads cannot override newer writes. Pixel parity, video-feed pagination and a grouped Shorts shelf remain outside this change.
+> [Build 41224699573](https://github.com/HayMayia/Photon/actions/runs/41224699573) **PASS in 6m8s**, source `ab98c61`, code 24: debug/release assembly, focused suite (192 methods), permanent certificates and publication. Added modern-entity/directory HTTP regressions; physical/live-account/TV checks remain pending.
+> **Music Photon, “Prism”** remains a separate upstream app. Its library/offline mirror is not live push-sync for external playlist edits. In Prism, use the same YouTube Music channel, Library's Sync action, then leave/reopen the playlist online. This Photon release does not patch Prism or read its private cache. [Source-backed scope](docs/PRISM_PLAYLIST_REFRESH.md).
+> **Retained v1.0.5 library pairing/stability:**
 > Account-library pages now resolve video formats before admitting each ordered six-entry batch. Consecutive Shorts receive half-width portrait cells from their first appearance, normal videos remain full-width, and existing cards never change spans while scrolling. Unknown formats wait or offer explicit retry instead of being locked into landscape frames. Initial/batch loading can take longer; genuine Google order and canonical deduplication are retained.
 > [Build 41223617263](https://github.com/HayMayia/Photon/actions/runs/41223617263) **PASS in 7m37s**, source `bd7867f`, code 22: debug/release assembly, focused suite (188 methods), permanent certificates and publication. New admission tests cover out-of-order responses, initially unknown Shorts and unavailable formats; prior rendered scrolling/header/overlay tests pass. Physical/live-account verification remains pending.
 > **Retained v1.0.4 direct actions and Shorts playback overlay:**

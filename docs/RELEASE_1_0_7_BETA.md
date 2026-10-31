@@ -11,3 +11,8 @@ Known library pairing/stability, direct Google writes, Shorts player overlays an
 After publication: **Home → Update to v1.0.7 Beta**. If a check is cached, force-stop/reopen then Home. No manual APK delivery or data clearing.
 
 Subscription-state reads are guarded against pre-mutation snapshots; a read-only Check subscription action never subscribes by itself. Successful subscription writes refresh the account channel strip.
+
+
+## Published build record
+
+Source `ab98c61a3d6a7c0d4b9c0e1e80d9edd72252031c`, code 24. [Run 41224699573](https://github.com/HayMayia/Photon/actions/runs/41224699573) passed in 6m8s: debug/release, focused 192-method suite, permanent signing and publication. Tag targets that source; asset 25,303,368 bytes. Physical/live-account checks remain pending. Prism source investigation: [scope and upstream references](https://github.com/HayMayia/Photon/blob/arena/c217a41b-photon/docs/PRISM_PLAYLIST_REFRESH.md).

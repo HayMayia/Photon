@@ -1,4 +1,8 @@
-# v1.0.6 Beta — subscriptions navigation, channels and account state
+# v1.0.6 Beta — superseded source notes
+
+This source was superseded before successful publication. Use v1.0.7 Beta; do not rerun the obsolete v1.0.6 publisher.
+
+## Subscriptions navigation, channels and account state
 
 Library now has a Subscriptions shortcut. The subscription feed includes a horizontal subscribed-channel/avatar strip with channel navigation and explicit channel pagination, on mobile and TV. Channels come from the connected Google account, not a local substitute. Feed video pagination/YouTube pixel parity and a grouped Shorts shelf are not completed by this update.
 

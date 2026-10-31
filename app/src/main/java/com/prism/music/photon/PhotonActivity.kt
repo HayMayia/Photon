@@ -395,6 +395,8 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
         } else if (tv && expanded && watch.video != null && !immersive) {
             TvVideoDetails(model, controller, watch, fullscreen = { fullscreen = true }, close = { expanded = false },
                 comments = { model.loadComments(watch.video!!); commentsSheet = true },
+                channel = { url -> collectionBackToPlayer = true; expanded = false; model.openCollection(url, true) },
+                cast = { activity.withLanPermission { casting.discover(); castSheet = true } }, open = ::open,
                 download = { downloadSheet = true }, save = { playlistSheet = true })
         } else if (expanded && watch.video != null) {
             val video = watch.video!!
@@ -466,7 +468,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
             tvState.SaveableStateProvider("television") {
                 PhotonTvScreen(model, tab, { navigateTo(it) }, ::open,
                     offline = { expanded = true; fullscreen = true; model.offline(it) }, channel = ::openChannel,
-                    resume = if (watch.video != null) ({ expanded = true; fullscreen = true }) else null,
+                    remove = { delete = it }, resume = if (watch.video != null) ({ expanded = true; fullscreen = true }) else null,
                     settings = { SettingsPage(library, model, notifications) })
             }
         } else {
@@ -807,7 +809,7 @@ private fun SettingsPage(library: PhotonLibrary, model: PhotonViewModel, notific
     fun link(url: String) { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
         item { Text("Settings", Modifier.padding(20.dp), style = MaterialTheme.typography.headlineSmall) }
-        item {
+        if (!context.isPhotonTv()) item {
             ListItem(headlineContent = { Text(if (library.youtubeLayout) "Switch to Photon" else "Switch to YouTube layout") },
                 supportingContent = { Text(if (library.youtubeLayout) "YouTube layout" else "Prism layout") },
                 trailingContent = { Switch(library.youtubeLayout, model::youtubeLayout) },

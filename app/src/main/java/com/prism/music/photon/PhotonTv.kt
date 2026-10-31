@@ -2,6 +2,7 @@ package com.prism.music.photon
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -30,7 +31,7 @@ internal fun Modifier.remoteFocus(): Modifier {
 @Composable
 internal fun PhotonTvScreen(model: PhotonViewModel, selected: Int, select: (Int) -> Unit,
     open: (Video) -> Unit, offline: (SavedDownload) -> Unit, channel: (String) -> Unit,
-    resume: (() -> Unit)?, settings: @Composable () -> Unit) {
+    remove: (SavedDownload) -> Unit, resume: (() -> Unit)?, settings: @Composable () -> Unit) {
     val library by model.library.collectAsStateWithLifecycle()
     val browse by model.browse.collectAsStateWithLifecycle()
     val home by model.youtubeHome.collectAsStateWithLifecycle()
@@ -48,7 +49,7 @@ internal fun PhotonTvScreen(model: PhotonViewModel, selected: Int, select: (Int)
     }
     Row(Modifier.fillMaxSize().safeDrawingPadding().padding(24.dp), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
         Column(Modifier.width(150.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("Photon", style = MaterialTheme.typography.headlineMedium)
+            Text(if (library.youtubeLayout) "Home" else "Photon", style = MaterialTheme.typography.headlineMedium)
             listOf(0 to "Home", 1 to "Search", 5 to "Subscriptions", 6 to "Shorts", 2 to "Library", 4 to "Downloads", 3 to "Settings").forEachIndexed { index, (tab, label) ->
                 FilledTonalButton(onClick = { focusedVideo = null; select(tab); if (tab == 0) model.home(); if (tab == 5) model.subscriptionsFeed(); if (tab == 6) model.shorts() },
                     modifier = Modifier.fillMaxWidth().then(if (index == 0) Modifier.focusRequester(navFocus) else Modifier).remoteFocus()) {
@@ -87,6 +88,7 @@ internal fun PhotonTvScreen(model: PhotonViewModel, selected: Int, select: (Int)
                                     }
                                     Text(video.title, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleMedium)
                                     Text(video.channel, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    if (selected == 4) TextButton(onClick = { library.downloads.firstOrNull { it.video.id == video.id }?.let(remove) }, modifier = Modifier.remoteFocus()) { Text("Delete download") }
                                 }
                             }
                         }
@@ -104,7 +106,8 @@ internal fun PhotonTvScreen(model: PhotonViewModel, selected: Int, select: (Int)
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @Composable
 internal fun TvVideoDetails(model: PhotonViewModel, controller: androidx.media3.session.MediaController?, watch: WatchState,
-    fullscreen: () -> Unit, close: () -> Unit, comments: () -> Unit, download: () -> Unit, save: () -> Unit) {
+    fullscreen: () -> Unit, close: () -> Unit, comments: () -> Unit, channel: (String) -> Unit, cast: () -> Unit,
+    open: (Video) -> Unit, download: () -> Unit, save: () -> Unit) {
     val video = watch.video ?: return
     val menus = LocalPlayerMenus.current
     val likes by model.googleLikes.collectAsStateWithLifecycle()
@@ -119,17 +122,29 @@ internal fun TvVideoDetails(model: PhotonViewModel, controller: androidx.media3.
         androidx.compose.foundation.lazy.LazyColumn(Modifier.weight(.42f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item { Text(video.title, style = MaterialTheme.typography.headlineSmall) }
             item { Text(video.channel) }
+            item { Text(listOf(video.published, if (video.views >= 0) "${video.views} views" else "").filter { it.isNotBlank() }.joinToString(" · ")) }
+            watch.details?.channel?.let { creator -> item {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { channel(creator.url) }, modifier = Modifier.remoteFocus()) { Text("Channel") }
+                    OutlinedButton(onClick = { model.subscribe(creator) }, modifier = Modifier.remoteFocus()) { Text("Subscription") }
+                }
+            } }
             item { Button(onClick = fullscreen, modifier = Modifier.remoteFocus()) { Text("Watch fullscreen") } }
             item { OutlinedButton(onClick = menus.settings, modifier = Modifier.remoteFocus()) { Text("Player settings") } }
             item { OutlinedButton(onClick = menus.captions, modifier = Modifier.remoteFocus()) { Text("Captions") } }
             item { OutlinedButton(onClick = { model.save(video) }, modifier = Modifier.remoteFocus()) { Text(if (likes[video.id] == true) "Unlike" else "Like") } }
             item { OutlinedButton(onClick = save, modifier = Modifier.remoteFocus()) { Text("Save to playlist") } }
+            item { OutlinedButton(onClick = cast, modifier = Modifier.remoteFocus()) { Text("Cast") } }
+            if (model.queue.value.isNotEmpty()) item { OutlinedButton(onClick = model::next, modifier = Modifier.remoteFocus()) { Text("Next") } }
             item { OutlinedButton(onClick = comments, modifier = Modifier.remoteFocus()) { Text("Comments") } }
             if (watch.details?.live == false) item { OutlinedButton(onClick = download, modifier = Modifier.remoteFocus()) { Text("Download") } }
             watch.error?.let { error -> item { Text(error, color = MaterialTheme.colorScheme.error) } }
             watch.details?.description?.takeIf { it.isNotBlank() }?.let { description -> item {
-                Text(android.text.Html.fromHtml(description, android.text.Html.FROM_HTML_MODE_COMPACT).toString())
+                Text(android.text.Html.fromHtml(description, android.text.Html.FROM_HTML_MODE_COMPACT).toString(), maxLines = 8, overflow = TextOverflow.Ellipsis)
             } }
+            items(watch.details?.related.orEmpty(), key = { "related:${it.id}" }) { related ->
+                OutlinedButton(onClick = { open(related) }, modifier = Modifier.fillMaxWidth().remoteFocus()) { Text(related.title, maxLines = 2, overflow = TextOverflow.Ellipsis) }
+            }
         }
     }
 }

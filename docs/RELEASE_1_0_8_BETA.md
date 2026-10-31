@@ -7,3 +7,8 @@ When format is unknown, a fixed half-width portrait preview frame keeps adjacent
 Regression coverage includes all metadata unavailable, one failed row among healthy rows, overlapping continuations, unchanged source/playback flags, late metadata geometry stability and cancellation. Previous UI/header/scroll/subscription tests remain. Physical/live-account verification is still pending.
 
 After publication use **Home → Update to v1.0.8 Beta**. Force-stop/reopen then Home if an old check is cached. No uninstall or storage clearing; account rows were not deleted from Google by this rendering error.
+
+
+## Published build record
+
+Source `3ce8d57a4f307599519d41d6072449a21fcb0c39`, code 25. [Build 41225445602](https://github.com/HayMayia/Photon/actions/runs/41225445602) passed in 8m55s: debug/release, 194-method focused suite, permanent signing checks and publication. Tag targets that source; asset 25,303,368 bytes. Physical/live-account checks remain pending.

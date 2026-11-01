@@ -440,6 +440,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                                     ActionChip("Channel", PrismIcons.Person) { collectionBackToPlayer = true; expanded = false; model.openCollection(channel.url, true) }
                                     ActionChip(if (googleSubscriptions[channel.url.substringAfterLast('/')] == true) "Subscribed" else "Subscribe", PrismIcons.PersonAdd) { model.subscribe(channel) }
                                 }
+                                ActionChip("VR viewer", PrismIcons.Fullscreen) { model.vrViewing.value = true }
                                 ActionChip("Comments", PrismIcons.Info) { model.loadComments(video); commentsSheet = true }
                                 ActionChip("Cast", PrismIcons.Cast) { activity.withLanPermission { casting.discover(); castSheet = true } }
                                 ActionChip("Save", PrismIcons.PlaylistAdd) { playlistSheet = true }
@@ -641,6 +642,8 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
         text = { OutlinedTextField(playlistName, { playlistName = it.take(100) }, label = { Text("Playlist name") }, singleLine = true) },
         confirmButton = { TextButton(enabled = playlistName.isNotBlank(), onClick = { model.createGooglePlaylist(playlistName.trim()); createPlaylist = false; playlistName = "" }) { Text("Continue") } },
         dismissButton = { TextButton(onClick = { createPlaylist = false }) { Text("Cancel") } })
+    val vr by model.vrViewing.collectAsStateWithLifecycle()
+    if (vr && watch.video != null) VrHeadsetDialog(controller) { model.vrViewing.value = false }
     if (playerSettings || captionSettings) PlayerSettingsPanel(model, controller, captionSettings) { playerSettings = false; captionSettings = false }
 
 }
@@ -654,11 +657,16 @@ internal fun VideoSurface(controller: MediaController?, modifier: Modifier, cont
     val model: PhotonViewModel = viewModel()
     val preferences by model.library.collectAsStateWithLifecycle()
     val onVisibility by rememberUpdatedState(visibilityChanged)
+    val watched by model.watch.collectAsStateWithLifecycle()
+    val vr by model.vrViewing.collectAsStateWithLifecycle()
+    if (vr) { Box(modifier.background(Color.Black)); return }
     fun configure(view: PhotonPlayerView) {
         view.setControllerVisibilityListener(if (visibilityChanged == null) null as PlayerView.ControllerVisibilityListener? else
             PlayerView.ControllerVisibilityListener { visible -> onVisibility?.invoke(visible == android.view.View.VISIBLE) })
         view.controllerAutoShow = visibilityChanged == null
 
+        view.shortsGestures = watched.video?.short == true
+        view.doubleTapLike = { model.watch.value.video?.let(model::likeShort) }
         view.remoteBack = menus.back
         view.findViewById<android.view.View>(androidx.media3.ui.R.id.exo_settings)?.setOnClickListener { menus.settings() }
         view.findViewById<android.view.View>(androidx.media3.ui.R.id.exo_subtitle)?.setOnClickListener { menus.captions() }

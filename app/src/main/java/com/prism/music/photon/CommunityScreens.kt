@@ -112,7 +112,7 @@ internal fun CommentsPanel(model: PhotonViewModel, video: Video) {
         }
     }
     val context = LocalContext.current
-    Column(Modifier.fillMaxWidth().fillMaxHeight(0.85f).padding(horizontal = 22.dp)) {
+    Column(Modifier.fillMaxWidth().fillMaxHeight(0.85f).imePadding().padding(horizontal = 16.dp)) {
         Text(if (replies) "Replies" else "Comments", style = MaterialTheme.typography.headlineSmall)
         Row {
             TextButton(onClick = { replies = false; model.loadComments(video) }) { Text(if (replies) "Back to comments" else "Refresh") }
@@ -120,24 +120,23 @@ internal fun CommentsPanel(model: PhotonViewModel, video: Video) {
         }
         LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(vertical = 16.dp)) {
             item {
-                GoogleAccountActions(model)
-                OutlinedTextField(value = draft, onValueChange = { draft = it.take(10_001) }, enabled = !posting,
-                    label = { Text("Public comment") }, modifier = Modifier.fillMaxWidth(), minLines = 2, maxLines = 5,
-                    supportingText = { Text("${draft.trim().length}/10000 · Top-level comments only; replies remain read-only.") })
-                Button(onClick = { if (account.identity == null) (context as? PhotonActivity)?.signInToYouTube() else model.postComment(video, draft) },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = CommentComposerPolicy.canReview(draft, posting, account.busy, page?.disabled == true)) {
-                    Text(if (posting) "Posting…" else if (account.identity == null) "Authorize comments" else "Post")
+                Text(account.identity?.let { "Comment as ${it.name}" } ?: "Connect Google to post", style = MaterialTheme.typography.labelMedium)
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedTextField(value = draft, onValueChange = { draft = it.take(10_001) }, enabled = !posting,
+                        placeholder = { Text("Add a comment…") }, modifier = Modifier.weight(1f), minLines = 1, maxLines = 3)
+                    TextButton(onClick = { if (account.identity == null) (context as? PhotonActivity)?.signInToYouTube() else model.postComment(video, draft) },
+                        enabled = CommentComposerPolicy.canReview(draft, posting, account.busy, page?.disabled == true)) {
+                        Text(if (posting) "Posting…" else if (account.identity == null) "Connect" else "Post")
+                    }
                 }
-                CommentComposerPolicy.reason(draft, posting, account.busy, page?.disabled == true)?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
-                if (account.identity == null && CommentComposerPolicy.validDraft(draft)) Text("Your Home login is connected separately. Google comment permission is needed before publishing; your draft will be kept and nothing posts automatically.", style = MaterialTheme.typography.bodySmall)
+                if (draft.length > 9500) Text("${draft.trim().length}/10000", style = MaterialTheme.typography.labelSmall)
+                account.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 if (posting) LinearProgressIndicator(Modifier.fillMaxWidth())
                 postError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 published?.takeIf { it.videoId == video.id }?.let { result ->
-                    Text("YouTube confirmed your comment · ${result.comment.id}", color = MaterialTheme.colorScheme.primary)
+                    Text("Posted", color = MaterialTheme.colorScheme.primary)
                     Text(result.comment.author, fontWeight = FontWeight.Bold)
                     Text(if (result.comment.html) android.text.Html.fromHtml(result.comment.text, android.text.Html.FROM_HTML_MODE_COMPACT).toString() else result.comment.text)
-                    Text("YouTube may moderate or delay its appearance in the public feed.", style = MaterialTheme.typography.bodySmall)
                 }
             }
             if (page?.disabled == true) item { Text("Comments are disabled for this video.") }
@@ -197,7 +196,7 @@ internal fun ShortsScreen(browse: BrowseState, watch: WatchState, controller: Me
                     information = { information = true }, fullscreen = fullscreen,
                     channel = { if (display.channelUrl.isNotBlank()) { model.openCollection(display.channelUrl, true); close() } },
                     save = { save = true }, share = { context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, video.url), "Share")) },
-                    subscribe = channel?.let { { model.subscribe(it) } }, subscribed = subscriptions[channel?.url.orEmpty().substringAfterLast('/')] == true)
+                    subscribe = channel?.let { { model.subscribe(it) } }, subscribed = subscriptions[channel?.url.orEmpty().substringAfterLast('/')] == true, vr = { model.vrViewing.value = true })
                 if (index == pager.currentPage && watch.busy) LinearProgressIndicator(Modifier.fillMaxWidth().align(Alignment.TopCenter))
                 if (index == pager.currentPage) watch.error?.let { Text(it, Modifier.align(Alignment.Center).padding(16.dp), color = MaterialTheme.colorScheme.error) }
             }

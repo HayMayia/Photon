@@ -67,13 +67,13 @@ data class VideoPage(val videos: List<Video>, val next: Page?, val query: String
 
 /** The ordinary YouTube service, not YouTube Music. No API key or Photon server. */
 class VideoRepository {
-    private val detailsCache = ExpiringVideoCache<VideoDetails>(8, 120_000)
-    private val detailLocks = Array(16) { Mutex() }
+    private val detailsCache = ExpiringVideoCache<VideoDetails>(16, 120_000)
+    private val detailLocks = Array(64) { Mutex() }
     fun invalidateDetails(id: String) { detailsCache.remove(id) }
     private val http = OkHttpClient.Builder()
-        .connectTimeout(20, TimeUnit.SECONDS)
-        .readTimeout(35, TimeUnit.SECONDS)
-        .callTimeout(90, TimeUnit.SECONDS)
+        .connectTimeout(10, TimeUnit.SECONDS)
+        .readTimeout(20, TimeUnit.SECONDS)
+        .callTimeout(35, TimeUnit.SECONDS)
         .build()
     val artworkHttp: OkHttpClient = http.newBuilder().callTimeout(15, TimeUnit.SECONDS).build()
     // Prism's range/POST transport also handles current YouTube video streams.
@@ -126,25 +126,27 @@ class VideoRepository {
         val info = StreamInfo.getInfo(ServiceList.YouTube, "https://www.youtube.com/watch?v=$id")
         val live = info.streamType == StreamType.LIVE_STREAM || info.streamType == StreamType.AUDIO_LIVE_STREAM
         val compatibleAudio = info.audioStreams.filter {
-            it.isUrl && it.deliveryMethod == DeliveryMethod.PROGRESSIVE_HTTP && it.format?.mimeType == "audio/mp4"
+            it.isUrl && it.deliveryMethod == DeliveryMethod.PROGRESSIVE_HTTP && it.format?.mimeType in setOf("audio/mp4", "audio/webm", "audio/ogg", "audio/ac3", "audio/eac3")
         }
-        val index = OriginalAudioPolicy.pick(compatibleAudio.map { OriginalAudioPolicy.Track(it.audioTrackType?.toString(), it.averageBitrate) })
+        val index = OriginalAudioPolicy.pick(compatibleAudio.map { OriginalAudioPolicy.Track(it.audioTrackType?.toString(), it.averageBitrate, it.itagItem?.audioChannels ?: -1, it.format?.mimeType == "audio/mp4") })
         val selectedAudio = index?.let { compatibleAudio[it] }
         val audio = selectedAudio?.content
         val original = selectedAudio?.audioTrackType?.toString() == "ORIGINAL"
         if (!live && audio == null && info.audioStreams.any { it.audioTrackType != null }) {
             error("No compatible original/unlabelled soundtrack is available. The app will not automatically substitute a dubbed language.")
         }
-        val audioLabel = if (original) "Original audio" else "Source default (language unverified)"
+        val channels = selectedAudio?.itagItem?.audioChannels ?: -1
+        val audioLabel = (if (original) "Original audio" else "Source default (language unverified)") + if (channels > 0) " · $channels channels" else ""
+        val downloadableAudio = selectedAudio == null || selectedAudio.format?.mimeType == "audio/mp4" && selectedAudio.codec?.let { it.startsWith("mp4a") } != false
         val qualities = buildList {
             if (live && !info.hlsUrl.isNullOrBlank()) {
                 add(VideoQuality(0, info.hlsUrl, mime = "application/x-mpegURL", downloadable = false))
             }
             info.videoStreams.filter { it.isUrl && it.deliveryMethod == DeliveryMethod.PROGRESSIVE_HTTP && it.format?.mimeType == "video/mp4" }
-                .forEach { add(VideoQuality(it.height, it.content, audio, audioLabel = audioLabel)) }
+                .forEach { add(VideoQuality(it.height, it.content, audio, downloadable = downloadableAudio, audioLabel = audioLabel)) }
             if (audio != null) info.videoOnlyStreams
                 .filter { it.isUrl && it.deliveryMethod == DeliveryMethod.PROGRESSIVE_HTTP && it.format?.mimeType == "video/mp4" && (it.codec?.startsWith("avc") != false) }
-                .forEach { add(VideoQuality(it.height, it.content, audio, audioLabel = audioLabel)) }
+                .forEach { add(VideoQuality(it.height, it.content, audio, downloadable = downloadableAudio, audioLabel = audioLabel)) }
         }.distinctBy { it.height }.sortedByDescending { it.height }
         check(qualities.isNotEmpty()) { "YouTube did not provide a compatible stream. It may require sign-in, be restricted, or be temporarily unavailable." }
         val result = VideoDetails(
@@ -308,10 +310,10 @@ fun viewLabel(views: Long): String = when {
 
 /** Language identity takes priority over bitrate. Never choose an explicitly dubbed/descriptive track automatically. */
 object OriginalAudioPolicy {
-    data class Track(val type: String?, val bitrate: Int)
+    data class Track(val type: String?, val bitrate: Int, val channels: Int = -1, val compatibleMp4: Boolean = true)
     fun pick(tracks: List<Track>): Int? {
         val original = tracks.indices.filter { tracks[it].type == "ORIGINAL" }
         val unlabelled = tracks.indices.filter { tracks[it].type == null }
-        return original.ifEmpty { unlabelled }.maxByOrNull { tracks[it].bitrate }
+        return original.ifEmpty { unlabelled }.maxWithOrNull(compareBy<Int> { tracks[it].channels.coerceAtLeast(0) }.thenBy { tracks[it].compatibleMp4 }.thenBy { tracks[it].bitrate })
     }
 }

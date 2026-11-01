@@ -16,6 +16,8 @@ import androidx.media3.ui.PlayerView
 /** Observe native touch routing rather than covering PlayerView with a gesture-stealing overlay. */
 @UnstableApi
 internal class PhotonPlayerView(context: Context) : PlayerView(context) {
+    var shortsGestures = false
+    var doubleTapLike: (() -> Unit)? = null
     var remoteBack: (() -> Unit)? = null
     private val television = context.isPhotonTv()
     private var remoteHoldEligible = false
@@ -88,18 +90,26 @@ internal class PhotonPlayerView(context: Context) : PlayerView(context) {
             parent?.requestDisallowInterceptTouchEvent(true)
             cancelNativeTouch(event)
         }
+        override fun onSingleTapConfirmed(event: MotionEvent): Boolean {
+            if (!useController || hitsControl(this@PhotonPlayerView, event.rawX, event.rawY)) return false
+            performClick()
+            return true
+        }
         override fun onDoubleTap(event: MotionEvent): Boolean {
-            val current = player ?: return false
-            if (!useController || !current.isCurrentMediaItemSeekable ||
-                !current.isCommandAvailable(Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM) ||
-                hitsControl(this@PhotonPlayerView, event.rawX, event.rawY)) return false
-            val forward = event.x >= width / 2f
+            if (!useController || hitsControl(this@PhotonPlayerView, event.rawX, event.rawY)) return false
+            seekingGesture = true // consume the second tap even when its zone deliberately does nothing
+            val action = PlaybackInteractionPolicy.doubleTap(shortsGestures, event.x / width.coerceAtLeast(1))
+            if (action == DoubleTapAction.LIKE) { doubleTapLike?.invoke(); return true }
+            if (action == DoubleTapAction.NONE) return true
+            val current = player ?: return true
+            if (!current.isCurrentMediaItemSeekable || !current.isCommandAvailable(Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM)) return true
+            val forward = action == DoubleTapAction.FORWARD
             current.seekTo(VideoSeek.target(current.currentPosition, current.duration, forward))
             feedback?.cancel()
             feedback = Toast.makeText(context, if (forward) "Forward 10 seconds" else "Rewind 10 seconds", Toast.LENGTH_SHORT).also { it.show() }
-            seekingGesture = true
             return true
         }
+
     })
 
     private fun cancelNativeTouch(event: MotionEvent) {
@@ -120,6 +130,10 @@ internal class PhotonPlayerView(context: Context) : PlayerView(context) {
         }
         return false
     }
+
+    // Background taps are delayed until confirmed single taps; double-tap centre is truly inert.
+    // Child controller buttons still receive their normal dispatchTouchEvent routing.
+    override fun onTouchEvent(event: MotionEvent): Boolean = if (useController) true else super.onTouchEvent(event)
 
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
         if (event.actionMasked == MotionEvent.ACTION_DOWN) endBoost()

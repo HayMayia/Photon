@@ -49,6 +49,7 @@ internal fun PlayerSettingsPanel(model: PhotonViewModel, controller: MediaContro
                 }
                 LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     if (!captionsOnly) {
+                        item { TextButton(onClick = { model.vrViewing.value = true; dismiss() }) { Text("VR viewer · side-by-side 2D") } }
                         item { Text("Quality", style = MaterialTheme.typography.titleMedium) }
                         item { LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(watch.details?.qualities.orEmpty()) { quality ->

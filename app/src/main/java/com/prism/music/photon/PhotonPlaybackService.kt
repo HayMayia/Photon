@@ -104,6 +104,7 @@ class PhotonPlaybackService : MediaSessionService() {
                 .setBufferDurationsMs(15_000, 50_000, 750, 1_500)
                 .setPrioritizeTimeOverSizeThresholds(true).build())
             .build().apply {
+            trackSelectionParameters = trackSelectionParameters.buildUpon().setMaxAudioChannelCount(Int.MAX_VALUE).build()
             setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(), true)
             setHandleAudioBecomingNoisy(true)
         }

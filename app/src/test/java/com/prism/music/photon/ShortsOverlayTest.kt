@@ -38,8 +38,11 @@ class ShortsOverlayTest {
         compose.onNodeWithText("Short title").assertIsDisplayed()
         compose.onNodeWithContentDescription("Unlike").performClick()
         compose.onNodeWithText("Comments").performClick()
+        compose.onNodeWithText("More").performClick()
         compose.onNodeWithText("Details").performClick()
+        compose.onNodeWithText("More").performClick()
         compose.onNodeWithText("Save").performClick()
+        compose.onNodeWithText("More").performClick()
         compose.onNodeWithText("Unsubscribe").performClick()
         compose.runOnIdle {
             assertEquals(listOf(1, 1, 1, 1, 1), listOf(likes, comments, details, saves, subscriptions))

@@ -541,12 +541,16 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
 
     fun retryPlayback(video: Video) { app.videos.invalidateDetails(video.id); open(video) }
 
+    val vrViewing = MutableStateFlow(false)
+    private var nextVideoWarmJob: Job? = null
+    fun likeShort(video: Video) { if (googleLikes.value[video.id] != true) requestGoogleChange(GoogleChange(GoogleChangeKind.LIKE, video.id, video.title, video, desired = true)) }
+
     fun open(video: Video, fromQueue: Boolean = false) {
         val opened = android.os.SystemClock.elapsedRealtime()
         val revision = library.value.youtubeSessionRevision
         PhotonDiagnostics.event("Open video requested")
         if (!fromQueue) queue.value = emptyList()
-        resolveVideoPresentation(video)
+        nextVideoWarmJob?.cancel()
         watchJob?.cancel()
         watchJob = viewModelScope.launch {
             mutableWatch.value = WatchState(video = video, busy = true)
@@ -554,10 +558,21 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 val details = app.videos.details(video.id)
                 // Metadata may finish while stream extraction is suspended; use the latest proof, not the opening snapshot.
                 val presentation = videoPresentation.value[video.id] ?: video
-                details.channel?.let(::resolveSubscription)
+                val proved = ShortsPresentation.merge(details.video, videoPresentation.value[video.id])
+                videoPresentation.value = (videoPresentation.value + (video.id to proved)).entries.toList().takeLast(512).associate { it.toPair() }
+                presentationRevisions[video.id] = revision
                 val max = library.value.defaultHeight
                 val quality = details.qualities.firstOrNull { it.height <= max } ?: details.qualities.last()
                 mutableWatch.value = WatchState(details.video.copy(short = video.short || presentation.short || details.video.short, thumbnail = if (presentation.short && presentation.thumbnail.isNotBlank()) presentation.thumbnail else details.video.thumbnail), details, quality, request = System.nanoTime(), startPositionMs = library.value.progress[video.id]?.resumeMs() ?: 0, openedAtMs = opened, webRevision = revision)
+                // Playback is published first; account-only reads must not contend with startup.
+                viewModelScope.launch { kotlinx.coroutines.delay(1_000); if (mutableWatch.value.video?.id == video.id) { resolveVideoPresentation(proved); details.channel?.let(::resolveSubscription) } }
+                val feed = mutableBrowse.value.videos
+                val index = feed.indexOfFirst { it.id == video.id }
+                val next = if (index >= 0) feed.getOrNull(index + 1) else null
+                if (video.short && next?.short == true && next.id != video.id) nextVideoWarmJob = viewModelScope.launch {
+                    kotlinx.coroutines.delay(700)
+                    try { app.videos.details(next.id) } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { }
+                }
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (error: Exception) { mutableWatch.value = WatchState(video = video, error = error.message ?: "This video could not be played") }
         }

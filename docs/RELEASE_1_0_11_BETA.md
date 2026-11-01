@@ -21,3 +21,10 @@ Original-language audio selection now prefers the highest supplied channel count
 Regression tests cover gesture zones/Shorts like intent, original-language/multichannel selection and the compact overlay. Physical phone/TV, native touch, GL/VR, surround-output and timed network startup verification remain pending.
 
 After publication use **Home → Update to v1.0.11 Beta**. If cached, force-stop/reopen then Home. Same permanent signing key, no uninstall or storage clearing, no manual APK delivery.
+
+
+## Verified publication
+
+Source `05a5f52f5f65622b0dc403b866bcac025ca11a30`, code 28. [Build 41315390749](https://github.com/HayMayia/Photon/actions/runs/41315390749) passed in 9m26s: debug/release, 201-method focused suite, permanent certificates and publication. Public Beta tag targets that source; asset 25,336,140 bytes.
+
+An additional test-only commit `4951df2` passed [run 41315895856](https://github.com/HayMayia/Photon/actions/runs/41315895856) in 3m54s with 203 methods. Native player MotionEvent dispatch verifies Short double-tap Like and inert normal centre without controller toggling. It changes no app code and does not republish. Physical startup timings, GPU/headset VR, actual surround receivers, native touch/accessibility and live account verification remain pending.

@@ -20,10 +20,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           New-Item -ItemType Directory -Force artifacts | Out-Null
-          gh release download windows-v0.1.0-beta --repo $env:GITHUB_REPOSITORY --pattern Photon-Windows-x64-Setup.exe --dir artifacts
+          gh release download windows-v0.2.0-beta --repo $env:GITHUB_REPOSITORY --pattern Photon-Windows-x64-Setup.exe --dir artifacts
           if ($LASTEXITCODE -ne 0) { throw 'Release download failed' }
           $actual = (Get-FileHash artifacts/Photon-Windows-x64-Setup.exe -Algorithm SHA256).Hash.ToLowerInvariant()
-          if ($actual -ne '15ee9b2c359ee4cde35b1c53689f7ffb7eab201fae0ab1857f7b410e160d44aa') { throw 'Published installer hash mismatch' }
+          if ($actual -ne 'c92dda12819bac8159043cea380cdab1a5585f0239aec65a46606f1aa8a12fe8') { throw 'Published installer hash mismatch' }
           "SHA256 verified: $actual" | Set-Content artifacts/verification.txt
           Get-AuthenticodeSignature artifacts/Photon-Windows-x64-Setup.exe | Select-Object Status | Out-String | Add-Content artifacts/verification.txt
       - name: Install per-user, initialize the installed app, and uninstall
@@ -36,6 +36,13 @@ jobs:
           if (-not $app.WaitForExit(90000)) { $app.Kill(); throw 'Installed app smoke test timed out' }
           if ($app.ExitCode -ne 0) { throw "Installed app startup failed: $($app.ExitCode)" }
           'Published installer: install and native/tool initialization PASS.' | Add-Content artifacts/verification.txt
+          $fixture = Join-Path $env:RUNNER_TEMP 'Photon-native-video-only.mp4'
+          & "$destination/tools/ffmpeg.exe" -nostdin -hide_banner -loglevel error -y -f lavfi -i 'color=c=black:s=160x90:r=10:d=20' -an -c:v mpeg4 $fixture
+          if ($LASTEXITCODE -ne 0) { throw 'Native test video generation failed' }
+          $nativePath = Get-ChildItem $destination -Recurse -Filter libvlc.dll | Where-Object { $_.DirectoryName -notmatch 'win-x86' } | Select-Object -First 1 -ExpandProperty DirectoryName
+          Add-Type -Path "$destination/LibVLCSharp.dll"
+          Add-Type -Path desktop/windows/packaging/NativeMediaCheck.cs -ReferencedAssemblies "$destination/LibVLCSharp.dll"
+          [NativeMediaCheck]::Run($destination, $nativePath, $fixture) | Add-Content artifacts/verification.txt
           $uninstall = Start-Process (Join-Path $destination 'unins000.exe') -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART') -PassThru
           if (-not $uninstall.WaitForExit(120000)) { $uninstall.Kill(); throw 'Uninstallation timed out' }
           if ($uninstall.ExitCode -ne 0) { throw "Uninstallation failed: $($uninstall.ExitCode)" }

@@ -1,22 +1,51 @@
-# Native Photon for Windows — 0.1.0 Beta
+# Native Photon for Windows — 0.2.0 Beta
 
-This is a real WPF/.NET application with an embedded LibVLC player, **not an Android APK conversion, emulator or YouTube website wrapper**. It is an early port, not Android feature parity.
+A native WPF/.NET application with embedded LibVLC, not a website wrapper,
+Android conversion or emulator. This is still an incomplete native port.
 
-## First release
+## Available in 0.2
 
-- Windows x64, per-user installation with no administrator elevation. Self-contained .NET runtime; no separate runtime install or individual Google API setup.
-- Native search, public YouTube links, public playlist/channel first-page lists, playback, available combined-MP4 quality choices, 10-second seek, volume, 0.25–2× speed, full screen and user-requested MP4 saving.
-- Bundled pinned yt-dlp + Node runtime perform extraction locally; no Photon backend or remote extraction service. No cookies/account tokens supplied to the extractor. Cancel terminates its process tree.
-- Account Home, Google sign-in/subscriptions/history/writes, cast, captions, native Shorts browsing, 360/VR, separate-track high-resolution/multichannel playback, playlist pagination and in-app updating are **not ported**. Search is not personalized Home. No fake saved/subscribed state is displayed.
-- Only genuinely combined audio/video MP4 sources are offered. Many videos may top out at 360p/720p; restrictions or YouTube changes can prevent playback. Do not interpret this as the Android quality/audio implementation.
+- Windows x64, per-user self-contained installation, no administrator elevation.
+- Native public search, video/channel/playlist links and paginated public lists.
+- Separate video/audio HD playback, quality and source soundtrack selection,
+  source VTT captions, seek, volume, 0.25–2× speed and full screen.
+- Original non-dubbed audio preferred before channel count. Source channel count
+  is displayed, never presented as measured physical output. No app stereo cap,
+  fake surround/upmix or promised Atmos/object passthrough.
+- Real 5.1 and 7.1 PCM speaker-order test sources; Windows Sound shortcut.
+- MKV saving copies selected source video/audio codecs without downmixing.
+- Optional Windows-only update banner links to a newer official installer release;
+  no manual “check” prompt, automatic executable replacement or Android release mixup.
+- Pinned local yt-dlp, Node and shared-LGPL FFmpeg; no extraction backend,
+  account cookies/tokens, remote plugins or automatic tool downloads at startup.
 
-Install the official `Photon-Windows-x64-Setup.exe`. The app installs to your local Programs folder and appears in Start. Updates currently require the next official installer. Do not disable Defender/SmartScreen. See SECURITY.md for integrity checks and warning review.
+Google-account login/sync, subscriptions/history/account mutations, personalized
+Home, casting, headset VR and full Android/iOS parity remain **unported**. These
+are not secretly implemented with local substitute state. No Google state is written.
+
+Install the official `Photon-Windows-x64-Setup.exe`; see SURROUND_TESTING.md for
+channel order. Select a genuine multichannel Windows output. Stereo-only devices
+cannot reproduce discrete surround, and stereo source tracks are not upmixed.
+The app starts at an available source resolution up to 1080p; higher resolutions
+remain selectable. Availability/decoder performance depend on the source/device.
 
 ## Source build / verification
 
-.NET 10 SDK, Windows, pinned NuGet LibVLCSharp.WPF 3.10.2 and VideoLAN.LibVLC.Windows 3.0.23. Run `dotnet run --project desktop/windows/Photon.Tests -c Release`, then publish the WPF project for win-x64. The Windows workflow downloads the pinned official yt-dlp 2026.10.26 binary, bundles Node 24.22.2, records SHA256 checks and builds an Inno Setup installer. Tools are included under `tools`; do not fetch executables automatically at app startup.
+.NET 10 SDK, Windows, pinned LibVLCSharp.WPF 3.10.2 / LibVLC.Windows 3.0.23.
+Run `dotnet run --project desktop/windows/Photon.Tests -c Release` and use the
+Windows workflow to build/package the complete app and tools. FFmpeg is pinned
+by immutable upstream release and SHA256; licensing and build/source references
+are included. Generated audio test assets and binaries are CI artifacts, not Git data.
 
-Windows CI validates core input/parser policies and native initialization/XAML construction. It does **not** prove real YouTube playback, hardware decoding, live searches or every Windows device's antivirus verdict. The release is unsigned unless separately stated; SHA256 is integrity evidence, not Authenticode publisher trust or proof of harmlessness.
+CI checks input/parser policies, original-language/channel selection, real 6/8-channel
+PCM source counts, six-channel stream-copy remux, native XAML/runtime initialization
+and installer production. Independent installed-release verification checks the exact
+published EXE. This does **not** certify live YouTube compatibility, physical speakers,
+all codecs/decoders, antivirus verdicts or Windows publisher reputation.
+
+The installer is unsigned. Do not disable Defender/SmartScreen. See SECURITY.md.
+Checksums verify integrity, not universal trust. Use downloads only where you have
+permission and comply with content rights/platform terms.
 
 ## Verified first publication
 

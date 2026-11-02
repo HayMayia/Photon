@@ -1,6 +1,7 @@
 package com.prism.music.photon
 
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.*
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.ResponseBody.Companion.toResponseBody
@@ -66,19 +67,33 @@ class YouTubeHomeTest {
     }
     @Test fun cookieIsSentOnlyToFixedHomeEndpointAndSelectedAccount() = runBlocking {
         var calls = 0
+        val cookie = "SAPISID=unit-test-session"
         val http = OkHttpClient.Builder().addInterceptor { chain ->
             calls++
-            assertEquals("https", chain.request().url.scheme)
-            assertEquals("www.youtube.com", chain.request().url.host)
-            assertEquals("2", chain.request().url.queryParameter("authuser"))
-            assertEquals("2", chain.request().header("X-Goog-AuthUser"))
-            assertEquals("unit-test-session", chain.request().header("Cookie"))
-            Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(200).message("Test")
-                .body(page(video).toResponseBody("text/html".toMediaType())).build()
+            val request = chain.request()
+            assertEquals("https", request.url.scheme)
+            assertEquals("www.youtube.com", request.url.host)
+            assertEquals("2", request.header("X-Goog-AuthUser"))
+            assertEquals(cookie, request.header("Cookie"))
+            val response = if (request.method == "GET") {
+                assertEquals("2", request.url.queryParameter("authuser"))
+                """<script>ytcfg.set({"INNERTUBE_CONTEXT":{"client":{"clientName":"WEB","clientVersion":"2.20261102.00.00"}}});</script>""" + page(video)
+            } else {
+                assertEquals("/youtubei/v1/browse", request.url.encodedPath)
+                assertTrue(request.header("Authorization")!!.startsWith("SAPISIDHASH "))
+                val buffer = okio.Buffer(); request.body!!.writeTo(buffer)
+                val body = Json.parseToJsonElement(buffer.readUtf8()).jsonObject
+                assertEquals("FEwhat_to_watch", body["browseId"]!!.jsonPrimitive.content)
+                YouTubeWebBootstrap.assigned(page(video.replace("dQw4w9WgXcQ", "abcdefghijk")), "ytInitialData").toString()
+            }
+            Response.Builder().request(request).protocol(Protocol.HTTP_1_1).code(200).message("Test")
+                .body(response.toResponseBody("text/plain".toMediaType())).build()
         }.build()
-        assertEquals(1, YouTubeHomeApi(http).home("unit-test-session", 2).videos.size)
-        assertEquals(1, calls)
+        // Only the signed browse response, never the bootstrap recommendation, becomes Home.
+        assertEquals(listOf("abcdefghijk"), YouTubeHomeApi(http).home(cookie, 2).videos.map { it.id })
+        assertEquals(2, calls)
     }
+
     @Test fun redirectIsNotFollowedWithSessionCookies() = runBlocking {
         var calls = 0
         val http = OkHttpClient.Builder().addInterceptor { chain ->

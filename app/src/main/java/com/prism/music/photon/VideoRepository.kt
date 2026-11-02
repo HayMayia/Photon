@@ -246,7 +246,7 @@ class VideoRepository {
 }
 
 /** Explicit host allowlist: a pasted arbitrary URL must never become a download request. */
-data class CollectionPage(val title: String, val description: String, val videos: List<Video>, val next: Page?, val channel: Channel? = null)
+data class CollectionPage(val title: String, val description: String, val videos: List<Video>, val next: Page?, val channel: Channel? = null, val accountPage: AccountLibraryPage? = null)
 data class VideoComment(val id: String, val author: String, val text: String, val likes: Int, val replies: Int, val replyPage: Page?, val html: Boolean = true)
 data class CommentPage(val comments: List<VideoComment>, val next: Page?, val disabled: Boolean = false)
 
@@ -268,7 +268,11 @@ object RecommendationRank {
 }
 
 object YouTubeLinks {
-    private fun trusted(text: String): Uri? = Uri.parse(text.trim()).takeIf { it.scheme in listOf("https", "http") && it.host?.lowercase() in listOf("youtube.com", "www.youtube.com", "m.youtube.com") }
+    private fun trusted(text: String): Uri? {
+        val candidate = Regex("https?://[^\\s<>]+").find(text.trim())?.value ?: text.trim()
+        return Uri.parse(candidate).takeIf { it.scheme in listOf("https", "http") && it.userInfo == null && it.port in listOf(-1, 80, 443) &&
+            it.host?.lowercase() in listOf("youtube.com", "www.youtube.com", "m.youtube.com", "music.youtube.com", "youtu.be") }
+    }
     fun channelUrl(text: String): String? {
         val uri = trusted(text) ?: return null
         val parts = uri.pathSegments

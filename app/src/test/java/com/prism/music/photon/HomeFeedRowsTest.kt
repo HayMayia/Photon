@@ -27,7 +27,7 @@ class HomeFeedRowsTest {
     }
     @Test fun sidebarMenusAdsAndUnselectedTabsCannotBecomeHomeRecommendations() {
         fun card(id: String) = """{"videoRenderer":{"videoId":"$id","title":{"simpleText":"Server card"}}}"""
-        val primary = Json.parseToJsonElement("""{"contents":[${card("abcdefghijk")}],"menu":${card("menuVideo01")},"sidebar":${card("sidebar0001")},"adSlotRenderer":${card("advert00001")},"tabs":[{"selected":false,"content":${card("otherTab001")}}]}""")
+        val primary = Json.parseToJsonElement("""{"contents":[${card("abcdefghijk")}],"menu":${card("menuVideo01")},"sidebar":${card("sidebar0001")},"adSlotRenderer":${card("advert00001")},"tabs":[{"tabRenderer":{"selected":false,"content":${card("otherTab001")}}}]}""")
         assertEquals(listOf("abcdefghijk"), YouTubeHomeParser.cards(primary).videos.map { it.id })
     }
     @Test fun playlistLockupWithVideoLengthIdCannotMasqueradeAsARecommendation() {

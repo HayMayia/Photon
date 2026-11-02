@@ -232,6 +232,12 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
     var playIntent by remember { mutableStateOf(false) }
     var buffering by remember { mutableStateOf(false) }
     val collection by model.collection.collectAsStateWithLifecycle()
+    val playlistQueue by model.queue.collectAsStateWithLifecycle()
+    val playlistSource by model.playlistSource.collectAsStateWithLifecycle()
+    val playlistMore by model.playlistMore.collectAsStateWithLifecycle()
+    val playlistQueueBusy by model.playlistQueueBusy.collectAsStateWithLifecycle()
+    val playlistQueueError by model.playlistQueueError.collectAsStateWithLifecycle()
+    val upcoming = PlaylistQueuePolicy.upcoming(playlistQueue, watch.video?.id, playlistSource != null, watch.details?.related.orEmpty())
     var commentsSheet by remember { mutableStateOf(false) }
     var playlistSheet by remember { mutableStateOf(false) }
     var shortsMode by rememberSaveable { mutableStateOf(false) }
@@ -345,7 +351,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
     fun open(source: Video) {
         val video = ShortsPresentation.merge(source, model.videoPresentation.value[source.id])
         fullscreen = tv
-        if (tv) { shortsMode = false; expanded = true; model.open(video) }
+        if (tv || model.preparedPlaylistSelection(video.id)) { shortsMode = false; expanded = true; model.open(video) }
         else if (video.short) { shortsMode = true; model.presentShort(video) }
         else { expanded = true; model.open(video) }
     }
@@ -459,12 +465,18 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                                     }
                                 }
                             }
-                            if (!watch.details?.related.isNullOrEmpty()) Text("Up next", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                            if (upcoming.isNotEmpty() || playlistSource != null) Text(if (playlistSource != null) "Up next · Playlist" else "Up next", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                         }
                     }
-                    items(watch.details?.related.orEmpty(), key = { it.id }) { related ->
-                        VideoRow(related, { open(related) }, { model.save(related) }, (googleLikes[related.id] == true))
+                    items(upcoming, key = { it.id }) { related ->
+                        VideoRow(related, { if (playlistSource != null) model.prepareQueuedSelection(related); open(related) }, { model.save(related) }, (googleLikes[related.id] == true))
                     }
+                    item {
+                        playlistQueueError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                        if (playlistQueueBusy) CircularProgressIndicator()
+                        else if (playlistMore) TextButton(onClick = { model.morePlaylistQueue() }) { Text("More from playlist") }
+                    }
+
                 }
             }
         } else if (tv) {

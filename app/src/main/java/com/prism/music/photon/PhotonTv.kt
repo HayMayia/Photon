@@ -113,6 +113,12 @@ internal fun TvVideoDetails(model: PhotonViewModel, controller: androidx.media3.
     val video = watch.video ?: return
     val menus = LocalPlayerMenus.current
     val likes by model.googleLikes.collectAsStateWithLifecycle()
+    val queue by model.queue.collectAsStateWithLifecycle()
+    val source by model.playlistSource.collectAsStateWithLifecycle()
+    val more by model.playlistMore.collectAsStateWithLifecycle()
+    val queueBusy by model.playlistQueueBusy.collectAsStateWithLifecycle()
+    val queueError by model.playlistQueueError.collectAsStateWithLifecycle()
+    val upcoming = PlaylistQueuePolicy.upcoming(queue, video.id, source != null, watch.details?.related.orEmpty())
     Row(Modifier.fillMaxSize().safeDrawingPadding().padding(28.dp), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
         Column(Modifier.weight(.58f), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             VideoSurface(controller, Modifier.fillMaxWidth().weight(1f), controls = true)
@@ -144,8 +150,10 @@ internal fun TvVideoDetails(model: PhotonViewModel, controller: androidx.media3.
             watch.details?.description?.takeIf { it.isNotBlank() }?.let { description -> item {
                 Text(android.text.Html.fromHtml(description, android.text.Html.FROM_HTML_MODE_COMPACT).toString(), maxLines = 8, overflow = TextOverflow.Ellipsis)
             } }
-            items(watch.details?.related.orEmpty(), key = { "related:${it.id}" }) { related ->
-                OutlinedButton(onClick = { open(related) }, modifier = Modifier.fillMaxWidth().remoteFocus()) { Text(related.title, maxLines = 2, overflow = TextOverflow.Ellipsis) }
+            item { Text(if (source != null) "Up next · Playlist" else "Up next") }
+            item { queueError?.let { Text(it, color = MaterialTheme.colorScheme.error) }; if (queueBusy) CircularProgressIndicator() else if (more) TextButton(onClick = { model.morePlaylistQueue() }) { Text("More from playlist") } }
+            items(upcoming, key = { "related:${it.id}" }) { related ->
+                OutlinedButton(onClick = { if (source != null) model.prepareQueuedSelection(related); open(related) }, modifier = Modifier.fillMaxWidth().remoteFocus()) { Text(related.title, maxLines = 2, overflow = TextOverflow.Ellipsis) }
             }
         }
     }

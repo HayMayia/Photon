@@ -324,6 +324,8 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
 
     fun moreAccountShelf() { val state = accountLibrary.value; openAccountShelf(state.shelf, state.playlist, state.title, more = true) }
     private fun invalidateAccountLibrary() {
+        if (queuedAccountPage != null) clearPlaylistQueue()
+        if (collection.value?.accountPage != null) { collectionJob?.cancel(); collection.value = null; collectionBusy.value = false }
         accountLibraryJob?.cancel(); ++accountLibraryGeneration; accountLibraryTokens.clear(); accountLibrary.value = AccountLibraryState()
     }
     val googleHistory = app.youtubeHistory.state
@@ -440,6 +442,81 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     val commentsBusy = MutableStateFlow(false)
     val commentsError = MutableStateFlow<String?>(null)
     val queue = MutableStateFlow<List<Video>>(emptyList())
+    val playlistSource = MutableStateFlow<String?>(null)
+    val playlistMore = MutableStateFlow(false)
+    val playlistQueueBusy = MutableStateFlow(false)
+    val playlistQueueError = MutableStateFlow<String?>(null)
+    private var queuedSelection: String? = null
+    private var queuedAccountPage: AccountLibraryPage? = null
+    private var queuedPublicPage: org.schabi.newpipe.extractor.Page? = null
+    private var queuedPublicUrl: String? = null
+    private var queuedRevision = -1L
+    private var queueJob: Job? = null
+    fun preparedPlaylistSelection(id: String) = queuedSelection == id && playlistSource.value != null
+    fun prepareQueuedSelection(video: Video) { if (playlistSource.value != null && queue.value.any { it.id == video.id }) queuedSelection = video.id }
+    private fun clearPlaylistQueue() {
+        queueJob?.cancel(); queueJob = null; queue.value = emptyList(); playlistSource.value = null
+        queuedSelection = null; queuedAccountPage = null; queuedPublicPage = null; queuedPublicUrl = null
+        playlistMore.value = false; playlistQueueBusy.value = false; playlistQueueError.value = null
+    }
+    fun prepareAccountPlaylist(video: Video) {
+        val state = accountLibrary.value
+        val id = state.playlist ?: return
+        clearPlaylistQueue()
+        queue.value = state.page?.items.orEmpty().mapNotNull { it.video }.distinctBy { it.id }
+        playlistSource.value = PlaylistQueuePolicy.key(library.value.youtubeSessionRevision, id)
+        queuedRevision = library.value.youtubeSessionRevision; queuedAccountPage = state.page
+        playlistMore.value = state.page?.continuation != null; queuedSelection = video.id
+    }
+    fun prepareCollectionPlaylist(video: Video) {
+        if (collectionIsChannel) return
+        val page = collection.value ?: return
+        clearPlaylistQueue(); queue.value = page.videos
+        playlistSource.value = "collection:$collectionUrl"; queuedRevision = library.value.youtubeSessionRevision
+        queuedAccountPage = page.accountPage; queuedPublicPage = page.next; queuedPublicUrl = collectionUrl
+        playlistMore.value = page.next != null || page.accountPage?.continuation != null; queuedSelection = video.id
+    }
+    fun upNext(): List<Video> = PlaylistQueuePolicy.upcoming(queue.value, watch.value.video?.id, playlistSource.value != null, watch.value.details?.related.orEmpty())
+    fun morePlaylistQueue(playAfter: Boolean = false) {
+        if (playlistQueueBusy.value || !playlistMore.value) return
+        val source = playlistSource.value ?: return
+        playlistQueueBusy.value = true; playlistQueueError.value = null
+        queueJob = viewModelScope.launch {
+            try {
+                val tokens = mutableSetOf<String>()
+                var appended = false
+                for (pageIndex in 0 until 200) {
+                    if (playlistSource.value != source) return@launch
+                    val incoming: List<Video>
+                    val account = queuedAccountPage
+                    if (account != null) {
+                        check(queuedRevision == library.value.youtubeSessionRevision && library.value.youtubeSessionReady)
+                        val token = account.continuation ?: break
+                        check(tokens.add(token)) { "Repeated playlist page" }
+                        val page = app.accountLibrary.more(app.youtubeHistory.session(), account, AccountEntryKind.VIDEO)
+                        incoming = page.items.mapNotNull { it.video }; queuedAccountPage = page
+                        playlistMore.value = page.continuation != null
+                    } else {
+                        val next = queuedPublicPage ?: break
+                        val page = app.videos.playlist(requireNotNull(queuedPublicUrl), next)
+                        incoming = page.videos; queuedPublicPage = page.next; playlistMore.value = page.next != null
+                    }
+                    if (playlistSource.value != source) return@launch
+                    val before = queue.value.size
+                    queue.value = PlaylistQueuePolicy.append(queue.value, incoming)
+                    appended = queue.value.size > before
+                    if (appended || !playlistMore.value) break
+                }
+                check(appended || !playlistMore.value) { "Playlist pages could not advance" }
+                if (playAfter && playlistSource.value == source) {
+                    val index = queue.value.indexOfFirst { it.id == watch.value.video?.id }
+                    queue.value.getOrNull(index + 1)?.let { open(it, true) }
+                }
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { if (playlistSource.value == source) playlistQueueError.value = "The next playlist page could not load. Retry; unrelated videos were not substituted." }
+            finally { if (playlistSource.value == source) playlistQueueBusy.value = false }
+        }
+    }
     val shelves = MutableStateFlow<List<HomeShelf>>(emptyList())
     private var shelfJob: Job? = null
 
@@ -597,7 +674,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
 
     fun openId(id: String) = open(Video(id, "Opening video…", "YouTube"))
 
-    fun retryPlayback(video: Video) { app.videos.invalidateDetails(video.id); open(video) }
+    fun retryPlayback(video: Video) { app.videos.invalidateDetails(video.id); open(video, fromQueue = playlistSource.value != null && queue.value.any { it.id == video.id }) }
 
     val vrViewing = MutableStateFlow(false)
     fun likeShort(video: Video) { if (googleLikes.value[video.id] != true) requestGoogleChange(GoogleChange(GoogleChangeKind.LIKE, video.id, video.title, video, desired = true)) }
@@ -606,7 +683,8 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
         val opened = android.os.SystemClock.elapsedRealtime()
         val revision = library.value.youtubeSessionRevision
         PhotonDiagnostics.event("Open video requested")
-        if (!fromQueue) queue.value = emptyList()
+        if (!fromQueue && !preparedPlaylistSelection(video.id)) clearPlaylistQueue()
+        queuedSelection = null
         watchJob?.cancel()
         watchJob = viewModelScope.launch {
             mutableWatch.value = WatchState(video = video, busy = true)
@@ -630,6 +708,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun offline(download: SavedDownload) {
+        clearPlaylistQueue()
         watchJob?.cancel()
         if (!File(download.path).isFile) {
             mutableWatch.value = WatchState(video = download.video, error = "The downloaded file is missing. Remove this entry and download it again.")
@@ -685,12 +764,16 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     fun deletePlaylist(id: String, title: String) = requestGoogleChange(GoogleChange(GoogleChangeKind.DELETE_PLAYLIST, id, title))
     fun playAll(videos: List<Video>) {
         if (videos.isEmpty()) return
-        queue.value = videos
+        prepareCollectionPlaylist(videos.first())
+        if (playlistSource.value == null) { queue.value = videos; playlistSource.value = "loaded-playlist" }
         open(videos.first(), true)
     }
     fun next() {
         val index = queue.value.indexOfFirst { it.id == watch.value.video?.id }
-        if (index >= 0) queue.value.getOrNull(index + 1)?.let { open(it, true) }
+        if (index >= 0) {
+            val next = queue.value.getOrNull(index + 1)
+            if (next != null) open(next, true) else if (playlistMore.value) morePlaylistQueue(playAfter = true)
+        }
     }
     fun closeCollection() { collectionJob?.cancel(); collection.value = null; collectionBusy.value = false; collectionError.value = null }
     fun openCollection(url: String, channel: Boolean, shorts: Boolean = false, more: Boolean = false) {
@@ -702,18 +785,27 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
             if (!more) collection.value = CollectionPage("Loading…", "", emptyList(), null)
             collectionBusy.value = true; collectionError.value = null
             try {
-                val result = if (channel) app.videos.channel(url, previous?.next, shorts) else app.videos.playlist(url, previous?.next)
+                val result = if (channel) app.videos.channel(url, previous?.next, shorts)
+                else if (library.value.youtubeHome && library.value.youtubeSessionReady) {
+                    val revision = library.value.youtubeSessionRevision
+                    val id = android.net.Uri.parse(requireNotNull(YouTubeLinks.playlistUrl(url))).getQueryParameter("list")!!
+                    val session = app.youtubeHistory.session()
+                    val page = previous?.accountPage?.let { app.accountLibrary.more(session, it, AccountEntryKind.VIDEO) }
+                        ?: app.accountLibrary.load(session, AccountShelf.PLAYLISTS, id)
+                    check(revision == library.value.youtubeSessionRevision && library.value.youtubeSessionReady)
+                    CollectionPage(previous?.title ?: "Playlist", "", page.items.mapNotNull { it.video }, null, accountPage = page)
+                } else app.videos.playlist(url, previous?.next)
                 result.channel?.let(::resolveSubscription)
                 val enriched = result.copy(videos = result.videos.map { ShortsPresentation.merge(it, videoPresentation.value[it.id]) })
                 val current = collection.value
-                collection.value = if (previous == null) enriched else (current ?: previous).copy(videos = ((current ?: previous).videos + enriched.videos).distinctBy { it.id }, next = result.next)
+                collection.value = if (previous == null) enriched else (current ?: previous).copy(videos = ((current ?: previous).videos + enriched.videos).distinctBy { it.id }, next = result.next, accountPage = result.accountPage)
                 enriched.videos.take(6).forEach { resolveVideoPresentation(it, includeLike = false) }
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (error: Exception) { collectionError.value = error.message ?: "Could not load this page" }
             finally { if (kotlinx.coroutines.currentCoroutineContext()[Job]?.isActive == true) collectionBusy.value = false }
         }
     }
-    fun moreCollection() { if (collection.value?.next != null) openCollection(collectionUrl, collectionIsChannel, collectionShorts, true) }
+    fun moreCollection() { if (collection.value?.let { it.next != null || it.accountPage?.continuation != null } == true) openCollection(collectionUrl, collectionIsChannel, collectionShorts, true) }
     fun channelTab(shorts: Boolean) = openCollection(collectionUrl, true, shorts)
     fun loadComments(video: Video, more: Boolean = false, replies: org.schabi.newpipe.extractor.Page? = null) {
         if (more && commentsBusy.value) return

@@ -94,18 +94,19 @@ internal fun YouTubeLayoutNavigation(selected: Int, home: () -> Unit, shorts: ()
 }
 
 @Composable
-internal fun YouTubeLayoutVideo(source: Video, open: () -> Unit, like: () -> Unit, channel: () -> Unit, modifier: Modifier = Modifier) {
+internal fun YouTubeLayoutVideo(source: Video, open: () -> Unit, like: () -> Unit, channel: () -> Unit, modifier: Modifier = Modifier, framePortrait: Boolean? = null) {
     val video = resolvedVideo(source)
+    val portrait = framePortrait ?: video.short
     val model: PhotonViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
     val likes by model.googleLikes.collectAsStateWithLifecycle()
     var menu by remember(video.id) { mutableStateOf(false) }
     Column(modifier.padding(bottom = 16.dp)) {
-        Box((if (video.short) Modifier.width(164.dp) else Modifier.fillMaxWidth()).aspectRatio(VideoArtworkShape.ratio(video.short)).clip(RoundedCornerShape(8.dp)).clickable(onClick = open)) {
+        Box((if (portrait) Modifier.width(164.dp) else Modifier.fillMaxWidth()).aspectRatio(VideoArtworkShape.ratio(portrait)).clip(RoundedCornerShape(8.dp)).clickable(onClick = open)) {
             VideoThumbnail(video, video.title, Modifier.fillMaxSize())
-            if (!video.short) Text(durationLabel(video.duration), Modifier.align(Alignment.BottomEnd).padding(6.dp).background(Color.Black.copy(alpha = 0.8f), RoundedCornerShape(4.dp)).padding(horizontal = 4.dp), color = Color.White, fontSize = 12.sp)
+            if (!portrait) Text(durationLabel(video.duration), Modifier.align(Alignment.BottomEnd).padding(6.dp).background(Color.Black.copy(alpha = 0.8f), RoundedCornerShape(4.dp)).padding(horizontal = 4.dp), color = Color.White, fontSize = 12.sp)
         }
         Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.Top) {
-            if (!video.short) Box(Modifier.padding(end = 12.dp).size(34.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh).clickable(onClick = channel), contentAlignment = Alignment.Center) {
+            if (!portrait) Box(Modifier.padding(end = 12.dp).size(34.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh).clickable(onClick = channel), contentAlignment = Alignment.Center) {
                 if (video.channelAvatar.isNotBlank()) coil3.compose.AsyncImage(video.channelAvatar, video.channel,
                     Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
                 else Text(video.channel.take(1).uppercase(), fontWeight = FontWeight.Bold)
@@ -161,7 +162,7 @@ internal fun YouTubeLayoutHome(model: PhotonViewModel, library: PhotonLibrary, o
         if (!library.youtubeHome || error != null) item { YouTubeHomeConnection(model) }
         items(rows, key = { it.key }) { row ->
             if (row.portrait) Box(Modifier.padding(horizontal = 12.dp)) { HomeRecommendationRow(row, open) }
-            else row.videos.forEach { video -> YouTubeLayoutVideo(video, { open(video) }, { model.save(video) }, { channel(video.channelUrl) }) }
+            else row.videos.forEach { video -> YouTubeLayoutVideo(video, { open(video) }, { model.save(video) }, { channel(video.channelUrl) }, framePortrait = row.portrait) }
         }
         item {
             if (feed.loadingMore) CircularProgressIndicator(Modifier.padding(16.dp))

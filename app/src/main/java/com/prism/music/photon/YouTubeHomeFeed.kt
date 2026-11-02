@@ -18,7 +18,13 @@ class YouTubeHomeApi(client: OkHttpClient = OkHttpClient()) {
     suspend fun home(cookie: String, accountIndex: Int = 0): YouTubeHomePage = home(YouTubeWebSession(accountIndex, 0, cookie, ""))
     suspend fun home(session: YouTubeWebSession): YouTubeHomePage = withContext(Dispatchers.IO) {
         val html = transport.html("/", session)
-        YouTubeHomeParser.parse(html).copy(context = YouTubeWebBootstrap.context(html))
+        val initial = YouTubeWebBootstrap.assigned(html, "ytInitialData")
+        if (!YouTubeWebBootstrap.signedIn(initial, html)) throw IOException("YouTube did not confirm the selected Google account")
+        val context = YouTubeWebBootstrap.context(html) ?: throw IOException("Authenticated Home context is unavailable")
+        // Bootstrap HTML may contain generic initial cards before signed-in client hydration.
+        // Ask the authenticated Home browse endpoint instead of treating those cards as personalized.
+        val response = transport.post("browse", context, buildJsonObject { put("browseId", "FEwhat_to_watch") }, session)
+        YouTubeHomeParser.browse(response).copy(context = context)
     }
     suspend fun subscriptions(session: YouTubeWebSession): YouTubeHomePage = withContext(Dispatchers.IO) {
         val html = transport.html("/feed/subscriptions", session)
@@ -43,6 +49,12 @@ object YouTubeHomeParser {
         val loggedInConfig = Regex("\"LOGGED_IN\"\\s*:\\s*true").containsMatchIn(html.substringBefore("var ytInitialData"))
         if (loggedOut != false && !(loggedOut == null && loggedInConfig))
             throw IOException("YouTube did not confirm a signed-in web session. Connect YouTube Home separately from comment authorization.")
+        return browse(root)
+    }
+
+    fun browse(root: JsonObject): YouTubeHomePage {
+        val loggedOut = ((root["responseContext"] as? JsonObject)?.get("mainAppWebResponseContext") as? JsonObject)?.get("loggedOut")?.jsonPrimitive?.booleanOrNull
+        if (loggedOut == true || root.containsKey("error")) throw IOException("Authenticated Home was rejected")
         val contents = root["contents"] ?: throw IOException("YouTube returned no recognizable Home content. No fallback feed was substituted.")
         val container = contents as? JsonObject ?: throw IOException("Unrecognized YouTube Home layout. No fallback feed was substituted.")
         val primary = (container["twoColumnBrowseResultsRenderer"] as? JsonObject)?.get("tabs")
@@ -81,13 +93,13 @@ object YouTubeHomeParser {
                 ?: value["runs"]?.jsonArray?.joinToString("") { it.jsonObject["text"]?.jsonPrimitive?.contentOrNull.orEmpty() }.orEmpty()
             else -> ""
         }
-        fun visit(node: JsonElement, depth: Int = 0) {
+        fun visit(node: JsonElement, depth: Int = 0, tab: Boolean = false) {
             if (depth > 70 || videos.size > 200) return
             when (node) {
                 is JsonArray -> node.forEach { visit(it, depth + 1) }
                 is JsonObject -> {
                     // Do not mine the sidebar, other tabs, account menus or player suggestions for a fake Home fallback.
-                    if (node["selected"]?.jsonPrimitive?.booleanOrNull == false) return
+                    if (tab && node["selected"]?.jsonPrimitive?.booleanOrNull == false) return
                     (node["continuationItemRenderer"] as? JsonObject)?.let { continuation ->
                         val endpoint = continuation["continuationEndpoint"] as? JsonObject
                         val command = endpoint?.get("continuationCommand") as? JsonObject
@@ -146,7 +158,7 @@ object YouTubeHomeParser {
                     // A recognized card is atomic: menus/endpoints must not contribute unrelated videos.
                     if (listOf("videoRenderer", "gridVideoRenderer", "videoWithContextRenderer", "reelItemRenderer", "lockupViewModel", "shortsLockupViewModel").any { node[it] is JsonObject }) return
                     node.filterKeys { it !in setOf("menu", "menus", "secondaryContents", "sidebar", "header", "navigationEndpoint", "continuationEndpoint", "frameworkUpdates", "playerOverlays", "adSlotRenderer", "promotedSparklesWebRenderer") }
-                        .values.forEach { visit(it, depth + 1) }
+                        .forEach { (key, value) -> visit(value, depth + 1, key == "tabRenderer") }
                 }
                 else -> Unit
             }

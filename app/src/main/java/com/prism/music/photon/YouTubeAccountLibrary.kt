@@ -71,12 +71,12 @@ internal object YouTubeAccountLibraryParser {
             val valid = if (entryKind == AccountEntryKind.CHANNEL) id.matches(Regex("UC[A-Za-z0-9_-]{20,30}")) else id.matches(Regex("[A-Za-z0-9_-]{2,150}"))
             if (kind == entryKind && valid && title.isNotBlank()) rows.putIfAbsent(id, AccountEntry(id, title, entryKind, artwork = artwork))
         }
-        fun walk(node: JsonElement, depth: Int = 0) {
+        fun walk(node: JsonElement, depth: Int = 0, tab: Boolean = false) {
             if (depth > 70 || rows.size >= 250) return
             when (node) {
                 is JsonArray -> node.forEach { walk(it, depth + 1) }
                 is JsonObject -> {
-                    if (node["selected"]?.jsonPrimitive?.booleanOrNull == false) return
+                    if (tab && node["selected"]?.jsonPrimitive?.booleanOrNull == false) return
                     (node["continuationItemRenderer"] as? JsonObject)?.let {
                         val command = ((it["continuationEndpoint"] as? JsonObject)?.get("continuationCommand") as? JsonObject)
                         text(command?.get("token")).takeIf { it.length in 1..32768 }?.let { value -> token = value }
@@ -104,7 +104,7 @@ internal object YouTubeAccountLibraryParser {
                     for (key in listOf("messageRenderer", "backgroundPromoRenderer", "feedNudgeRenderer")) (node[key] as? JsonObject)?.let { msg ->
                         listOf("title", "text", "bodyText", "body", "subtitle").map { text(msg[it]) }.filter { it.isNotBlank() }.joinToString("\n").takeIf { it.isNotBlank() }?.let(messages::add)
                     }
-                    node.filterKeys { it !in setOf("secondaryContents", "sidebar", "header", "menu", "navigationEndpoint") }.values.forEach { walk(it, depth + 1) }
+                    node.filterKeys { it !in setOf("secondaryContents", "sidebar", "header", "menu", "navigationEndpoint") }.forEach { (key, value) -> walk(value, depth + 1, key == "tabRenderer") }
                 }
                 else -> Unit
             }

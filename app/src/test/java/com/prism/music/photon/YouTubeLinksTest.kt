@@ -20,6 +20,13 @@ class YouTubeLinksTest {
     @Test fun noUserInfoTrick() { assertNull(YouTubeLinks.videoId("https://youtube.com@evil.example/watch?v=$id")) }
     @Test fun noArbitraryDownloadUrl() { assertNull(YouTubeLinks.videoId("https://example.com/video.mp4")) }
     @Test fun noPlaylistAsVideo() { assertNull(YouTubeLinks.videoId("https://youtube.com/playlist?list=PL123")) }
+    @Test fun sharedPlaylistLinksDoNotFallThroughToTheFirstVideo() {
+        val list = "PL_shared_playlist"
+        for (link in listOf("https://music.youtube.com/watch?v=$id&list=$list", "https://youtu.be/$id?list=$list", "Listen here: https://music.youtube.com/playlist?list=$list")) {
+            assertEquals("https://www.youtube.com/playlist?list=$list", YouTubeLinks.playlistUrl(link))
+        }
+        assertNull(YouTubeLinks.playlistUrl("https://youtube.com.attacker.invalid/watch?v=$id&list=$list"))
+    }
     @Test fun noInvalidId() { assertNull(YouTubeLinks.videoId("https://youtube.com/watch?v=../../etc/passwd")) }
     @Test fun noBlankOrSearchPhrase() { assertNull(YouTubeLinks.videoId("")); assertNull(YouTubeLinks.videoId("science and technology")) }
 }

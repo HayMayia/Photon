@@ -57,11 +57,11 @@ internal fun CollectionScreen(model: PhotonViewModel, library: PhotonLibrary, op
             if (current.description.isNotBlank()) Text(current.description, maxLines = 4, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
             if (current.videos.isNotEmpty()) FilledTonalButton(onClick = { model.playAll(current.videos) }) { Icon(PrismIcons.Play, null); Text("Play loaded videos") }
         }
-        items(current.videos, key = { it.id }) { video -> CommunityVideoRow(video, { open(video) }) }
+        items(current.videos, key = { it.id }) { video -> CommunityVideoRow(video, { model.prepareCollectionPlaylist(video); open(video) }) }
         item {
             error?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(12.dp)) }
             if (busy) CircularProgressIndicator(Modifier.padding(20.dp))
-            else if (current.next != null) OutlinedButton(onClick = model::moreCollection) { Text("Load more") }
+            else if (current.next != null || current.accountPage?.continuation != null) OutlinedButton(onClick = model::moreCollection) { Text("Load more") }
         }
     }
 }

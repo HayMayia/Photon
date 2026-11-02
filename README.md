@@ -14,23 +14,22 @@ fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
 
 ## Android
 
-**Latest: v1.1.0.10 Beta — exact playlist entries, compact rows and safe deletion.**
-Use **Home → Update to v1.1.0.10 Beta** (reopen Photon if the banner is cached).
-Playlist loading selects the requested entry list rather than preview/sidebar cards;
-a mismatched returned playlist ID is rejected. Preview-only bootstrap pages hydrate
-the exact authenticated playlist. Modern cards can prove their video through a watch
-target instead of requiring a contentType marker. Normal song/video entries use compact
-rows; Shorts retain the existing portrait library columns. Recently opened account
-playlists and Liked videos reuse their exact-account pages for five minutes, with
-Refresh bypass and mutation invalidation. Liked Music keeps its persistent cache.
-Deleting a playlist now asks for confirmation naming it; Cancel sends no deletion.
-See [release notes](docs/RELEASE_1_1_0_10_BETA.md).
-[Build 41459160060](https://github.com/HayMayia/Photon/actions/runs/41459160060)
-**PASS in 9m47s**: debug/release builds, focused unit suite, permanent signing and
-publication. Source `384441b`, code 39. PR run 41459173403 also passes. Rendered tests
-show six actual compact entries together, open the selected fifth row, and check
-Cancel vs explicit deletion confirmation. Live-account and physical-device behavior
-remain unverified; first uncached Google loads still require network access.
+**Latest: v1.1.0.12 Beta — keep fast music opening, repair incomplete lists.**
+Use **Home → Update to v1.1.0.12 Beta** (reopen Photon if the banner is cached).
+Existing Liked Music stays visible while old snapshots are automatically repaired.
+Snapshots now distinguish completed scans from unresolved metadata; incomplete scans
+retry with a backoff instead of being silently considered fresh for six hours.
+Newest Google likes are checked incrementally at two-minute intervals while active,
+without rebuilding the whole list on each visit. Full reconciliation remains periodic.
+Large-page continuation tokens are no longer lost after 250 rows. Music row renderers
+and exact-video music watch configurations provide source proof without extra metadata
+lookups; unknown rows remain unresolved rather than silently disappearing.
+The playlist layout, cache and deletion confirmations from 1.1.0.10 are retained.
+See [release notes](docs/RELEASE_1_1_0_12_BETA.md).
+[Build 41465004904](https://github.com/HayMayia/Photon/actions/runs/41465004904)
+**PASS in 9m35s**: debug/release, focused unit suite, permanent signing and publication.
+Source `24cf6c5`, code 41; PR 41465017099 PASS. Seven recovery regressions pass.
+These tests do not establish the exact cause or completeness of a private live account.
 
 **Liked Music remains automatic:** a music-only view of Google-account likes,
 including older returned pages, not a manually filled custom playlist. Unknown or

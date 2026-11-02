@@ -635,3 +635,29 @@ Verified asset 701997391, 25,385,776 bytes, SHA256
 No live-account deletion, real-account playlist identity check, physical-device UI
 or first-load latency benchmark is claimed. The rendered test is production row UI
 under Robolectric, not a hardware screenshot.
+
+
+## Android 1.1.0.12 — Liked Music completeness and new-like recovery
+
+Source `24cf6c59333db3c5acdb89b9fb40eed0d8c2778e`, code 41.
+Run 41465004904 PASS in 9m35s; PR 41465017099 PASS. Debug/release, focused unit
+suite, permanent signer and publication verified. Seven new recovery tests verify:
+legacy cached single-song snapshots require repair without deleting cached content;
+incomplete metadata does not freeze for six hours or refetch on every navigation;
+a 300-entry page preserves its trailing continuation token; music configuration is
+bound to its exact video; music-responsive entries are parsed; unrecognized entries
+are accounted for; new head-page likes merge without removing older-page songs.
+
+Cache schema/completion flags are persisted outside playback preferences. Incomplete
+full scans retry after two minutes while active. Completed caches get incremental
+first-page checks, leaving older cached entries intact until full reconciliation.
+Metadata reads use a six-second deadline and source-only music proof. Known rows stay
+visible during repair, and progress is displayed for full scans.
+Verified Photon.apk asset 702103795, 25,385,776 bytes, SHA256
+`88fcc13160216b41511a61fd2d0421c90d3d2162205c1ff1d1431f29e8c41024`.
+No private live-account access, actual new-like propagation, completeness proof or
+physical-device timing check was performed. The supplied screenshot establishes the
+symptom (one row with empty space), not its precise source-side cause. 1.1.0.11's
+initial source published before cancellation; complete refresh source d73a639 built
+and passed tests but did not publish that already-existing version. 1.1.0.12 is the
+verified, independently versioned complete source; no release asset was overwritten.

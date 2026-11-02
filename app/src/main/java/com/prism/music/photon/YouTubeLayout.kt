@@ -135,14 +135,13 @@ internal fun YouTubeLayoutVideo(source: Video, open: () -> Unit, like: () -> Uni
 internal fun YouTubeLayoutHome(model: PhotonViewModel, library: PhotonLibrary, open: (Video) -> Unit, search: () -> Unit,
                                settings: () -> Unit, cast: () -> Unit, topic: (String) -> Unit, shorts: () -> Unit, channel: (String) -> Unit) {
     val feed by model.youtubeHome.collectAsStateWithLifecycle()
-    val browse by model.browse.collectAsStateWithLifecycle()
     val list = rememberLazyListState()
     LaunchedEffect(feed.page?.continuation, feed.loadingMore, feed.autoMore, feed.error, library.youtubeHome) {
         if (!library.youtubeHome || feed.page?.continuation == null || feed.loadingMore || !feed.autoMore || feed.error != null || feed.page?.videos.isNullOrEmpty()) return@LaunchedEffect
         snapshotFlow { list.layoutInfo.visibleItemsInfo.lastOrNull()?.index?.let { it >= list.layoutInfo.totalItemsCount - 4 } == true }
             .distinctUntilChanged().collect { if (it) model.moreYouTubeHome() }
     }
-    val videos = if (library.youtubeHome) feed.page?.videos.orEmpty() else browse.videos
+    val videos = feed.page?.videos.orEmpty()
     LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(bottom = 16.dp)) {
         item { PhotonUpdateCard() }
         item { YouTubeLayoutHeader(search = search, settings = settings, cast = cast) }
@@ -155,24 +154,18 @@ internal fun YouTubeLayoutHome(model: PhotonViewModel, library: PhotonLibrary, o
                 FilterChip(false, shorts, label = { Text("Shorts") }, shape = RoundedCornerShape(8.dp))
             }
         }
-        if (if (library.youtubeHome) feed.busy else browse.busy) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
-        val error = if (library.youtubeHome) feed.error else browse.error
+        if (feed.busy) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
+        val error = feed.error
         if (error != null) item { Text(error, Modifier.padding(16.dp), color = MaterialTheme.colorScheme.error); TextButton(onClick = model::home) { Text("Retry") } }
         feed.page?.message?.takeIf { library.youtubeHome }?.let { message -> item { Text(message, Modifier.padding(16.dp)) } }
-        if (!library.youtubeHome) item { TextButton(onClick = settings, modifier = Modifier.padding(horizontal = 12.dp)) { Text("Sign in for your recommendations") } }
-        if (videos.any { it.short }) item {
-            Text("Shorts", Modifier.padding(12.dp), fontWeight = FontWeight.Bold, fontSize = 20.sp)
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(horizontal = 12.dp)) {
-                items(videos.filter { it.short }, key = { it.id }) { video ->
-                    YouTubeLayoutVideo(video, { open(video) }, { model.save(video) }, { channel(video.channelUrl) }, Modifier.width(164.dp))
-                }
-            }
+        if (!library.youtubeHome || error != null) item { YouTubeHomeConnection(model) }
+        items(HomeFeedRows.make(videos), key = { it.key }) { row ->
+            if (row.portrait) Box(Modifier.padding(horizontal = 12.dp)) { HomeRecommendationRow(row, open) }
+            else row.videos.forEach { video -> YouTubeLayoutVideo(video, { open(video) }, { model.save(video) }, { channel(video.channelUrl) }) }
         }
-        items(videos.filterNot { it.short }, key = { it.id }) { video -> YouTubeLayoutVideo(video, { open(video) }, { model.save(video) }, { channel(video.channelUrl) }) }
         item {
-            if (library.youtubeHome && feed.loadingMore || !library.youtubeHome && browse.moreBusy) CircularProgressIndicator(Modifier.padding(16.dp))
+            if (feed.loadingMore) CircularProgressIndicator(Modifier.padding(16.dp))
             else if (library.youtubeHome && feed.page?.continuation != null) TextButton(onClick = model::moreYouTubeHome) { Text("Load more") }
-            else if (!library.youtubeHome && browse.hasMore) TextButton(onClick = model::loadMore) { Text("Load more") }
         }
     }
 }

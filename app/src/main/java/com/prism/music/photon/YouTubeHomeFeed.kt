@@ -138,20 +138,15 @@ object YouTubeHomeParser {
                         val safe = thumbnail.takeIf { candidate -> runCatching { val uri = java.net.URI(candidate); uri.scheme == "https" && uri.host in setOf("i.ytimg.com", "img.youtube.com") && uri.userInfo == null }.getOrDefault(false) }.orEmpty()
                         if (Regex("[A-Za-z0-9_-]{11}").matches(id) && title.isNotBlank()) videos.putIfAbsent(id, Video(id, title, "YouTube", safe, short = true))
                     }
-                    val lockup = node["lockupViewModel"] as? JsonObject
-                    if (lockup != null) {
-                        val id = lockup["contentId"]?.jsonPrimitive?.contentOrNull.orEmpty()
-                        val metadata = lockup["metadata"]?.jsonObject?.get("lockupMetadataViewModel")?.jsonObject
-                        val title = text(metadata?.get("title"))
-                        if (Regex("[A-Za-z0-9_-]{11}").matches(id) && title.isNotBlank())
-                            videos.putIfAbsent(id, Video(id, title, "YouTube", "https://i.ytimg.com/vi/$id/hqdefault.jpg"))
-                    }
                     for (key in listOf("messageRenderer", "backgroundPromoRenderer", "feedNudgeRenderer")) {
                         val message = node[key] as? JsonObject ?: continue
                         val rendered = listOf("title", "text", "bodyText", "body", "subtitle").map { text(message[it]) }.filter { it.isNotBlank() }.joinToString("\n")
                         if (rendered.isNotBlank()) messages += rendered
                     }
-                    node.values.forEach { visit(it, depth + 1) }
+                    // A recognized card is atomic: menus/endpoints must not contribute unrelated videos.
+                    if (listOf("videoRenderer", "gridVideoRenderer", "videoWithContextRenderer", "reelItemRenderer", "lockupViewModel", "shortsLockupViewModel").any { node[it] is JsonObject }) return
+                    node.filterKeys { it !in setOf("menu", "menus", "secondaryContents", "sidebar", "header", "navigationEndpoint", "continuationEndpoint", "frameworkUpdates", "playerOverlays", "adSlotRenderer", "promotedSparklesWebRenderer") }
+                        .values.forEach { visit(it, depth + 1) }
                 }
                 else -> Unit
             }

@@ -49,7 +49,7 @@ class YouTubeHomeTest {
         }
     }
     @Test fun modernLockupCardsRemainNativeVideoLinks() {
-        val result = YouTubeHomeParser.parse(page("""{"lockupViewModel":{"contentId":"abcdefghijk","metadata":{"lockupMetadataViewModel":{"title":{"content":"A real recommendation"}}}}}"""))
+        val result = YouTubeHomeParser.parse(page("""{"lockupViewModel":{"contentType":"LOCKUP_CONTENT_TYPE_VIDEO","contentId":"abcdefghijk","metadata":{"lockupMetadataViewModel":{"title":{"content":"A real recommendation"}}}}}"""))
         assertEquals("abcdefghijk", result.videos.single().id)
         assertEquals("A real recommendation", result.videos.single().title)
     }

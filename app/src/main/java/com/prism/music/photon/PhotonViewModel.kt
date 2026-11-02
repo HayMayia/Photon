@@ -371,7 +371,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     fun pauseHistory(paused: Boolean) {
         app.library.update { it.copy(historyPaused = paused) }
         if (paused) { searchJob?.cancel(); shelfJob?.cancel(); shelves.value = emptyList(); mutableBrowse.value = BrowseState() }
-        else { home(); if (!library.value.youtubeHome) refreshShelves() }
+        else { home() }
     }
     fun connectYouTubeHome(accountIndex: Int) {
         // Enter account Home before fetching: a failure must be visible, not leave the old local feed on screen.
@@ -473,7 +473,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     private var searchJob: Job? = null
     private var watchJob: Job? = null
 
-    init { home(); if (!library.value.youtubeHome && !library.value.historyPaused) refreshShelves() }
+    init { home() }
 
     fun playerOptions(transform: (PhotonLibrary) -> PhotonLibrary) = app.library.update { old ->
         val next = transform(old)
@@ -481,21 +481,11 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun home() {
+        searchJob?.cancel(); shelfJob?.cancel(); shelves.value = emptyList()
         if (library.value.youtubeHome) { refreshYouTubeHome(); return }
-        if (library.value.historyPaused) {
-            searchJob?.cancel(); mutableBrowse.value = BrowseState(personalized = true, error = "Local history is paused. Generated recommendations are paused too; search remains available."); return
-        }
-        if (library.value.history.isEmpty()) { search("science and technology"); return }
-        searchJob?.cancel()
-        searchJob = viewModelScope.launch {
-            page = null
-            mutableBrowse.value = BrowseState(busy = true, query = "For you", personalized = true)
-            try {
-                val videos = app.videos.recommendations(library.value)
-                mutableBrowse.value = BrowseState(videos = videos, query = "For you", personalized = true)
-            } catch (cancelled: CancellationException) { throw cancelled }
-            catch (error: Exception) { mutableBrowse.value = BrowseState(query = "For you", personalized = true, error = error.message ?: "Recommendations unavailable") }
-        }
+        // Home must not silently become search discovery or a local approximation of Google's feed.
+        mutableBrowse.value = BrowseState()
+        youtubeHome.value = YouTubeHomeState(error = "Sign in with Google to load your account's Home recommendations. No random or generated feed is substituted.")
     }
 
     val subscriptionChannels = MutableStateFlow(AccountLibraryState(shelf = AccountShelf.CHANNELS, title = "Subscribed channels"))

@@ -47,10 +47,8 @@ class MusicPlaybackPolicyTest {
         assertTrue(Json.decodeFromString<Video>(Json.encodeToString(video)).music)
         assertFalse(Json.decodeFromString<Video>("""{"id":"abcdefghijk","title":"Older download","channel":"Creator"}""").music)
     }
-    @Test fun likedMusicSelectsOnlyARealPlaylistWithTheExactName() {
-        assertTrue(LikedMusicPlaylist.matches(AccountEntry("PL_account", "Liked Music", AccountEntryKind.PLAYLIST)))
-        assertTrue(LikedMusicPlaylist.matches(AccountEntry("PL_account", " liked music ", AccountEntryKind.PLAYLIST)))
-        assertFalse(LikedMusicPlaylist.matches(AccountEntry("abcdefghijk", "Liked Music", AccountEntryKind.VIDEO)))
-        assertFalse(LikedMusicPlaylist.matches(AccountEntry("PL_account", "Liked Music videos", AccountEntryKind.PLAYLIST)))
+    @Test fun likedMusicReadsTheSameGoogleLikesAsLikedVideos() {
+        assertEquals(AccountShelf.LIKED.path, AccountShelf.LIKED_MUSIC.path)
+        assertEquals("/playlist?list=LL", AccountShelf.LIKED_MUSIC.path)
     }
 }

@@ -8,7 +8,7 @@ import java.io.IOException
 
 enum class AccountShelf(val label: String, val path: String) {
     HISTORY("History", "/feed/history"), PLAYLISTS("Playlists", "/feed/playlists"),
-    LIKED("Liked videos", "/playlist?list=LL"), CHANNELS("Channels", "/feed/channels")
+    LIKED("Liked videos", "/playlist?list=LL"), LIKED_MUSIC("Liked Music", "/playlist?list=LL"), CHANNELS("Channels", "/feed/channels")
 }
 enum class AccountEntryKind { VIDEO, PLAYLIST, CHANNEL }
 data class AccountEntry(val id: String, val title: String, val kind: AccountEntryKind, val video: Video? = null, val artwork: String = "", val layoutShort: Boolean? = null)
@@ -29,6 +29,15 @@ internal class YouTubeAccountLibraryApi(client: OkHttpClient = OkHttpClient()) {
             AccountShelf.CHANNELS -> AccountEntryKind.CHANNEL
             else -> AccountEntryKind.VIDEO
         }).copy(context = YouTubeWebBootstrap.context(html))
+    }
+    suspend fun musicCategory(session: YouTubeWebSession, video: Video): Boolean? = withContext(Dispatchers.IO) {
+        require(video.id.matches(Regex("[A-Za-z0-9_-]{11}")))
+        // Read only metadata with the same pinned Google account; no format/stream lookup,
+        // playlist mutations, playback reports, or separate YouTube Music login.
+        val html = transport.html("/watch?v=${video.id}", session)
+        val initial = YouTubeWebBootstrap.assigned(html, "ytInitialData")
+        if (!YouTubeWebBootstrap.signedIn(initial, html)) throw IOException("Account metadata session expired")
+        YouTubeMusicCategory.parse(YouTubeWebBootstrap.assigned(html, "ytInitialPlayerResponse"), video.id)
     }
     suspend fun more(session: YouTubeWebSession, page: AccountLibraryPage, kind: AccountEntryKind): AccountLibraryPage = withContext(Dispatchers.IO) {
         val token = page.continuation?.takeIf { it.length in 1..32768 } ?: throw IOException("No further account page")
@@ -104,5 +113,16 @@ internal object YouTubeAccountLibraryParser {
         return AccountLibraryPage(rows.values.toList(), token, message = messages.joinToString("\n").ifBlank {
             if (rows.isEmpty()) "YouTube returned no supported items for this account list. It may be empty or its layout may be unsupported; local items were not substituted." else ""
         }.takeIf { it.isNotBlank() })
+    }
+}
+
+
+internal object YouTubeMusicCategory {
+    fun parse(player: JsonObject, expectedId: String): Boolean? {
+        val details = player["videoDetails"] as? JsonObject ?: return null
+        if (details["videoId"]?.jsonPrimitive?.contentOrNull != expectedId) return null
+        val renderer = (player["microformat"] as? JsonObject)?.get("playerMicroformatRenderer") as? JsonObject ?: return null
+        val category = renderer["category"]?.jsonPrimitive?.contentOrNull?.trim()?.takeIf { it.isNotBlank() } ?: return null
+        return MusicPlaybackPolicy.isMusicCategory(category)
     }
 }

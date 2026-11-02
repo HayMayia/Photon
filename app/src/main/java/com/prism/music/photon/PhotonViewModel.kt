@@ -182,11 +182,8 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 result.subscribed?.let { googleSubscriptions.value = googleSubscriptions.value + (change.id to it); loadSubscriptionChannels() }
                 googleChange.value = GoogleChangeState()
                 val shelf = accountLibrary.value
-                if (change.title == LikedMusicPlaylist.NAME && result.playlistId != null)
-                    openAccountShelf(AccountShelf.PLAYLISTS, result.playlistId, LikedMusicPlaylist.NAME)
-                else if (shelf.title == LikedMusicPlaylist.NAME && shelf.playlist == change.id && change.kind == GoogleChangeKind.ADD_VIDEO)
-                    openAccountShelf(AccountShelf.PLAYLISTS, change.id, LikedMusicPlaylist.NAME)
-                else if (shelf.page != null) openAccountShelf(shelf.shelf, shelf.playlist, shelf.title)
+                if (shelf.page != null || shelf.shelf == AccountShelf.LIKED_MUSIC)
+                    openAccountShelf(shelf.shelf, shelf.playlist, shelf.title)
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) {
                 if (revision == library.value.youtubeSessionRevision) googleChange.value = GoogleChangeState(message = "This Google change could not be verified. Nothing was saved locally instead, and no automatic retry was made. Check official YouTube before retrying: a request might already have reached it.")
@@ -210,6 +207,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     private val accountLibraryTokens = mutableSetOf<String>()
     private var accountLibraryGeneration = 0L
     fun openAccountShelf(shelf: AccountShelf, playlist: String? = null, title: String = shelf.label, more: Boolean = false) {
+        if (shelf == AccountShelf.LIKED_MUSIC && playlist == null) { scanLikedMusic(); return }
         if (more && (accountLibrary.value.busy || accountLibrary.value.moreBusy)) return
         accountLibraryJob?.cancel()
         val previous = accountLibrary.value
@@ -262,49 +260,64 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
         if (state.generation != generation || !AccountLibraryRows.needsFormatCommit(page.items)) return
         accountLibrary.value = state.copy(page = page.copy(items = AccountLibraryRows.commitFormats(page.items)))
     }
-    /** Real Google playlist. Search all returned pages before creating, never a local substitute. */
-    fun openLikedMusic(video: Video? = null) {
-        if (!library.value.youtubeHome || !library.value.youtubeSessionReady) {
-            googleChange.value = GoogleChangeState(message = "Sign in with Google to use Liked Music. No local substitute was created.")
-            return
-        }
-        if (googleChange.value.busy || googleChange.value.pending != null) return
+    fun openLikedMusic() = openAccountShelf(AccountShelf.LIKED_MUSIC)
+
+    /** Traverse every returned likes page, including non-music-only pages, with incremental results. */
+    private val likedMusicProof = ExpiringVideoCache<Boolean>(4096, 6 * 60 * 60_000L)
+    private fun scanLikedMusic() {
         accountLibraryJob?.cancel()
         val generation = ++accountLibraryGeneration
         val revision = library.value.youtubeSessionRevision
-        accountLibrary.value = AccountLibraryState(AccountShelf.PLAYLISTS, title = LikedMusicPlaylist.NAME, busy = true, generation = generation)
+        accountLibrary.value = AccountLibraryState(AccountShelf.LIKED_MUSIC, title = LikedMusicPlaylist.NAME, busy = true, generation = generation)
         accountLibraryJob = viewModelScope.launch {
             fun active() = generation == accountLibraryGeneration && revision == library.value.youtubeSessionRevision && library.value.youtubeSessionReady && library.value.youtubeHome
+            var unresolved = 0
+            var scanned = 0
+            var complete = false
             try {
+                check(active()) { "Sign in with Google first" }
                 val session = app.youtubeHistory.session()
-                var page = app.accountLibrary.load(session, AccountShelf.PLAYLISTS)
+                var likesBeforePage = googleLikes.value
+                var page = app.accountLibrary.load(session, AccountShelf.LIKED_MUSIC)
                 val tokens = mutableSetOf<String>()
-                var completed = false
+                val seen = mutableSetOf<String>()
                 for (index in 0 until 200) {
                     if (!active()) return@launch
-                    val found = page.items.firstOrNull(LikedMusicPlaylist::matches)
-                    if (found != null) {
-                        if (video == null) openAccountShelf(AccountShelf.PLAYLISTS, found.id, LikedMusicPlaylist.NAME)
-                        else {
-                            accountLibrary.value = AccountLibraryState(AccountShelf.PLAYLISTS, found.id, LikedMusicPlaylist.NAME, generation = generation)
-                            addToPlaylist(found.id, video)
+                    val incoming = page.items.filter { it.kind == AccountEntryKind.VIDEO && seen.add(it.id) }
+                    for (batch in incoming.chunked(2)) {
+                        val classified = LikedMusicRows.classify(batch) { video ->
+                            val key = "$revision:${video.id}"
+                            likedMusicProof.get(key) ?: app.accountLibrary.musicCategory(session, video)?.also { likedMusicProof.put(key, it) }
                         }
-                        return@launch
+                        if (!active()) return@launch
+                        unresolved += classified.unresolved
+                        scanned += batch.size
+                        val likes = googleLikes.value
+                        googleLikes.value = likes + batch.map { it.id }.filter { likes[it] == likesBeforePage[it] }.associateWith { true }
+                        val admitted = classified.items.filter { googleLikes.value[it.id] != false }
+                        val items = AccountLibraryRows.append(accountLibrary.value.page?.items.orEmpty(), admitted)
+                        accountLibrary.value = AccountLibraryState(AccountShelf.LIKED_MUSIC, title = LikedMusicPlaylist.NAME,
+                            page = page.copy(items = items, continuation = null, message = LikedMusicRows.message(true, unresolved, scanned)),
+                            busy = false, moreBusy = true, generation = generation)
+                        admitted.forEach { it.video?.let { video -> resolveVideoPresentation(video, includeLike = false) } }
                     }
                     val token = page.continuation
-                    if (token == null) { completed = true; break }
-                    check(tokens.add(token)) { "Repeated playlist page" }
-                    page = app.accountLibrary.more(session, page, AccountEntryKind.PLAYLIST)
+                    if (token == null) { complete = true; break }
+                    check(tokens.add(token)) { "Repeated Google likes page" }
+                    likesBeforePage = googleLikes.value
+                    page = app.accountLibrary.more(session, page, AccountEntryKind.VIDEO)
                 }
-                check(completed && active()) { "Playlist lookup incomplete" }
-                // An unsupported/empty-error response is NOT proof that this playlist is absent.
-                check(page.message == null) { "Playlist lookup could not be verified" }
-                accountLibrary.value = accountLibrary.value.copy(busy = false)
-                createGooglePlaylist(LikedMusicPlaylist.NAME, video)
+                check(complete) { "Google likes scan limit reached" }
+                if (!active()) return@launch
+                val items = accountLibrary.value.page?.items.orEmpty()
+                accountLibrary.value = AccountLibraryState(AccountShelf.LIKED_MUSIC, title = LikedMusicPlaylist.NAME,
+                    page = page.copy(items = items, continuation = null,
+                        message = LikedMusicRows.message(false, unresolved, scanned) ?: if (scanned == 0) page.message else if (items.isEmpty()) "No music videos were identified in the returned Google likes." else null), generation = generation)
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) {
-                if (active()) accountLibrary.value = accountLibrary.value.copy(busy = false,
-                    error = "Could not verify Liked Music. Refresh Playlists before retrying; no local playlist or automatic retry was made.")
+                if (generation == accountLibraryGeneration && revision == library.value.youtubeSessionRevision)
+                    accountLibrary.value = accountLibrary.value.copy(busy = false, moreBusy = false,
+                        error = "Older Google likes could not finish loading. Loaded music is retained; Refresh to retry. No playlist was created or changed.")
             }
         }
     }

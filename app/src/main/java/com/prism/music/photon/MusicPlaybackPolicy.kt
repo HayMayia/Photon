@@ -9,5 +9,4 @@ internal object MusicPlaybackPolicy {
 
 internal object LikedMusicPlaylist {
     const val NAME = "Liked Music"
-    fun matches(entry: AccountEntry): Boolean = entry.kind == AccountEntryKind.PLAYLIST && entry.title.trim().equals(NAME, ignoreCase = true)
 }

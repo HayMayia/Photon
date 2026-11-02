@@ -21,9 +21,10 @@ internal data class PhotonUpdateState(val release: PhotonRelease? = null, val bu
 internal object PhotonReleasePolicy {
     fun displayVersion(version: String): String = "v" + version.removePrefix("v").replace("-beta", " Beta", ignoreCase = true)
     fun newer(remote: String, local: String): Boolean {
-        fun parts(s: String) = Regex("\\d+").findAll(s).take(3).map { it.value.toIntOrNull() ?: 0 }.toList().let { it + List((3 - it.size).coerceAtLeast(0)) { 0 } }
+        fun parts(s: String) = Regex("^v?(\\d+(?:\\.\\d+){0,3})", RegexOption.IGNORE_CASE).find(s.trim())?.groupValues?.get(1)
+            ?.split('.')?.map { it.toIntOrNull() ?: 0 }.orEmpty().let { it + List((4 - it.size).coerceAtLeast(0)) { 0 } }
         val a = parts(remote); val b = parts(local)
-        for (i in 0..2) if (a[i] != b[i]) return a[i] > b[i]
+        for (i in 0..3) if (a[i] != b[i]) return a[i] > b[i]
         val remoteBeta = remote.contains("beta", true); val localBeta = local.contains("beta", true)
         if (remoteBeta != localBeta) return !remoteBeta && localBeta
         if (remoteBeta) {
@@ -69,7 +70,11 @@ internal class PhotonUpdates(private val context: Context) {
                             val asset = r["assets"]?.jsonArray?.firstOrNull { it.jsonObject["name"]?.jsonPrimitive?.content == "Photon.apk" }?.jsonObject
                             val url = asset?.get("browser_download_url")?.jsonPrimitive?.content ?: return@mapNotNull null
                             PhotonRelease(version, url).takeIf { PhotonReleasePolicy.trusted(url) && version != preferences.getString("dismissed", null) && PhotonReleasePolicy.newer(version, BuildConfig.VERSION_NAME) }
-                        }.firstOrNull()
+                        }.maxWithOrNull(Comparator { a, b -> when {
+                            PhotonReleasePolicy.newer(a.version, b.version) -> 1
+                            PhotonReleasePolicy.newer(b.version, a.version) -> -1
+                            else -> 0
+                        } })
                     }
                 }
                 lastCheck = System.currentTimeMillis()

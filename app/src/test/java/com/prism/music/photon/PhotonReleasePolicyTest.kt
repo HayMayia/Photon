@@ -4,6 +4,16 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class PhotonReleasePolicyTest {
+    @Test fun comparesFourComponentVersionsWithoutConfusingBetaSequence() {
+        assertTrue(PhotonReleasePolicy.newer("v1.1.0.0-beta", "1.0.11 Beta"))
+        assertFalse(PhotonReleasePolicy.newer("v1.1.0.0-beta", "1.1.0.0 Beta"))
+        assertTrue(PhotonReleasePolicy.newer("v1.1.0.1-beta", "1.1.0.0 Beta"))
+        assertFalse(PhotonReleasePolicy.newer("v1.1.0.0-beta99", "1.1.0.1 Beta"))
+        assertTrue(PhotonReleasePolicy.newer("v1.1.0.0-beta2", "1.1.0.0 Beta1"))
+        assertFalse(PhotonReleasePolicy.newer("v1.1.0-beta2", "1.1.0.0 Beta2"))
+        assertTrue(PhotonReleasePolicy.newer("v1.1.0.0", "1.1.0.0 Beta99"))
+    }
+
     @Test fun recognizesBetaUpgradeAndDoesNotOfferSameVersion() {
         assertTrue(PhotonReleasePolicy.newer("v1.0.0-beta", "0.13.0-alpha"))
         assertFalse(PhotonReleasePolicy.newer("v1.0.0-beta", "1.0.0 Beta"))

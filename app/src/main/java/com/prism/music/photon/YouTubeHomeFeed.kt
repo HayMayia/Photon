@@ -98,15 +98,14 @@ object YouTubeHomeParser {
                         val id = item["videoId"]?.jsonPrimitive?.contentOrNull.orEmpty()
                         val title = text(item["title"] ?: item["headline"])
                         if (!Regex("[A-Za-z0-9_-]{11}").matches(id) || title.isBlank()) continue
-                        val short = key == "reelItemRenderer" || (item["navigationEndpoint"] as? JsonObject)?.containsKey("reelWatchEndpoint") == true ||
-                            (item["thumbnailOverlays"] as? JsonArray)?.any { ((it as? JsonObject)?.get("thumbnailOverlayTimeStatusRenderer") as? JsonObject)?.get("style")?.jsonPrimitive?.contentOrNull == "SHORTS" } == true
+                        val short = key == "reelItemRenderer" || ShortsPresentation.fromRenderer(item, id)
                         val avatar = GoogleAccountControls.objects(item).mapNotNull { (it["url"] as? JsonPrimitive)?.contentOrNull }
                             .firstOrNull { candidate -> ShortsPresentation.safeArtwork(candidate).isNotBlank() && runCatching { java.net.URI(candidate).host in setOf("yt3.ggpht.com", "yt3.googleusercontent.com") }.getOrDefault(false) }.orEmpty()
                         val byline = item["ownerText"] ?: item["shortBylineText"] ?: item["longBylineText"]
                         val channel = text(byline)
                         val channelId = runCatching { byline?.jsonObject?.get("runs")?.jsonArray?.firstOrNull()?.jsonObject
                             ?.get("navigationEndpoint")?.jsonObject?.get("browseEndpoint")?.jsonObject?.get("browseId")?.jsonPrimitive?.content }.getOrNull()
-                        val thumbnail = runCatching { item["thumbnail"]?.jsonObject?.get("thumbnails")?.jsonArray?.lastOrNull()?.jsonObject?.get("url")?.jsonPrimitive?.content }.getOrNull().orEmpty()
+                        val thumbnail = ThumbnailPolicy.select(((item["thumbnail"] as? JsonObject)?.get("thumbnails") as? JsonArray), short)
                         val safeThumbnail = thumbnail.takeIf { candidate -> runCatching {
                             val uri = java.net.URI(candidate)
                             uri.scheme == "https" && uri.host in setOf("i.ytimg.com", "img.youtube.com") && uri.userInfo == null
@@ -116,11 +115,26 @@ object YouTubeHomeParser {
                         videos.putIfAbsent(id, Video(id, title, channel, safeThumbnail, duration,
                             channelUrl = channelId?.takeIf { it.startsWith("UC") }?.let { "https://www.youtube.com/channel/$it" }.orEmpty(), short = short, channelAvatar = avatar))
                     }
+                    (node["lockupViewModel"] as? JsonObject)?.takeIf { (it["contentType"] as? JsonPrimitive)?.contentOrNull == "LOCKUP_CONTENT_TYPE_VIDEO" }?.let { item ->
+                        val id = (item["contentId"] as? JsonPrimitive)?.contentOrNull.orEmpty()
+                        val metadata = (item["metadata"] as? JsonObject)?.get("lockupMetadataViewModel") as? JsonObject
+                        val title = text(metadata?.get("title"))
+                        if (id.matches(Regex("[A-Za-z0-9_-]{11}")) && title.isNotBlank()) {
+                            val short = ShortsPresentation.fromRenderer(item, id)
+                            val sources = GoogleAccountControls.objects(item["contentImage"] ?: JsonObject(emptyMap())).mapNotNull { it["sources"] as? JsonArray }.firstOrNull()
+                            val owner = metadata?.let { GoogleAccountControls.objects(it).firstOrNull { part ->
+                                (((part["navigationEndpoint"] as? JsonObject)?.get("browseEndpoint") as? JsonObject)?.get("browseId") as? JsonPrimitive)?.contentOrNull?.startsWith("UC") == true
+                            } }
+                            val channelId = (((owner?.get("navigationEndpoint") as? JsonObject)?.get("browseEndpoint") as? JsonObject)?.get("browseId") as? JsonPrimitive)?.contentOrNull
+                            videos.putIfAbsent(id, Video(id, title, text(owner?.get("text")), ThumbnailPolicy.select(sources, short),
+                                channelUrl = channelId?.let { "https://www.youtube.com/channel/$it" }.orEmpty(), short = short))
+                        }
+                    }
                     (node["shortsLockupViewModel"] as? JsonObject)?.let { short ->
                         val command = ((short["onTap"] as? JsonObject)?.get("innertubeCommand") as? JsonObject)?.get("reelWatchEndpoint") as? JsonObject
                         val id = command?.get("videoId")?.jsonPrimitive?.contentOrNull.orEmpty()
                         val title = text((short["overlayMetadata"] as? JsonObject)?.get("primaryText"))
-                        val thumbnail = (((short["thumbnail"] as? JsonObject)?.get("sources") as? JsonArray)?.lastOrNull() as? JsonObject)?.get("url")?.jsonPrimitive?.contentOrNull.orEmpty()
+                        val thumbnail = ThumbnailPolicy.select(((short["thumbnail"] as? JsonObject)?.get("sources") as? JsonArray), true)
                         val safe = thumbnail.takeIf { candidate -> runCatching { val uri = java.net.URI(candidate); uri.scheme == "https" && uri.host in setOf("i.ytimg.com", "img.youtube.com") && uri.userInfo == null }.getOrDefault(false) }.orEmpty()
                         if (Regex("[A-Za-z0-9_-]{11}").matches(id) && title.isNotBlank()) videos.putIfAbsent(id, Video(id, title, "YouTube", safe, short = true))
                     }

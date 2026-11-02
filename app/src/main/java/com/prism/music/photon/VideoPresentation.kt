@@ -17,6 +17,18 @@ internal object ShortsPresentation {
         uri.path == "/shorts/$id" && (url.startsWith("/") && !url.startsWith("//") ||
             uri.scheme == "https" && uri.host in setOf("www.youtube.com", "youtube.com") && uri.userInfo == null)
     }.getOrDefault(false)
+    fun fromRenderer(item: JsonObject, id: String): Boolean {
+        if (GoogleAccountControls.objects(item).any { node ->
+                ((node["reelWatchEndpoint"] as? JsonObject)?.get("videoId") as? JsonPrimitive)?.contentOrNull == id ||
+                    shortsRoute(((node["webCommandMetadata"] as? JsonObject)?.get("url") as? JsonPrimitive)?.contentOrNull.orEmpty(), id)
+            }) return true
+        val badges = listOfNotNull(item["thumbnailOverlays"], item["badges"], item["contentImage"])
+        return badges.any { value -> GoogleAccountControls.objects(value).any { node ->
+            listOf("style", "iconType", "iconName", "badgeStyle").any { name ->
+                (node[name] as? JsonPrimitive)?.contentOrNull in setOf("SHORTS", "SHORTS_LOGO", "BADGE_STYLE_TYPE_SHORTS")
+            }
+        } }
+    }
     fun fromHtml(id: String, html: String): Pair<Boolean, String>? {
         val doc = Jsoup.parse(html.substringBefore("</head>") + "</head>")
         // Shorts often canonicalize to /watch. The matching reel command is stronger evidence.

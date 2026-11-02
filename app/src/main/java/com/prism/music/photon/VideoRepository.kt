@@ -101,10 +101,12 @@ class VideoRepository {
     private val presentationCache = ExpiringVideoCache<Pair<Boolean, String>>(512, 600_000)
     private val presentationSlots = kotlinx.coroutines.sync.Semaphore(2)
     private val presentationHttp by lazy { http.newBuilder().followRedirects(false).followSslRedirects(false)
-        .cookieJar(okhttp3.CookieJar.NO_COOKIES).callTimeout(15, TimeUnit.SECONDS).build() }
+        .cookieJar(okhttp3.CookieJar.NO_COOKIES).callTimeout(6, TimeUnit.SECONDS).build() }
     suspend fun presentation(video: Video): Video? = withContext(Dispatchers.IO) {
+        if (video.short) return@withContext video
         val cached = presentationCache.get(video.id)
         val result = cached ?: presentationSlots.withPermit {
+            presentationCache.get(video.id)?.let { return@withPermit it }
             require(video.id.matches(Regex("[A-Za-z0-9_-]{11}")))
             presentationHttp.newCall(okhttp3.Request.Builder().url("https://www.youtube.com/shorts/${video.id}?hl=en").build()).execute().use { response ->
                 if (!response.isSuccessful) return@use null

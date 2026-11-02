@@ -119,7 +119,7 @@ internal fun CommentsPanel(model: PhotonViewModel, video: Video) {
             TextButton(onClick = { context.startActivity(browserIntent(video.url)) }) { Text("Open in browser") }
         }
         LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(vertical = 16.dp)) {
-            item {
+            if (!replies) item {
                 Text(account.identity?.let { "Comment as ${it.name}" } ?: "Connect Google to post", style = MaterialTheme.typography.labelMedium)
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     OutlinedTextField(value = draft, onValueChange = { draft = it.take(10_001) }, enabled = !posting,

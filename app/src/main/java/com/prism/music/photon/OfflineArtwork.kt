@@ -2,7 +2,11 @@ package com.prism.music.photon
 
 import android.content.Context
 import android.graphics.BitmapFactory
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.painter.ColorPainter
+import androidx.compose.material3.MaterialTheme
+import coil3.request.ImageRequest
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
@@ -21,8 +25,18 @@ val LocalDownloadArtwork = staticCompositionLocalOf<Map<String, String>> { empty
 
 @Composable
 fun VideoThumbnail(video: Video, description: String?, modifier: Modifier = Modifier, contentScale: ContentScale = ContentScale.Crop) {
+    val context = LocalContext.current
     val path = LocalDownloadArtwork.current[video.id]
-    AsyncImage(if (path != null) File(path) else video.thumbnail, description, modifier, contentScale = contentScale)
+    val original = video.thumbnail.ifBlank { if (video.id.matches(Regex("[A-Za-z0-9_-]{11}"))) "https://i.ytimg.com/vi/${video.id}/hqdefault.jpg" else "" }
+    val preview = ThumbnailPolicy.cardUrl(original)
+    var fallback by remember(original, path) { mutableStateOf(false) }
+    val local = path?.let(::File)?.takeIf { it.isFile }
+    val data = local ?: if (fallback) original else preview
+    val request = remember(data, context) { ImageRequest.Builder(context).data(data).size(640, 960).build() }
+    val placeholder = ColorPainter(MaterialTheme.colorScheme.surfaceContainerHigh)
+    AsyncImage(request, description, modifier, contentScale = contentScale,
+        placeholder = placeholder, error = placeholder, onError = { if (local == null && preview != original) fallback = true })
+
 }
 
 @Composable

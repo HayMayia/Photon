@@ -32,7 +32,8 @@ internal fun VrHeadsetDialog(player: MediaController?, close: () -> Unit) {
                 Text("VR viewer · 2D", Modifier.padding(12.dp), color = Color.White)
                 TextButton(onClick = close) { Text("Exit VR") }
             }
-            AndroidView(factory = { context -> StereoVideoView(context, player) }, modifier = Modifier.weight(1f).fillMaxWidth(), onRelease = { it.release() })
+            if (player != null) AndroidView(factory = { context -> StereoVideoView(context, player) }, modifier = Modifier.weight(1f).fillMaxWidth(), onRelease = { it.release() })
+            else Box(Modifier.weight(1f).fillMaxWidth()) { Text("Connecting player…", color = Color.White) }
             Text("Rotate your phone for a headset. Same original image in both eyes; no 3D/360 conversion.", Modifier.padding(12.dp), color = Color.White)
         }
     }
@@ -54,9 +55,10 @@ private class StereoVideoView(context: android.content.Context, private val play
     private val listener = object : androidx.media3.common.Player.Listener {
         override fun onVideoSizeChanged(size: androidx.media3.common.VideoSize) { if (size.height > 0) aspect = size.width.toFloat() * size.pixelWidthHeightRatio / size.height; requestRender() }
     }
-    init { setEGLContextClientVersion(2); setRenderer(this); renderMode = RENDERMODE_WHEN_DIRTY; player?.addListener(listener) }
+    init { keepScreenOn = true; setEGLContextClientVersion(2); setRenderer(this); renderMode = RENDERMODE_WHEN_DIRTY; player?.addListener(listener) }
     private fun shader(type: Int, source: String): Int = glCreateShader(type).also { glShaderSource(it, source); glCompileShader(it) }
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
+        surface?.release(); texture?.release()
         program = glCreateProgram()
         glAttachShader(program, shader(GL_VERTEX_SHADER, "attribute vec2 p;attribute vec2 uv;uniform mat4 m;varying vec2 t;void main(){gl_Position=vec4(p,0.,1.);t=(m*vec4(uv,0.,1.)).xy;}"))
         glAttachShader(program, shader(GL_FRAGMENT_SHADER, "#extension GL_OES_EGL_image_external : require\nprecision mediump float;uniform samplerExternalOES image;varying vec2 t;void main(){gl_FragColor=texture2D(image,t);}"))

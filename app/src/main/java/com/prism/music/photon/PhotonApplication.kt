@@ -5,7 +5,8 @@ import com.prism.music.ui.theme.AppFonts
 import com.prism.music.ui.theme.IconStyle
 
 /** Photon deliberately does not start Prism's music jobs, account sync, or update installer. */
-class PhotonApplication : Application() {
+class PhotonApplication : Application(), coil3.SingletonImageLoader.Factory {
+    override fun newImageLoader(context: coil3.PlatformContext): coil3.ImageLoader = PhotonImageLoader.create(context)
     internal val updates by lazy { PhotonUpdates(this) }
     internal val tvForeground = kotlinx.coroutines.flow.MutableStateFlow(false)
     val account by lazy { YouTubeAccount() }

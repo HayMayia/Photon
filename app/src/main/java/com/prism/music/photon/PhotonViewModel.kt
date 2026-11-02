@@ -64,23 +64,23 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     private val likesPending = mutableSetOf<String>()
     private val metadataReadSlots = kotlinx.coroutines.sync.Semaphore(2)
     private val likeReadSlots = kotlinx.coroutines.sync.Semaphore(2)
-    fun resolveVideoPresentation(video: Video) {
+    fun resolveVideoPresentation(video: Video, includeLike: Boolean = true) {
         val requestedRevision = library.value.youtubeSessionRevision
         val presentationKey = "$requestedRevision:${video.id}"
         if ((video.id !in videoPresentation.value || (videoPresentation.value[video.id]?.short != true && presentationRevisions[video.id] != requestedRevision)) && presentationPending.add(presentationKey)) viewModelScope.launch {
             try {
                 val resolved = metadataReadSlots.withPermit {
-                    var result = app.videos.presentation(video)
-                    if (result?.short != true && requestedRevision == library.value.youtubeSessionRevision && library.value.youtubeHome && library.value.youtubeSessionReady) {
-                        try {
-                            val metadata = app.accountActions.presentation(video.id, app.youtubeHistory.session())
-                            if (requestedRevision == library.value.youtubeSessionRevision && library.value.youtubeSessionReady && metadata != null) {
-                                val base = result ?: video
-                                result = base.copy(short = base.short || metadata.first, thumbnail = if (metadata.first) metadata.second.ifBlank { base.thumbnail } else base.thumbnail)
-                            }
-                        } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { /* Keep any public proof when the authenticated route is unavailable. */ }
+                    if (video.short) video else {
+                        // One authoritative account read first; do not serially probe both routes for every normal row.
+                        val account = if (requestedRevision == library.value.youtubeSessionRevision && library.value.youtubeHome && library.value.youtubeSessionReady) {
+                            try { app.accountActions.presentation(video.id, app.youtubeHistory.session()) }
+                            catch (cancelled: CancellationException) { throw cancelled }
+                            catch (_: Exception) { null }
+                        } else null
+                        if (account != null) video.copy(short = account.first,
+                            thumbnail = if (account.first) account.second.ifBlank { video.thumbnail } else video.thumbnail)
+                        else app.videos.presentation(video)
                     }
-                    result
                 } ?: return@launch
                 if (requestedRevision != library.value.youtubeSessionRevision) return@launch
                 presentationRevisions[video.id] = requestedRevision
@@ -94,6 +94,8 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 // Retain positive presentation on the dataset even if the global 512-item LRU evicts it.
                 val shelf = accountLibrary.value
                 shelf.page?.let { page -> accountLibrary.value = shelf.copy(page = page.copy(items = AccountLibraryRows.metadata(page.items, resolved))) }
+                val activeCollection = collection.value
+                if (activeCollection != null) collection.value = activeCollection.copy(videos = activeCollection.videos.map { if (it.id == resolved.id) ShortsPresentation.merge(it, resolved) else it })
                 val feed = mutableBrowse.value
                 if (feed.query == "Google subscriptions") mutableBrowse.value = feed.copy(videos = feed.videos.map {
                     if (it.id == resolved.id) ShortsPresentation.merge(it, resolved) else it
@@ -102,6 +104,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
             } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { /* Unknown stays unknown; no duration guesses. */ }
             finally { presentationPending.remove(presentationKey) }
         }
+        if (!includeLike) return
         val revision = library.value.youtubeSessionRevision
         val key = "$revision:${video.id}"
         val previousLike = googleLikes.value[video.id]
@@ -241,6 +244,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 if (more) accountLibraryTokens += oldPage!!.continuation!!
                 accountLibrary.value = AccountLibraryState(shelf, playlist, title,
                     page.copy(items = accountLibrary.value.page?.items.orEmpty(), continuation = page.continuation?.takeUnless { it in accountLibraryTokens }), generation = generation)
+                page.items.mapNotNull { it.video }.take(6).forEach { resolveVideoPresentation(it, includeLike = false) }
 
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) {
@@ -475,7 +479,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
             try {
                 val result = app.youtubeHome.subscriptions(app.youtubeHistory.session())
                 if (revision != library.value.youtubeSessionRevision || !library.value.youtubeSessionReady) return@launch
-                mutableBrowse.value = BrowseState(videos = result.videos, query = "Google subscriptions", error = result.message)
+                mutableBrowse.value = BrowseState(videos = result.videos.map { ShortsPresentation.merge(it, videoPresentation.value[it.id]) }, query = "Google subscriptions", error = result.message)
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { if (revision == library.value.youtubeSessionRevision) mutableBrowse.value = BrowseState(query = "Google subscriptions", error = "Could not read Google subscriptions. Sign in with the primary Google button and retry. No local channel feed was substituted.") }
         }
@@ -558,7 +562,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 val details = app.videos.details(video.id)
                 // Metadata may finish while stream extraction is suspended; use the latest proof, not the opening snapshot.
                 val presentation = videoPresentation.value[video.id] ?: video
-                val proved = ShortsPresentation.merge(details.video, videoPresentation.value[video.id])
+                val proved = ShortsPresentation.merge(ShortsPresentation.merge(details.video, video), videoPresentation.value[video.id])
                 videoPresentation.value = (videoPresentation.value + (video.id to proved)).entries.toList().takeLast(512).associate { it.toPair() }
                 presentationRevisions[video.id] = revision
                 val max = library.value.defaultHeight
@@ -579,6 +583,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun offline(download: SavedDownload) {
+        nextVideoWarmJob?.cancel()
         watchJob?.cancel()
         if (!File(download.path).isFile) {
             mutableWatch.value = WatchState(video = download.video, error = "The downloaded file is missing. Remove this entry and download it again.")
@@ -596,7 +601,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
         if (mutableWatch.value.video == null) mutableWatch.value = WatchState(video = video)
     }
 
-    fun close() { watchJob?.cancel(); mutableWatch.value = WatchState() }
+    fun close() { vrViewing.value = false; nextVideoWarmJob?.cancel(); watchJob?.cancel(); mutableWatch.value = WatchState() }
     fun save(video: Video) = requestGoogleChange(GoogleChange(GoogleChangeKind.LIKE, video.id, video.title, video, desired = googleLikes.value[video.id] != true))
     fun download(video: Video, quality: VideoQuality) = VideoDownloadWorker.enqueue(app, video, quality.height, library.value.wifiOnly)
     fun cancel(id: java.util.UUID) { WorkManager.getInstance(app).cancelWorkById(id) }
@@ -651,7 +656,10 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
             try {
                 val result = if (channel) app.videos.channel(url, previous?.next, shorts) else app.videos.playlist(url, previous?.next)
                 result.channel?.let(::resolveSubscription)
-                collection.value = if (previous == null) result else previous.copy(videos = (previous.videos + result.videos).distinctBy { it.id }, next = result.next)
+                val enriched = result.copy(videos = result.videos.map { ShortsPresentation.merge(it, videoPresentation.value[it.id]) })
+                val current = collection.value
+                collection.value = if (previous == null) enriched else (current ?: previous).copy(videos = ((current ?: previous).videos + enriched.videos).distinctBy { it.id }, next = result.next)
+                enriched.videos.take(6).forEach { resolveVideoPresentation(it, includeLike = false) }
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (error: Exception) { collectionError.value = error.message ?: "Could not load this page" }
             finally { if (kotlinx.coroutines.currentCoroutineContext()[Job]?.isActive == true) collectionBusy.value = false }

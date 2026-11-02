@@ -14,20 +14,23 @@ fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
 
 ## Android
 
-**Latest: v1.1.0.8 Beta — playlist playback and authenticated Home hydration.**
-Use **Home → Update to v1.1.0.8 Beta** (reopen Photon if the banner is cached).
-Shared Music/shortened playlist links open the playlist rather than just the first
-video. Selecting an entry pins Up next and Next to that playlist, including later
-pages, on phone and TV; playlist ends never substitute unrelated recommendations.
-Connected playlist URLs use the Google-account loader. Home requests the signed
-account's browse response instead of using bootstrap HTML cards. Native Home rows
-keep their committed frame while late Shorts metadata resolves; Shorts pairing,
-landscape regular videos, and source order are retained.
-See [release notes](docs/RELEASE_1_1_0_8_BETA.md).
-[Build 41454902703](https://github.com/HayMayia/Photon/actions/runs/41454902703)
-**PASS in 6m44s**: debug/release builds, unit suite, permanent signing and publication.
-Source `531a066`, code 37. PR verification 41454911976 also passes. Actual Google
-relevance and physical-device behavior are not certified by these tests.
+**Latest: v1.1.0.9 Beta — cached Liked Music, simpler comments, playback headroom.**
+Use **Home → Update to v1.1.0.9 Beta** (reopen Photon if the banner is cached).
+Liked Music reopens a persistent account-bound snapshot instead of restarting the
+entire likes scan. Stale refreshes keep the list usable; confirmed Photon likes and
+unlikes update it automatically. Music snapshots live outside playback preferences
+so progress ticks do not repeatedly serialize a large library. Initial classification
+still takes time; external Google changes reconcile on refresh (six-hour freshness).
+Comments use **Publish Comment** and offer Google-backed Like controls, supporting
+classic and modern entity-key bindings; unavailable controls are not faked locally.
+Playback keeps the 750 ms start threshold, increases forward buffering to 45–120 s,
+and uses 5 s recovery after a stall. This does not guarantee stall-free CDN playback.
+Playlist queues and authenticated Home improvements from 1.1.0.8 remain included.
+See [release notes](docs/RELEASE_1_1_0_9_BETA.md).
+[Build 41456909398](https://github.com/HayMayia/Photon/actions/runs/41456909398)
+**PASS in 7m51s**: debug/release, focused unit suite, permanent signing, publication.
+Source `b952b6e`, code 38. PR verification 41456918669 also passes. Physical playback
+and live-account comment mutations were not tested in this environment.
 
 **Liked Music remains automatic:** a music-only view of Google-account likes,
 including older returned pages, not a manually filled custom playlist. Unknown or

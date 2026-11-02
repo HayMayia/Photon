@@ -591,3 +591,25 @@ behavior is certified. Playlist-source state, generation/account checks and expl
 UI origins are implemented; end-to-end device playback remains a manual check.
 The earlier compile failure 41454460281 was corrected before this successful release;
 intermediate cancelled sources were not published as this version.
+
+
+## Android 1.1.0.9 — cached music, comment likes and rebuffer recovery
+
+Source `b952b6e9f62e450d77f43f55d95c2d0b5547f14d`, code 38.
+Run 41456909398 PASS in 7m51s; PR run 41456918669 PASS. Debug/release assembly,
+focused Android unit suite, permanent signer verification and release publication.
+Eight added checks cover persistent snapshot JSON/defaults, preserving a confirmed
+like/unlike racing a scan, exact classic comment binding, already-liked state,
+missing action rejection, modern toolbar entity-key binding, and buffer constants.
+Snapshots are stored separately from PhotonLibrary/playback progress. Account revision
+checks prevent showing a different account's snapshot. Cached list navigation does
+not cancel the independent refresh job. Background freshness checks run while the
+ViewModel is alive; no claim of system-wide scheduled sync while Photon is stopped.
+
+Asset 701948164, 25,369,392 bytes, SHA256
+`05c914e9be70185ae7c6898a4c6b9a45ef9ca7b0cc4018898e0fadcc94f0e6e6`.
+No physical network/CDN buffering comparison, Google comment mutation or live-account
+cache sync was tested. Comment action lookup supports classic and entity-bound modern
+controls but is bounded to 12 returned pages; missing controls fail rather than
+producing local-only likes. Buffer constants are regression-tested, not evidence of
+zero rebuffer events on arbitrary networks or devices.

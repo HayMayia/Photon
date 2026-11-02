@@ -8,4 +8,10 @@
 - The music snapshot is stored separately from playback preferences so progress updates do not repeatedly serialize a large music library.
 - Playback retains the 750 ms initial start threshold, but buffers 45–120 seconds ahead and requires 5 seconds after a stall to reduce repeated short buffering cycles. This is increased recovery headroom, not a guarantee against inadequate bandwidth, CDN throttling or server errors.
 
-Validation pending hosted Android build, regression suite, signing and release publication. No live-account comment mutation or physical-device buffering comparison was performed.
+Validation: **hosted run 41456909398 PASS (7m51s)**: debug/release builds, focused unit suite, permanent certificate verification and publication. PR run **41456918669 PASS**. Eight new checks cover snapshot serialization/defaults, scan-vs-like/unlike races, exact classic/modern comment-control bindings, missing action rejection, already-liked state, and startup/rebuffer headroom. Existing Android regressions also pass.
+
+Published source `b952b6e9f62e450d77f43f55d95c2d0b5547f14d`, version code 38.
+Verified Photon.apk asset 701948164, 25,369,392 bytes, SHA256
+`05c914e9be70185ae7c6898a4c6b9a45ef9ca7b0cc4018898e0fadcc94f0e6e6`.
+
+No live-account comment mutation or physical-device buffering comparison was performed. Comment discovery is bounded to 12 returned comment pages; some replies/unsupported controls may not be exposed. Likes are never simulated when the server cannot confirm them.

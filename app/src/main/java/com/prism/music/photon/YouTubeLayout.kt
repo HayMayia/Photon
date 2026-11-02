@@ -136,12 +136,12 @@ internal fun YouTubeLayoutHome(model: PhotonViewModel, library: PhotonLibrary, o
                                settings: () -> Unit, cast: () -> Unit, topic: (String) -> Unit, shorts: () -> Unit, channel: (String) -> Unit) {
     val feed by model.youtubeHome.collectAsStateWithLifecycle()
     val list = rememberLazyListState()
+    val rows = rememberHomeFeedRows(feed.page?.videos.orEmpty(), model, list)
     LaunchedEffect(feed.page?.continuation, feed.loadingMore, feed.autoMore, feed.error, library.youtubeHome) {
         if (!library.youtubeHome || feed.page?.continuation == null || feed.loadingMore || !feed.autoMore || feed.error != null || feed.page?.videos.isNullOrEmpty()) return@LaunchedEffect
         snapshotFlow { list.layoutInfo.visibleItemsInfo.lastOrNull()?.index?.let { it >= list.layoutInfo.totalItemsCount - 4 } == true }
             .distinctUntilChanged().collect { if (it) model.moreYouTubeHome() }
     }
-    val videos = feed.page?.videos.orEmpty()
     LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(bottom = 16.dp)) {
         item { PhotonUpdateCard() }
         item { YouTubeLayoutHeader(search = search, settings = settings, cast = cast) }
@@ -159,7 +159,7 @@ internal fun YouTubeLayoutHome(model: PhotonViewModel, library: PhotonLibrary, o
         if (error != null) item { Text(error, Modifier.padding(16.dp), color = MaterialTheme.colorScheme.error); TextButton(onClick = model::home) { Text("Retry") } }
         feed.page?.message?.takeIf { library.youtubeHome }?.let { message -> item { Text(message, Modifier.padding(16.dp)) } }
         if (!library.youtubeHome || error != null) item { YouTubeHomeConnection(model) }
-        items(HomeFeedRows.make(videos), key = { it.key }) { row ->
+        items(rows, key = { it.key }) { row ->
             if (row.portrait) Box(Modifier.padding(horizontal = 12.dp)) { HomeRecommendationRow(row, open) }
             else row.videos.forEach { video -> YouTubeLayoutVideo(video, { open(video) }, { model.save(video) }, { channel(video.channelUrl) }) }
         }

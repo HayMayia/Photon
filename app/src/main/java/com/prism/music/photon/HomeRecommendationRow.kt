@@ -3,7 +3,9 @@ package com.prism.music.photon
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
@@ -34,4 +36,20 @@ internal fun HomeRecommendationColumns(row: HomeFeedRows.Row, card: @Composable 
         row.videos.forEach { source -> card(source, Modifier.weight(1f)) }
         if (row.portrait && row.videos.size == 1) Spacer(Modifier.weight(1f))
     }
+}
+
+
+/** Observe only already-resolved metadata; never eagerly extract every offscreen recommendation. */
+@Composable
+internal fun rememberHomeFeedRows(videos: List<Video>, model: PhotonViewModel, list: LazyListState): List<HomeFeedRows.Row> {
+    val metadata by model.videoPresentation.collectAsStateWithLifecycle()
+    val proposed = HomeFeedRows.make(videos.map { ShortsPresentation.merge(it, metadata[it.id]) })
+    var committed by remember { mutableStateOf(proposed) }
+    // New dataset/empty account must clear immediately; late portrait corrections wait for scroll idle.
+    val sameDataset = committed.flatMap { it.videos }.map { it.id }.all { id -> videos.any { it.id == id } }
+    if (videos.isEmpty() || !list.isScrollInProgress || !sameDataset) {
+        SideEffect { if (committed != proposed) committed = proposed }
+        return proposed
+    }
+    return committed
 }

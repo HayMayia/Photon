@@ -11,6 +11,8 @@
   and title widths now match; two-line title areas align; an unpaired Short retains a
   half-width column. Ordinary videos stay full-width landscape. Google's returned order
   is retained instead of collecting all Shorts above the remaining recommendations.
+- Late source-proven Shorts corrections are applied when scrolling is idle, without
+  eagerly looking up every offscreen recommendation.
 - Search/topic discovery remains available explicitly, not as account Home fallback.
   Google's history pause and recommendation choices are not overwritten or fabricated.
 

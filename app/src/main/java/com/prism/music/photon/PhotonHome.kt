@@ -79,6 +79,7 @@ private fun ActualYouTubeHome(model: PhotonViewModel, open: (Video) -> Unit, set
                               shorts: () -> Unit, subscriptions: () -> Unit, downloads: () -> Unit, saved: () -> Unit, discover: (String) -> Unit) {
     val feed by model.youtubeHome.collectAsStateWithLifecycle()
     val list = rememberLazyListState()
+    val rows = rememberHomeFeedRows(feed.page?.videos.orEmpty(), model, list)
     LaunchedEffect(feed.page?.continuation, feed.page?.videos?.size, feed.loadingMore, feed.autoMore, feed.error) {
         if (feed.page?.continuation == null || feed.loadingMore || !feed.autoMore || feed.error != null || feed.page?.videos.isNullOrEmpty()) return@LaunchedEffect
         snapshotFlow { (list.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1) >= list.layoutInfo.totalItemsCount - 5 }
@@ -122,7 +123,7 @@ private fun ActualYouTubeHome(model: PhotonViewModel, open: (Video) -> Unit, set
             feed.page?.message?.let { Text(it, Modifier.padding(vertical = 12.dp)) }
             if (feed.error != null || (feed.page == null && !feed.busy)) YouTubeHomeConnection(model)
         }
-        items(HomeFeedRows.make(feed.page?.videos.orEmpty()), key = { it.key }) { row ->
+        items(rows, key = { it.key }) { row ->
             HomeRecommendationRow(row, open)
         }
         item {

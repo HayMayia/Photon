@@ -9,3 +9,12 @@ Native public search/link browsing, first-page playlists/channels, embedded LibV
 **Unsigned preview:** Windows may show SmartScreen/unknown-publisher warnings. SHA256SUMS accompanies the installer. Do not disable antivirus or install a custom trust certificate. Security/false-positive review and a conditional free OSS signing route are documented in `desktop/windows/SECURITY.md`; neither guarantees warning-free distribution.
 
 CI builds and startup/core checks are not real-device/live-YouTube playback certification. Android releases and their updater are unchanged.
+
+## Verification
+
+Source `a9ca38a1888b1d9e3c45d77a276e28062ac2227e`; [Windows build 41431338162](https://github.com/HayMayia/Photon/actions/runs/41431338162) PASS in 3m55s, 25 core checks and native initialization. Separate [published-installer verification 41431997310](https://github.com/HayMayia/Photon/actions/runs/41431997310) PASS in 48s: fixed digest, per-user installation, installed native startup and uninstallation. This is not a live-playback, virus-scan or SmartScreen approval.
+
+Installer: 147,906,611 bytes. SHA256:
+```
+15ee9b2c359ee4cde35b1c53689f7ffb7eab201fae0ab1857f7b410e160d44aa
+```

@@ -17,3 +17,9 @@ This is much earlier than Android/Windows: no search/playlist browser, Google lo
 Pin/review dependency source; keep `.local` extraction enforced; do not import browser cookies, enable remote fallback, collect credentials or relax App Transport Security. Review privacy declarations and content-platform rules before release. Use only legitimate Apple signing; never ask users to install unknown enterprise/MDM profiles or trust a custom root certificate. Android Play Protect and Windows SmartScreen reviews do not approve an iOS app.
 
 No camera, microphone, contacts, photo-library or tracking permission is requested. Direct YouTube/CDN connections still disclose network metadata and requested video identifiers to their providers. Playback/network/headset behavior is unverified; unsigned CI builds are not Apple security approval.
+
+## Verified foundation build
+
+Source `a9ca38a1888b1d9e3c45d77a276e28062ac2227e`, [run 41431338241](https://github.com/HayMayia/Photon/actions/runs/41431338241) PASS in 1m53s: 3 host Swift URL/media policy tests and unsigned iPhone ARM64 archive compiled using Xcode 16.4/iOS 18.5 SDK for a minimum iOS 17 deployment. Artifact `Photon-iOS-UNSIGNED-DEVELOPER-ARCHIVE` is 1,742,267 bytes (GitHub artifact ID 13134402183). Not an IPA, not installable without legitimate signing, not App Store/TestFlight approval, and not simulator/physical/live-video testing. Current store SDK requirements need reassessment before a store submission.
+
+The initial build referenced a stream-wait method not available in the pinned library; it was removed before this successful archive. Failed builds were not represented as installable releases. Remote extraction stays disabled.

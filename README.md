@@ -4,6 +4,15 @@
 [Yigder's Prism](https://github.com/Yigder/Prism), retaining its real Compose theme,
 fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
 
+## Native platform previews
+
+- **Windows x64:** [Download the EXE installer](https://github.com/HayMayia/Photon/releases/download/windows-v0.1.0-beta/Photon-Windows-x64-Setup.exe) · [scope/build guide](desktop/windows/README.md) · [security and free signing application procedure](desktop/windows/SECURITY.md). Native WPF + LibVLC, not a browser wrapper. Public search/link/list playback and combined-MP4 saving; **not Android feature parity**. Unsigned preview; no claim that SmartScreen warnings are eliminated.
+- **iOS:** [Native SwiftUI/AVPlayer foundation](native/ios/README.md), compiled as an **unsigned developer archive, not an installable IPA**. Public video-link playback foundation only. Apple signing/provisioning and distribution/content-rights review remain outstanding; no phone-only, free universal native installation is promised.
+- Windows build [41431338162](https://github.com/HayMayia/Photon/actions/runs/41431338162) **PASS** (3m55s): 25 core checks, native startup, installer/publication. Exact published installer install/start/uninstall verification [41431997310](https://github.com/HayMayia/Photon/actions/runs/41431997310) **PASS** (48s). iOS [41431338241](https://github.com/HayMayia/Photon/actions/runs/41431338241) **PASS** (1m53s): 3 Swift policy tests and unsigned ARM64 archive. These are build/integration checks, not live YouTube/GPU/antivirus certification.
+- Android is unchanged by these previews; its Home updater ignores releases without `Photon.apk`.
+
+## Android
+
 > **v1.1.0.2 Beta — buffering regression safeguards.**
 > [Release notes](docs/RELEASE_1_1_0_2_BETA.md). Use **Home → Update to v1.1.0.2 Beta**; if cached, force-stop/reopen then Home. No uninstall or storage clearing.
 > Media and prefetched ranges now use independent streaming connections without the metadata client's 35-second whole-response deadline. Connection/read stalls are still bounded. Buffered/prefetched bodies can wait without expiring just because playback has sufficient data or is paused. Truncated chunks fail explicitly for loader recovery; normal chunk continuity is covered by tests.

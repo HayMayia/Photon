@@ -2,6 +2,9 @@
 
 Effective date: 2 November 2026
 
+**Platform scope:** Most feature-specific sections below describe the Android app. The initial native Windows preview uses local yt-dlp/Node extraction for public YouTube requests, does not connect Google accounts/import browser cookies/write account history, and saves MP4 files only at a user-selected path. It has no telemetry or remote extraction backend. The unsigned iOS foundation uses pinned local YouTubeKit extraction and AVPlayer, with no account connection or remote extraction fallback. Neither preview is Android feature parity; third-party YouTube/CDN providers still receive network metadata and requested content identifiers. The iOS archive is not an installable/publicly approved release. Platform limitations and dependency details are documented in their respective READMEs.
+
+
 Photon is an independent, open-source Android YouTube client maintained through [HayMayia/Photon](https://github.com/HayMayia/Photon). It is not affiliated with or endorsed by Google or YouTube. This policy describes the current Photon implementation, including optional Google account features.
 
 ## Information Photon uses

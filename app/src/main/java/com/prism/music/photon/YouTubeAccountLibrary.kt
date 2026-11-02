@@ -23,12 +23,21 @@ internal class YouTubeAccountLibraryApi(client: OkHttpClient = OkHttpClient()) {
         val html = transport.html(playlist?.let { "/playlist?list=$it" } ?: shelf.path, session)
         val root = YouTubeWebBootstrap.assigned(html, "ytInitialData")
         if (!YouTubeWebBootstrap.signedIn(root, html)) throw IOException("YouTube did not confirm the account library login")
-        val primary = root["contents"] ?: throw IOException("Unrecognized account library page")
+        val context = YouTubeWebBootstrap.context(html)
+        val list = playlist ?: if (shelf in listOf(AccountShelf.LIKED, AccountShelf.LIKED_MUSIC)) "LL" else null
+        val primary = if (list != null) {
+            PlaylistContents.primary(root, list) ?: run {
+                // Some bootstrap pages expose a preview only. Hydrate the exact playlist, not Home/related cards.
+                val response = transport.post("browse", context ?: throw IOException("Playlist context unavailable"),
+                    buildJsonObject { put("browseId", "VL$list") }, session)
+                PlaylistContents.primary(response, list) ?: throw IOException("The requested playlist's entries were not returned")
+            }
+        } else root["contents"] ?: throw IOException("Unrecognized account library page")
         YouTubeAccountLibraryParser.parse(primary, if (playlist != null) AccountEntryKind.VIDEO else when (shelf) {
             AccountShelf.PLAYLISTS -> AccountEntryKind.PLAYLIST
             AccountShelf.CHANNELS -> AccountEntryKind.CHANNEL
             else -> AccountEntryKind.VIDEO
-        }).copy(context = YouTubeWebBootstrap.context(html))
+        }).copy(context = context)
     }
     suspend fun musicCategory(session: YouTubeWebSession, video: Video): Boolean? = withContext(Dispatchers.IO) {
         require(video.id.matches(Regex("[A-Za-z0-9_-]{11}")))
@@ -97,7 +106,11 @@ internal object YouTubeAccountLibraryParser {
                     val videoKey = listOf("videoRenderer", "gridVideoRenderer", "videoWithContextRenderer", "playlistVideoRenderer", "playlistPanelVideoRenderer", "reelItemRenderer").firstOrNull { node[it] is JsonObject }
                     if (kind == AccountEntryKind.VIDEO && (videoKey != null || lockup != null || node["shortsLockupViewModel"] != null)) {
                         // Playlist rows use the same title/byline/thumbnail fields as ordinary video renderers.
-                        val source = if (videoKey != null && videoKey != "reelItemRenderer") buildJsonObject { put("videoRenderer", node[videoKey]!!) } else node
+                        val source = if (videoKey != null && videoKey != "reelItemRenderer") buildJsonObject { put("videoRenderer", node[videoKey]!!) }
+                        else if (lockup != null && text(lockup["contentType"]).isBlank() &&
+                            GoogleAccountControls.objects(lockup).any { (it["watchEndpoint"] as? JsonObject)?.get("videoId")?.jsonPrimitive?.contentOrNull == text(lockup["contentId"]) }) {
+                            buildJsonObject { put("lockupViewModel", JsonObject(lockup + ("contentType" to JsonPrimitive("LOCKUP_CONTENT_TYPE_VIDEO")))) }
+                        } else node
                         YouTubeHomeParser.cards(source).videos.forEach { video -> rows.putIfAbsent(video.id, AccountEntry(video.id, video.title, kind, video)) }
                         return
                     }

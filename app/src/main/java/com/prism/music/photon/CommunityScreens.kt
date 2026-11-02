@@ -33,6 +33,7 @@ internal fun CollectionScreen(model: PhotonViewModel, library: PhotonLibrary, op
     val busy by model.collectionBusy.collectAsStateWithLifecycle()
     val error by model.collectionError.collectAsStateWithLifecycle()
     val googleSubscriptions by model.googleSubscriptions.collectAsStateWithLifecycle()
+    val likes by model.googleLikes.collectAsStateWithLifecycle()
     val current = page ?: return
     LazyColumn(Modifier.fillMaxSize().statusBarsPadding(), contentPadding = PaddingValues(20.dp)) {
         item {
@@ -57,7 +58,12 @@ internal fun CollectionScreen(model: PhotonViewModel, library: PhotonLibrary, op
             if (current.description.isNotBlank()) Text(current.description, maxLines = 4, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
             if (current.videos.isNotEmpty()) FilledTonalButton(onClick = { val first = current.videos.first(); model.prepareCollectionPlaylist(first); open(first) }) { Icon(PrismIcons.Play, null); Text("Play") }
         }
-        items(current.videos, key = { it.id }) { video -> CommunityVideoRow(video, { model.prepareCollectionPlaylist(video); open(video) }) }
+        items(current.videos, key = { it.id }) { source ->
+            val video = resolvedVideo(source)
+            if (current.channel == null && !video.short) PlaylistEntryRow(video, likes[video.id] == true,
+                open = { model.prepareCollectionPlaylist(video); open(video) }, like = { model.save(video) })
+            else CommunityVideoRow(video, { model.prepareCollectionPlaylist(video); open(video) })
+        }
         item {
             error?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(12.dp)) }
             if (busy) CircularProgressIndicator(Modifier.padding(20.dp))

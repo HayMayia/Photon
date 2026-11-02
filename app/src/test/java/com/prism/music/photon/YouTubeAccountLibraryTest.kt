@@ -14,7 +14,7 @@ class YouTubeAccountLibraryTest {
     private val channel = """{"channelRenderer":{"channelId":"UCabcdefghijklmnopqrstuv","title":{"simpleText":"Subscribed creator"}}}"""
     private fun parse(source: String, kind: AccountEntryKind = AccountEntryKind.VIDEO) = YouTubeAccountLibraryParser.parse(Json.parseToJsonElement(source), kind)
     private val cfg = """ytcfg.set({"INNERTUBE_CONTEXT":{"client":{"clientName":"WEB","clientVersion":"2.test"}}});"""
-    private fun html(body: String, loggedOut: Boolean = false) = cfg + """var ytInitialData = {"responseContext":{"mainAppWebResponseContext":{"loggedOut":$loggedOut}},"contents":{"sectionListRenderer":{"contents":[$body]}}};"""
+    private fun html(body: String, loggedOut: Boolean = false) = cfg + """var ytInitialData = {"responseContext":{"mainAppWebResponseContext":{"loggedOut":$loggedOut}},"contents":{"sectionListRenderer":{"contents":[{"playlistVideoListRenderer":{"contents":[$body]}}]}}};"""
     private fun api(handler: (Request) -> String) = YouTubeAccountLibraryApi(OkHttpClient.Builder().addInterceptor { chain ->
         Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(200).message("OK")
             .body(handler(chain.request()).toResponseBody("text/html".toMediaType())).build()

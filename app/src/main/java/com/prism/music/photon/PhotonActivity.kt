@@ -206,6 +206,14 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
     val googleLikes by model.googleLikes.collectAsStateWithLifecycle()
     val googleSubscriptions by model.googleSubscriptions.collectAsStateWithLifecycle()
     val googleChange by model.googleChange.collectAsStateWithLifecycle()
+    val playlistToDelete by model.playlistToDelete.collectAsStateWithLifecycle()
+    playlistToDelete?.let { (_, title) ->
+        AlertDialog(onDismissRequest = model::cancelPlaylistDeletion,
+            title = { Text("Delete playlist?") },
+            text = { Text("Delete “$title” from your Google account? The videos themselves won't be deleted.") },
+            confirmButton = { TextButton(onClick = model::confirmPlaylistDeletion) { Text("Delete playlist") } },
+            dismissButton = { TextButton(onClick = model::cancelPlaylistDeletion) { Text("Cancel") } })
+    }
     val work by model.work.collectAsStateWithLifecycle(initialValue = emptyList())
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var tabHistory by rememberSaveable { mutableStateOf(arrayListOf<Int>()) }

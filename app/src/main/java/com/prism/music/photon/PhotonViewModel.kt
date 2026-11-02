@@ -184,9 +184,10 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 }
                 result.subscribed?.let { googleSubscriptions.value = googleSubscriptions.value + (change.id to it); loadSubscriptionChannels() }
                 googleChange.value = GoogleChangeState()
+                if (change.kind !in listOf(GoogleChangeKind.LIKE, GoogleChangeKind.SUBSCRIBE)) accountPlaylistCache.clear()
                 val shelf = accountLibrary.value
                 if (shelf.shelf != AccountShelf.LIKED_MUSIC && shelf.page != null)
-                    openAccountShelf(shelf.shelf, shelf.playlist, shelf.title)
+                    openAccountShelf(shelf.shelf, shelf.playlist, shelf.title, force = true)
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) {
                 if (revision == library.value.youtubeSessionRevision) googleChange.value = GoogleChangeState(message = "This Google change could not be verified. Nothing was saved locally instead, and no automatic retry was made. Check official YouTube before retrying: a request might already have reached it.")
@@ -209,7 +210,10 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     private var accountLibraryJob: Job? = null
     private val accountLibraryTokens = mutableSetOf<String>()
     private var accountLibraryGeneration = 0L
-    fun openAccountShelf(shelf: AccountShelf, playlist: String? = null, title: String = shelf.label, more: Boolean = false) {
+    private val accountPlaylistCache = object : LinkedHashMap<String, Pair<Long, AccountLibraryPage>>(8, .75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Pair<Long, AccountLibraryPage>>?) = size > 8
+    }
+    fun openAccountShelf(shelf: AccountShelf, playlist: String? = null, title: String = shelf.label, more: Boolean = false, force: Boolean = false) {
         if (shelf == AccountShelf.LIKED_MUSIC && playlist == null) { openLikedMusic(); return }
         if (more && (accountLibrary.value.busy || accountLibrary.value.moreBusy)) return
         accountLibraryJob?.cancel()
@@ -218,9 +222,15 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
         if (more && (oldPage?.continuation == null || oldPage.continuation in accountLibraryTokens || accountLibraryTokens.size >= 200)) return
         if (!more) accountLibraryTokens.clear()
         val generation = if (more) previous.generation else ++accountLibraryGeneration
+        val cacheKey = playlist?.let { PlaylistQueuePolicy.key(library.value.youtubeSessionRevision, it) }
+        val cached = cacheKey?.let { accountPlaylistCache[it] }
+        if (!more && !force && cached != null && System.currentTimeMillis() - cached.first < 5 * 60_000L) {
+            accountLibrary.value = AccountLibraryState(shelf, playlist, title, cached.second, generation = generation)
+            return
+        }
         accountLibraryJob = viewModelScope.launch {
             val revision = library.value.youtubeSessionRevision
-            accountLibrary.value = if (more) previous.copy(moreBusy = true, error = null) else AccountLibraryState(shelf, playlist, title, busy = true, generation = generation)
+            accountLibrary.value = if (more) previous.copy(moreBusy = true, error = null) else AccountLibraryState(shelf, playlist, title, page = cached?.second, busy = cached == null, moreBusy = cached != null, generation = generation)
             try {
                 val session = app.youtubeHistory.session()
                 val kind = if (playlist != null || shelf in listOf(AccountShelf.HISTORY, AccountShelf.LIKED)) AccountEntryKind.VIDEO else if (shelf == AccountShelf.CHANNELS) AccountEntryKind.CHANNEL else AccountEntryKind.PLAYLIST
@@ -229,6 +239,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 // Admit account rows without waiting for optional metadata. Existing cards never change span.
                 // Incoming order is preserved even when later metadata requests finish first.
                 val existingKeys = if (more) accountLibrary.value.page?.items.orEmpty().map(AccountLibraryRows::key).toSet() else emptySet()
+                if (!more) accountLibrary.value = accountLibrary.value.copy(page = null)
                 val incoming = page.items.distinctBy(AccountLibraryRows::key).filter { AccountLibraryRows.key(it) !in existingKeys }
                 for (batch in incoming.chunked(6)) {
                     val prepared = AccountLibraryAdmission.prepare(batch) { video ->
@@ -249,6 +260,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 if (more) accountLibraryTokens += oldPage!!.continuation!!
                 accountLibrary.value = AccountLibraryState(shelf, playlist, title,
                     page.copy(items = accountLibrary.value.page?.items.orEmpty(), continuation = page.continuation?.takeUnless { it in accountLibraryTokens }), generation = generation)
+                if (cacheKey != null) accountLibrary.value.page?.let { accountPlaylistCache[cacheKey] = System.currentTimeMillis() to it }
                 if (playlist != null && playlistSource.value == PlaylistQueuePolicy.key(revision, playlist)) {
                     // A tap during incremental admission must not freeze a partially admitted first page.
                     queue.value = PlaylistQueuePolicy.append(queue.value, accountLibrary.value.page?.items.orEmpty().mapNotNull { it.video })
@@ -367,6 +379,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
 
     fun moreAccountShelf() { val state = accountLibrary.value; openAccountShelf(state.shelf, state.playlist, state.title, more = true) }
     private fun invalidateAccountLibrary() {
+        accountPlaylistCache.clear(); playlistToDelete.value = null
         ++likedMusicEpoch; likedMusicJob?.cancel(); likedMusicJob = null
         likedMusicSnapshot = null; likedMusicSnapshotRevision = -1; likedMusicMutations.clear()
         commentLikes.value = emptySet(); commentLikeBusy.value = emptySet(); commentLikeError.value = null
@@ -846,7 +859,14 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     fun createGooglePlaylist(name: String, video: Video? = null) = requestGoogleChange(GoogleChange(GoogleChangeKind.CREATE_PLAYLIST, "", name, video))
     fun addToPlaylist(id: String, video: Video) = requestGoogleChange(GoogleChange(GoogleChangeKind.ADD_VIDEO, id, video.title, video))
     fun removeFromPlaylist(id: String, video: Video) = requestGoogleChange(GoogleChange(GoogleChangeKind.REMOVE_VIDEO, id, video.title, video))
-    fun deletePlaylist(id: String, title: String) = requestGoogleChange(GoogleChange(GoogleChangeKind.DELETE_PLAYLIST, id, title))
+    val playlistToDelete = MutableStateFlow<Pair<String, String>?>(null)
+    fun deletePlaylist(id: String, title: String) { playlistToDelete.value = id to title }
+    fun cancelPlaylistDeletion() { playlistToDelete.value = null }
+    fun confirmPlaylistDeletion() {
+        val target = playlistToDelete.value ?: return
+        playlistToDelete.value = null
+        requestGoogleChange(GoogleChange(GoogleChangeKind.DELETE_PLAYLIST, target.first, target.second))
+    }
     fun next() {
         val index = queue.value.indexOfFirst { it.id == watch.value.video?.id }
         if (index >= 0) {

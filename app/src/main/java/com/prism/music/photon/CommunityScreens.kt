@@ -80,6 +80,8 @@ internal fun PlaylistPicker(library: PhotonLibrary, video: Video, model: PhotonV
     Column(Modifier.fillMaxWidth().padding(24.dp).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Add to YouTube playlist", style = MaterialTheme.typography.headlineSmall)
         Text("This changes the same Google account as Home. New playlists are private; no local fallback.", style = MaterialTheme.typography.bodySmall)
+        FilledTonalButton(enabled = library.youtubeHome && library.youtubeSessionReady && !state.busy,
+            onClick = { model.openLikedMusic(video); done() }) { Text("Save to Liked Music") }
         OutlinedTextField(name, { name = it }, label = { Text("New YouTube playlist name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
         FilledTonalButton(enabled = name.isNotBlank(), onClick = { model.createGooglePlaylist(name, video); done() }) { Text("Create and add") }
         if (state.busy) LinearProgressIndicator()

@@ -4,6 +4,8 @@ import android.app.PendingIntent
 import android.content.Intent
 import android.net.Uri
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.collect
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import androidx.media3.common.AudioAttributes
@@ -36,6 +38,16 @@ class PhotonPlaybackService : MediaSessionService() {
     private var historyRefreshJob: Job? = null
     private var lastHistoryRefresh = -30_000L
     private val json = Json { ignoreUnknownKeys = true }
+
+    private fun playbackAllowed(): Boolean {
+        val app = application as PhotonApplication
+        if (isPhotonTv()) return app.tvForeground.value
+        if (app.playbackForeground.value) return true
+        val library = app.library.state.value
+        val raw = session?.player?.currentMediaItem?.mediaMetadata?.extras?.getString("photon_video")
+        val music = raw?.let { runCatching { json.decodeFromString<Video>(it).music }.getOrDefault(false) } ?: false
+        return MusicPlaybackPolicy.backgroundAllowed(music, library.musicBackground, library.videoBackground, false)
+    }
 
     private fun snapshot(savePosition: Boolean = false) {
         val player = session?.player ?: return
@@ -120,7 +132,10 @@ class PhotonPlaybackService : MediaSessionService() {
                 if (opened > 0) PhotonDiagnostics.event("First frame after open: ${android.os.SystemClock.elapsedRealtime() - opened} ms")
             }
             override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
-                if (isPhotonTv() && playWhenReady && !(application as PhotonApplication).tvForeground.value) player.pause()
+                if (playWhenReady && !playbackAllowed()) player.pause()
+            }
+            override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                if (!playbackAllowed()) player.pause()
             }
             override fun onPlaybackStateChanged(state: Int) {
                 PhotonDiagnostics.event("Playback state=$state")
@@ -134,8 +149,10 @@ class PhotonPlaybackService : MediaSessionService() {
                 lastTick = android.os.SystemClock.elapsedRealtime()
             }
         })
-        if (isPhotonTv()) scope.launch {
-            (application as PhotonApplication).tvForeground.collect { foreground -> if (!foreground) player.pause() }
+        scope.launch {
+            val app = application as PhotonApplication
+            combine(app.playbackForeground, app.tvForeground, app.library.state) { _, _, _ -> Unit }
+                .collect { if (!playbackAllowed()) player.pause() }
         }
         scope.launch {
             while (isActive) { delay(5_000); snapshot() }
@@ -145,7 +162,7 @@ class PhotonPlaybackService : MediaSessionService() {
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = session
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-        if (isPhotonTv()) { session?.player?.pause(); stopSelf(); return }
+        if (isPhotonTv() || !playbackAllowed()) { session?.player?.pause(); stopSelf(); return }
         // An explicitly paused session can stop; playing media keeps its foreground notification.
         if (session?.player?.playWhenReady != true) stopSelf()
     }

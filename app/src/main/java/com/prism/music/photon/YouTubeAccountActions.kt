@@ -10,7 +10,7 @@ import java.io.IOException
 enum class GoogleChangeKind { LIKE, SUBSCRIBE, CREATE_PLAYLIST, ADD_VIDEO, REMOVE_VIDEO, DELETE_PLAYLIST }
 data class GoogleChange(val kind: GoogleChangeKind, val id: String, val title: String, val video: Video? = null, val channel: Channel? = null, val desired: Boolean? = null)
 data class GoogleChangeState(val pending: GoogleChange? = null, val revision: Long = -1, val busy: Boolean = false, val message: String? = null)
-data class GoogleChangeResult(val message: String, val liked: Boolean? = null, val subscribed: Boolean? = null)
+data class GoogleChangeResult(val message: String, val liked: Boolean? = null, val subscribed: Boolean? = null, val playlistId: String? = null)
 
 /** Structured controls only; never decides Google state from a local cache or an English button label. */
 internal object GoogleAccountControls {
@@ -187,7 +187,7 @@ internal class YouTubeAccountActionsApi(client: OkHttpClient = OkHttpClient()) {
                 checkPermission()
                 val created = read("/playlist?list=$id", session)
                 if (video != null && GoogleAccountControls.playlistRow(created.root, video.id) == null) throw IOException("Created playlist contents could not be verified; check YouTube before retrying")
-                GoogleChangeResult("YouTube returned a new private playlist ID and the playlist was read back. Refresh Playlists to see it.")
+                GoogleChangeResult("YouTube returned a new private playlist ID and the playlist was read back. Refresh Playlists to see it.", playlistId = id)
             }
             GoogleChangeKind.ADD_VIDEO, GoogleChangeKind.REMOVE_VIDEO -> {
                 require(change.id.matches(Regex("[A-Za-z0-9_-]{2,150}")) && change.id !in setOf("LL", "WL"))

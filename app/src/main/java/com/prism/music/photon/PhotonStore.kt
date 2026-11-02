@@ -43,6 +43,8 @@ data class PhotonLibrary(
     val youtubeLayout: Boolean = false,
     val playbackSpeed: Float = 1f,
     val repeatVideo: Boolean = false,
+    val musicBackground: Boolean = true,
+    val videoBackground: Boolean = false,
     val captionsEnabled: Boolean = true,
     val captionLanguage: String = "",
     val captionSizePercent: Int = 100,

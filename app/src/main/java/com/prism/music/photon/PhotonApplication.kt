@@ -8,6 +8,7 @@ import com.prism.music.ui.theme.IconStyle
 class PhotonApplication : Application(), coil3.SingletonImageLoader.Factory {
     override fun newImageLoader(context: coil3.PlatformContext): coil3.ImageLoader = PhotonImageLoader.create(context)
     internal val updates by lazy { PhotonUpdates(this) }
+    internal val playbackForeground = kotlinx.coroutines.flow.MutableStateFlow(false)
     internal val tvForeground = kotlinx.coroutines.flow.MutableStateFlow(false)
     val account by lazy { YouTubeAccount() }
     internal val accountActions by lazy { YouTubeAccountActionsApi() }
@@ -24,8 +25,10 @@ class PhotonApplication : Application(), coil3.SingletonImageLoader.Factory {
             override fun onActivityResumed(activity: android.app.Activity) { if (activity is PhotonActivity) tvForeground.value = true }
             override fun onActivityPaused(activity: android.app.Activity) { if (activity is PhotonActivity) tvForeground.value = false }
             override fun onActivityCreated(activity: android.app.Activity, state: android.os.Bundle?) {}
-            override fun onActivityStarted(activity: android.app.Activity) {}
-            override fun onActivityStopped(activity: android.app.Activity) {}
+            override fun onActivityStarted(activity: android.app.Activity) { if (activity is PhotonActivity) playbackForeground.value = true }
+            override fun onActivityStopped(activity: android.app.Activity) {
+                if (activity is PhotonActivity && !activity.isChangingConfigurations) playbackForeground.value = false
+            }
             override fun onActivitySaveInstanceState(activity: android.app.Activity, state: android.os.Bundle) {}
             override fun onActivityDestroyed(activity: android.app.Activity) {}
         })

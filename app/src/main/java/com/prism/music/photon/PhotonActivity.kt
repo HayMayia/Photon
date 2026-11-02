@@ -834,6 +834,14 @@ private fun SettingsPage(library: PhotonLibrary, model: PhotonViewModel, notific
         }
         item {
             SettingsGroup("PLAYBACK & DOWNLOADS") {
+                if (!context.isPhotonTv()) {
+                    ListItem(headlineContent = { Text("Music in background") },
+                        supportingContent = { Text("Continue when YouTube identifies the video as Music, including with the screen off") },
+                        trailingContent = { Switch(library.musicBackground, model::musicBackground) })
+                    ListItem(headlineContent = { Text("Regular videos in background") },
+                        supportingContent = { Text("Off by default. Also applies when music classification is unavailable") },
+                        trailingContent = { Switch(library.videoBackground, model::videoBackground) })
+                } else Text("Background playback is disabled on TV.", Modifier.padding(16.dp))
                 ListItem(headlineContent = { Text("Download on Wi-Fi only") }, supportingContent = { Text("Uses unmetered networks; turn off to use mobile data") }, leadingContent = { Icon(PrismIcons.Download, null) }, trailingContent = { Switch(library.wifiOnly, model::wifi) })
                 Text("Preferred playback quality", Modifier.padding(horizontal = 16.dp, vertical = 8.dp), fontWeight = FontWeight.SemiBold)
                 Row(Modifier.padding(horizontal = 16.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

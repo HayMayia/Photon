@@ -22,7 +22,7 @@ class PanoramaControlsTest {
         assertNull(view.videoSurfaceView)
     }
     @Test fun panoramaBackgroundRoutesDragToViewerInsteadOfSeekOrShortLike() {
-        val context = RuntimeEnvironment.getApplication<Application>()
+        val context = RuntimeEnvironment.getApplication()
         val routed = mutableListOf<Int>()
         var likes = 0
         val view = PhotonPlayerView(context).apply {

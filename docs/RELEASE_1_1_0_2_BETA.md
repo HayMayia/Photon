@@ -9,3 +9,9 @@ Playback stability takes priority over speculative startup savings.
 - Add local rebuffer diagnostics (buffer duration/speed, no stream URL or credentials).
 
 Compared source against 0.12.0-alpha (the older 0.12 Beta generation); its 750 ms startup threshold is restored. Source confirms the deadline/prefetch hazard, not that it was the sole cause on this phone. Physical continuous-playback, pause/resume, weak-network and high-speed testing remains pending. This release does not promise zero buffering on every connection. Thumbnail/Shorts, 360/viewer and Google authority policies are retained.
+
+## Verified publication
+
+Source `397c5339d2ab3923e291d1630561b5c7c4210441`, code 31. [Run 41424687509](https://github.com/HayMayia/Photon/actions/runs/41424687509) **PASS in 9m30s**: debug/release, 227-method focused suite, permanent signing and publication. PR run 41424695349 also passes. Official prerelease targets that source; uploaded `Photon.apk` is 25,353,008 bytes. Six local signing tests pass.
+
+The new regressions exercise a real loopback HTTP response held unread past the metadata deadline, media timeout/dispatcher/pool isolation, exact range stitching and early EOF propagation. They are not physical-device reproduction or proof that all causes of buffering have been removed.

@@ -613,3 +613,25 @@ cache sync was tested. Comment action lookup supports classic and entity-bound m
 controls but is bounded to 12 returned pages; missing controls fail rather than
 producing local-only likes. Buffer constants are regression-tested, not evidence of
 zero rebuffer events on arbitrary networks or devices.
+
+
+## Android 1.1.0.10 — exact playlists, visible entries and deletion warning
+
+Source `384441b0743a9dc9647277050ddd88732dc1f938`, code 39.
+Run 41459160060 PASS in 9m47s, PR 41459173403 PASS. Debug/release, focused unit
+suite, permanent signing and publication succeeded. Seven new tests cover requested
+playlist list selection (excluding previews), mismatched ID rejection, preview-only
+rejection, modern cards with proven watch targets, explicit authenticated VL browse
+hydration yielding 20 entries, six real PlaylistEntryRow components visible at once
+with selection of the fifth, and production dialog Cancel versus Delete behavior.
+The old API fixtures now model an actual playlistVideoListRenderer rather than a
+bare preview video in generic contents; generic previews no longer count as a playlist.
+
+Account page caches are bound to revision and playlist ID, limited to eight lists
+and five minutes; Refresh and playlist mutations bypass/invalidate them. Liked videos
+uses LL identity for queue binding and caching, not unrelated recommendations.
+Verified asset 701997391, 25,385,776 bytes, SHA256
+`819af956cecdc82bc301943c7170b75bb70dabf938a1b05942c2594f58e30a17`.
+No live-account deletion, real-account playlist identity check, physical-device UI
+or first-load latency benchmark is claimed. The rendered test is production row UI
+under Robolectric, not a hardware screenshot.

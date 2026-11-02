@@ -14,23 +14,23 @@ fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
 
 ## Android
 
-**Latest: v1.1.0.9 Beta — cached Liked Music, simpler comments, playback headroom.**
-Use **Home → Update to v1.1.0.9 Beta** (reopen Photon if the banner is cached).
-Liked Music reopens a persistent account-bound snapshot instead of restarting the
-entire likes scan. Stale refreshes keep the list usable; confirmed Photon likes and
-unlikes update it automatically. Music snapshots live outside playback preferences
-so progress ticks do not repeatedly serialize a large library. Initial classification
-still takes time; external Google changes reconcile on refresh (six-hour freshness).
-Comments use **Publish Comment** and offer Google-backed Like controls, supporting
-classic and modern entity-key bindings; unavailable controls are not faked locally.
-Playback keeps the 750 ms start threshold, increases forward buffering to 45–120 s,
-and uses 5 s recovery after a stall. This does not guarantee stall-free CDN playback.
-Playlist queues and authenticated Home improvements from 1.1.0.8 remain included.
-See [release notes](docs/RELEASE_1_1_0_9_BETA.md).
-[Build 41456909398](https://github.com/HayMayia/Photon/actions/runs/41456909398)
-**PASS in 7m51s**: debug/release, focused unit suite, permanent signing, publication.
-Source `b952b6e`, code 38. PR verification 41456918669 also passes. Physical playback
-and live-account comment mutations were not tested in this environment.
+**Latest: v1.1.0.10 Beta — exact playlist entries, compact rows and safe deletion.**
+Use **Home → Update to v1.1.0.10 Beta** (reopen Photon if the banner is cached).
+Playlist loading selects the requested entry list rather than preview/sidebar cards;
+a mismatched returned playlist ID is rejected. Preview-only bootstrap pages hydrate
+the exact authenticated playlist. Modern cards can prove their video through a watch
+target instead of requiring a contentType marker. Normal song/video entries use compact
+rows; Shorts retain the existing portrait library columns. Recently opened account
+playlists and Liked videos reuse their exact-account pages for five minutes, with
+Refresh bypass and mutation invalidation. Liked Music keeps its persistent cache.
+Deleting a playlist now asks for confirmation naming it; Cancel sends no deletion.
+See [release notes](docs/RELEASE_1_1_0_10_BETA.md).
+[Build 41459160060](https://github.com/HayMayia/Photon/actions/runs/41459160060)
+**PASS in 9m47s**: debug/release builds, focused unit suite, permanent signing and
+publication. Source `384441b`, code 39. PR run 41459173403 also passes. Rendered tests
+show six actual compact entries together, open the selected fifth row, and check
+Cancel vs explicit deletion confirmation. Live-account and physical-device behavior
+remain unverified; first uncached Google loads still require network access.
 
 **Liked Music remains automatic:** a music-only view of Google-account likes,
 including older returned pages, not a manually filled custom playlist. Unknown or

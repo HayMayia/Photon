@@ -53,7 +53,7 @@ internal fun AccountLibraryScreen(model: PhotonViewModel, revision: Long, ready:
             span = { entry -> GridItemSpan(AccountGridPolicy.span(entry)) }) { entry ->
             if (entry.video != null) {
                 val video = resolvedVideo(entry.video)
-                Column(Modifier.fillMaxWidth().remoteFocus().clickable { if (state.playlist != null) model.prepareAccountPlaylist(video); open(video) }.padding(horizontal = 6.dp, vertical = 10.dp)) {
+                Column(Modifier.fillMaxWidth().remoteFocus().clickable { if (state.playlist != null || state.shelf == AccountShelf.LIKED_MUSIC) model.prepareAccountPlaylist(video); open(video) }.padding(horizontal = 6.dp, vertical = 10.dp)) {
                     VideoThumbnail(video, entry.title, if (television && AccountGridPolicy.portrait(entry))
                         Modifier.height(180.dp).aspectRatio(VideoArtworkShape.ratio(true)).align(androidx.compose.ui.Alignment.CenterHorizontally)
                         else Modifier.fillMaxWidth().aspectRatio(AccountGridPolicy.ratio(entry)),

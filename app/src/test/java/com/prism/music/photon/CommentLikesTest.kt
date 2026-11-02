@@ -12,6 +12,12 @@ class CommentLikesTest {
     }
     @Test fun alreadyLikedCommentDoesNotNeedAnotherWrite() { assertTrue(YouTubeCommentLikes.control(fixture(liked = true), "comment-1")!!.liked) }
     @Test fun missingActionIsNotFabricated() { assertNull(YouTubeCommentLikes.control(fixture(token = ""), "comment-1")) }
+    @Test fun modernToolbarMustMatchTheCommentsOwnEntityKeys() {
+        fun modern(surface: String) = Json.parseToJsonElement("""{"commentViewModel":{"commentId":"modern-1","toolbarSurfaceKey":"surface-1","toolbarStateKey":"state-1"},"mutations":[{"entityKey":"$surface","payload":{"engagementToolbarSurfaceEntityPayload":{"likeCommand":{"innertubeCommand":{"performCommentActionEndpoint":{"action":"modern-token"}}}}}},{"payload":{"engagementToolbarStateEntityPayload":{"key":"state-1","likeState":"TOOLBAR_LIKE_STATE_INDIFFERENT"}}}]}""").jsonObject
+        assertEquals("modern-token", YouTubeCommentLikes.control(modern("surface-1"), "modern-1")?.action)
+        assertNull(YouTubeCommentLikes.control(modern("unrelated-surface"), "modern-1"))
+        assertNull(YouTubeCommentLikes.control(modern("surface-1"), "different-comment"))
+    }
     @Test fun steadyPlaybackHasRecoveryHeadroomWithoutSlowingFirstFrame() {
         assertEquals(750, StartupPolicy.START_BUFFER_MS)
         assertTrue(StartupPolicy.REBUFFER_MS >= 5000)

@@ -55,7 +55,7 @@ internal class YouTubeCommentLikes(client: OkHttpClient = OkHttpClient()) {
                     .firstOrNull { it["key"]?.jsonPrimitive?.contentOrNull == stateKey } ?: return null
                 val likeState = state["likeState"]?.jsonPrimitive?.contentOrNull ?: return null
                 if (likeState == "TOOLBAR_LIKE_STATE_LIKED") return Control("", true)
-                if (likeState !in setOf("TOOLBAR_LIKE_STATE_INDIFFERENT", "TOOLBAR_LIKE_STATE_DISLIKED")) return null
+                if (likeState !in setOf("TOOLBAR_LIKE_STATE_INDIFFERENT", "TOOLBAR_LIKE_STATE_UNLIKED", "TOOLBAR_LIKE_STATE_DISLIKED")) return null
                 val mutation = GoogleAccountControls.objects(root).firstOrNull { it["entityKey"]?.jsonPrimitive?.contentOrNull == surfaceKey } ?: return null
                 val surface = (mutation["payload"] as? JsonObject)?.get("engagementToolbarSurfaceEntityPayload") as? JsonObject ?: return null
                 val command = surface["likeCommand"] ?: return null

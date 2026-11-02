@@ -276,6 +276,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
         val cached = app.likedMusicCache.snapshot.takeIf { it.revision == revision }
         val snapshot = likedMusicSnapshot?.takeIf { likedMusicSnapshotRevision == revision } ?: cached?.videos
         val rows = snapshot.orEmpty().map { AccountEntry(it.id, it.title, AccountEntryKind.VIDEO, it) }
+        googleLikes.value += rows.map { it.id }.filter { googleLikes.value[it] != false }.associateWith { true }
         accountLibrary.value = AccountLibraryState(AccountShelf.LIKED_MUSIC, title = LikedMusicPlaylist.NAME,
             page = snapshot?.let { AccountLibraryPage(rows) }, busy = snapshot == null, generation = generation)
         if (force || cached == null || System.currentTimeMillis() - cached.updatedAt > 6 * 60 * 60_000L) scanLikedMusic()
@@ -302,6 +303,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 val fresh = found.mapNotNull { it.video }.filter { googleLikes.value[it.id] != false }
                 val videos = if (done) fresh else (old + fresh).distinctBy { it.id }.filter { googleLikes.value[it.id] != false }
                 likedMusicSnapshot = videos; likedMusicSnapshotRevision = revision
+                if (playlistSource.value == PlaylistQueuePolicy.key(revision, "liked-music")) queue.value = videos
                 if (done) app.likedMusicCache.save(LikedMusicSnapshot(revision, videos, System.currentTimeMillis()))
                 if (accountLibrary.value.shelf == AccountShelf.LIKED_MUSIC && accountLibrary.value.playlist == null) {
                     accountLibrary.value = accountLibrary.value.copy(busy = false, moreBusy = false, error = error,
@@ -360,7 +362,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
         ++likedMusicEpoch; likedMusicJob?.cancel(); likedMusicJob = null
         likedMusicSnapshot = null; likedMusicSnapshotRevision = -1
         commentLikes.value = emptySet(); commentLikeBusy.value = emptySet(); commentLikeError.value = null
-        if (queuedAccountPage != null) clearPlaylistQueue()
+        if (queuedAccountPage != null || playlistSource.value?.startsWith("account:") == true) clearPlaylistQueue()
         if (collection.value?.accountPage != null) { collectionJob?.cancel(); collection.value = null; collectionBusy.value = false }
         accountLibraryJob?.cancel(); ++accountLibraryGeneration; accountLibraryTokens.clear(); accountLibrary.value = AccountLibraryState()
     }
@@ -518,12 +520,13 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     }
     fun prepareAccountPlaylist(video: Video) {
         val state = accountLibrary.value
-        val id = state.playlist ?: return
+        val derivedMusic = state.shelf == AccountShelf.LIKED_MUSIC && state.playlist == null
+        val id = state.playlist ?: if (derivedMusic) "liked-music" else return
         clearPlaylistQueue()
         queue.value = state.page?.items.orEmpty().mapNotNull { it.video }.distinctBy { it.id }
         playlistSource.value = PlaylistQueuePolicy.key(library.value.youtubeSessionRevision, id)
-        queuedRevision = library.value.youtubeSessionRevision; queuedAccountPage = state.page
-        playlistMore.value = state.page?.continuation != null; queuedSelection = video.id
+        queuedRevision = library.value.youtubeSessionRevision; queuedAccountPage = if (derivedMusic) null else state.page
+        playlistMore.value = !derivedMusic && state.page?.continuation != null; queuedSelection = video.id
     }
     fun prepareCollectionPlaylist(video: Video) {
         if (collectionIsChannel) return
@@ -613,7 +616,18 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     private var searchJob: Job? = null
     private var watchJob: Job? = null
 
-    init { home() }
+    init {
+        home()
+        // Background freshness checks do not depend on revisiting the shelf.
+        viewModelScope.launch {
+            while (true) {
+                kotlinx.coroutines.delay(30 * 60_000L)
+                val snapshot = app.likedMusicCache.snapshot
+                if (library.value.youtubeHome && library.value.youtubeSessionReady && snapshot.revision == library.value.youtubeSessionRevision &&
+                    System.currentTimeMillis() - snapshot.updatedAt > 6 * 60 * 60_000L) scanLikedMusic()
+            }
+        }
+    }
 
     fun playerOptions(transform: (PhotonLibrary) -> PhotonLibrary) = app.library.update { old ->
         val next = transform(old)

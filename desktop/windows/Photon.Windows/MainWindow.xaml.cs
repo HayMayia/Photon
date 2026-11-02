@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.IO;
 using System.Net.Http;
 using System.Windows;
 using System.Windows.Controls;
@@ -103,10 +104,11 @@ public partial class MainWindow : Window
         if (_playback == null || Quality.SelectedItem is not StreamChoice choice) { Status.Text = "Open a video first."; return; }
         var dialog = new SaveFileDialog { Filter = "MP4 video|*.mp4", FileName = "Photon-" + _playback.Video.Id + ".mp4", AddExtension = true, DefaultExt = ".mp4", OverwritePrompt = true };
         if (dialog.ShowDialog(this) != true) return;
+        if (!string.Equals(Path.GetExtension(dialog.FileName), ".mp4", StringComparison.OrdinalIgnoreCase)) { Status.Text = "Choose an MP4 filename."; return; }
         var job = BeginOperation(); var temporary = dialog.FileName + "." + Guid.NewGuid().ToString("N") + ".partial";
         try
         {
-            using var client = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = Timeout.InfiniteTimeSpan };
+            using var client = new HttpClient(new SocketsHttpHandler { AllowAutoRedirect = false, ConnectTimeout = TimeSpan.FromSeconds(10) }) { Timeout = Timeout.InfiniteTimeSpan };
             var uri = YouTubePolicy.MediaUri(choice.Url); HttpResponseMessage? response = null;
             try
             {
@@ -114,7 +116,8 @@ public partial class MainWindow : Window
                 {
                     using var request = new HttpRequestMessage(HttpMethod.Get, uri);
                     request.Headers.TryAddWithoutValidation("User-Agent", choice.UserAgent); request.Headers.Referrer = new(choice.Referer);
-                    response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, job.Token);
+                    using var headerDeadline = CancellationTokenSource.CreateLinkedTokenSource(job.Token); headerDeadline.CancelAfter(TimeSpan.FromSeconds(35));
+                    response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, headerDeadline.Token);
                     if ((int)response.StatusCode is >= 300 and < 400 && response.Headers.Location is { } location)
                     { uri = YouTubePolicy.MediaUri(new Uri(uri, location).AbsoluteUri); response.Dispose(); response = null; continue; }
                     break;
@@ -139,7 +142,11 @@ public partial class MainWindow : Window
             finally { response?.Dispose(); }
         }
         catch (Exception error) { Report(error, job); }
-        finally { if (File.Exists(temporary)) File.Delete(temporary); }
+        finally {
+            try { if (File.Exists(temporary)) File.Delete(temporary); }
+            catch (IOException) { if (!_closed && ReferenceEquals(_operation, job)) Status.Text = "Temporary download could not be removed. Remove the .partial file manually."; }
+            catch (UnauthorizedAccessException) { if (!_closed && ReferenceEquals(_operation, job)) Status.Text = "Temporary download could not be removed. Check folder access."; }
+        }
     }
     private void WindowClosing(object? sender, CancelEventArgs e)
     {

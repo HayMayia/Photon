@@ -11,10 +11,12 @@ final class PlaybackModel: ObservableObject {
     @Published var opening = false
     private var task: Task<Void, Never>?
     private var generation = UUID()
+    private var itemStatus: NSKeyValueObservation?
     func open() {
         task?.cancel()
-        guard let id = YouTubeInput.videoID(input) else { status = "Enter an HTTPS YouTube video link."; return }
-        let request = UUID(); generation = request; opening = true; status = "Opening…"
+        let request = UUID(); generation = request
+        guard let id = YouTubeInput.videoID(input) else { opening = false; status = "Enter an HTTPS YouTube video link."; return }
+        opening = true; status = "Opening…"
         task = Task {
             do {
                 // Local extraction only: never enable the library's remote WebSocket fallback.
@@ -24,7 +26,6 @@ final class PlaybackModel: ObservableObject {
                     if generation == request { opening = false; status = "No supported combined audio/video stream. Separate-track HD and account-only playback are not ported yet." }
                     return
                 }
-                try await stream.waitUntilAvailable()
                 try Task.checkCancellation()
                 guard generation == request else { return }
                 try AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback)
@@ -32,7 +33,14 @@ final class PlaybackModel: ObservableObject {
                 player?.pause()
                 let item = AVPlayerItem(url: stream.url); item.preferredForwardBufferDuration = 10
                 let next = AVPlayer(playerItem: item); next.automaticallyWaitsToMinimizeStalling = true
-                player = next; next.play(); opening = false; status = "Public source playback · \(id)"
+                itemStatus = item.observe(\.status, options: [.initial, .new]) { observed, _ in
+                    Task { @MainActor in
+                        guard self.generation == request else { return }
+                        if observed.status == .failed { self.status = "Playback failed. Try reopening the video." }
+                        else if observed.status == .readyToPlay { self.status = "Public source playback · \(id)" }
+                    }
+                }
+                player = next; next.play(); opening = false; status = "Preparing player…"
             } catch is CancellationError {
                 if generation == request { opening = false; status = "Cancelled." }
             } catch {
@@ -41,7 +49,7 @@ final class PlaybackModel: ObservableObject {
         }
     }
     func cancel() { task?.cancel(); generation = UUID(); opening = false; status = "Cancelled." }
-    func stop() { cancel(); player?.pause(); player = nil; try? AVAudioSession.sharedInstance().setActive(false) }
+    func stop() { cancel(); itemStatus = nil; player?.pause(); player = nil; try? AVAudioSession.sharedInstance().setActive(false) }
 }
 
 struct ContentView: View {

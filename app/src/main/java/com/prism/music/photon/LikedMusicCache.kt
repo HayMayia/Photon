@@ -37,3 +37,12 @@ internal object LikedMusicFreshness {
     fun needsRefresh(snapshot: LikedMusicSnapshot?, now: Long): Boolean = snapshot == null || snapshot.schemaVersion < 1 ||
         now - snapshot.updatedAt >= if (snapshot.scanComplete) 6 * 60 * 60_000L else 2 * 60_000L
 }
+
+/** A first-page check cannot delete older songs simply because they are on later pages. */
+internal object LikedMusicHeadUpdates {
+    fun merge(cached: List<Video>, incoming: List<Video>, headOrder: List<String>): List<Video> {
+        val byId = (cached + incoming).associateBy { it.id }
+        val headIds = headOrder.toSet()
+        return (headOrder.mapNotNull { byId[it] } + cached.filterNot { it.id in headIds }).distinctBy { it.id }
+    }
+}

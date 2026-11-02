@@ -10,6 +10,12 @@ class LikedMusicRecoveryTest {
         assertTrue(LikedMusicFreshness.needsRefresh(old, 1001))
         assertEquals(1, old.videos.size)
     }
+    @Test fun newestLikesAreAddedWithoutDroppingSongsFromOlderPages() {
+        val old = Video("abcdefghijk", "Older song", "Creator", music = true)
+        val new = Video("otherVideo1", "New like", "Creator", music = true)
+        assertEquals(listOf(new, old), LikedMusicHeadUpdates.merge(listOf(old), listOf(new), listOf(new.id)))
+        assertEquals(listOf(new, old), LikedMusicHeadUpdates.merge(listOf(new, old), listOf(new), listOf(new.id)))
+    }
     @Test fun incompleteScanIsNotFrozenForSixHoursOrRetriedOnEveryOpen() {
         val partial = LikedMusicSnapshot(1, updatedAt = 1000, schemaVersion = 1, scanComplete = false, unresolved = 8)
         assertFalse(LikedMusicFreshness.needsRefresh(partial, 1001))

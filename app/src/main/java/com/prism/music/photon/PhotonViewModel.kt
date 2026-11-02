@@ -7,7 +7,6 @@ import androidx.work.WorkManager
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withPermit
@@ -547,7 +546,6 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     fun retryPlayback(video: Video) { app.videos.invalidateDetails(video.id); open(video) }
 
     val vrViewing = MutableStateFlow(false)
-    private var nextVideoWarmJob: Job? = null
     fun likeShort(video: Video) { if (googleLikes.value[video.id] != true) requestGoogleChange(GoogleChange(GoogleChangeKind.LIKE, video.id, video.title, video, desired = true)) }
 
     fun open(video: Video, fromQueue: Boolean = false) {
@@ -555,9 +553,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
         val revision = library.value.youtubeSessionRevision
         PhotonDiagnostics.event("Open video requested")
         if (!fromQueue) queue.value = emptyList()
-        nextVideoWarmJob?.cancel()
         watchJob?.cancel()
-        app.firstFrameVideo.value = null
         watchJob = viewModelScope.launch {
             mutableWatch.value = WatchState(video = video, busy = true)
             try {
@@ -572,24 +568,14 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 mutableWatch.value = WatchState(details.video.copy(short = video.short || presentation.short || details.video.short, thumbnail = if (presentation.short && presentation.thumbnail.isNotBlank()) presentation.thumbnail else details.video.thumbnail), details, quality, request = System.nanoTime(), startPositionMs = library.value.progress[video.id]?.resumeMs() ?: 0, openedAtMs = opened, webRevision = revision)
                 // Playback is published first; account-only reads must not contend with startup.
                 viewModelScope.launch { kotlinx.coroutines.delay(1_000); if (mutableWatch.value.video?.id == video.id) { resolveVideoPresentation(proved); details.channel?.let(::resolveSubscription) } }
-                val next = StartupPolicy.next(queue.value, video.id) ?: StartupPolicy.next(mutableBrowse.value.videos, video.id)
-                if (next != null) nextVideoWarmJob = viewModelScope.launch {
-                    // Do not steal extraction/network work from the video the user just opened.
-                    try {
-                        kotlinx.coroutines.withTimeout(30_000) { app.firstFrameVideo.first { it == video.id } }
-                        kotlinx.coroutines.delay(1_000)
-                        if (mutableWatch.value.video?.id == video.id) app.videos.details(next.id)
-                    } catch (cancelled: kotlinx.coroutines.TimeoutCancellationException) { /* No first frame: no speculative work. */ }
-                    catch (cancelled: CancellationException) { throw cancelled }
-                    catch (_: Exception) { /* Optional warm-ahead never interrupts playback. */ }
-                }
+                // No speculative next-video extraction while the selected video is using the connection.
+
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (error: Exception) { mutableWatch.value = WatchState(video = video, error = error.message ?: "This video could not be played") }
         }
     }
 
     fun offline(download: SavedDownload) {
-        nextVideoWarmJob?.cancel()
         watchJob?.cancel()
         if (!File(download.path).isFile) {
             mutableWatch.value = WatchState(video = download.video, error = "The downloaded file is missing. Remove this entry and download it again.")
@@ -607,7 +593,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
         if (mutableWatch.value.video == null) mutableWatch.value = WatchState(video = video)
     }
 
-    fun close() { vrViewing.value = false; nextVideoWarmJob?.cancel(); watchJob?.cancel(); mutableWatch.value = WatchState() }
+    fun close() { vrViewing.value = false; watchJob?.cancel(); mutableWatch.value = WatchState() }
     fun save(video: Video) = requestGoogleChange(GoogleChange(GoogleChangeKind.LIKE, video.id, video.title, video, desired = googleLikes.value[video.id] != true))
     fun download(video: Video, quality: VideoQuality) = VideoDownloadWorker.enqueue(app, video, quality.height, library.value.wifiOnly)
     fun cancel(id: java.util.UUID) { WorkManager.getInstance(app).cancelWorkById(id) }

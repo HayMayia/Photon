@@ -42,10 +42,7 @@ internal object ProjectionMetadata {
 }
 
 internal object StartupPolicy {
-    const val START_BUFFER_MS = 500
+    // Restore the pre-1.1.0.1 startup threshold; steady playback takes priority over 250 ms.
+    const val START_BUFFER_MS = 750
     const val REBUFFER_MS = 1500
-    fun next(feed: List<Video>, id: String): Video? {
-        val index = feed.indexOfFirst { it.id == id }
-        return if (index >= 0) feed.getOrNull(index + 1)?.takeIf { it.id != id } else null
-    }
 }

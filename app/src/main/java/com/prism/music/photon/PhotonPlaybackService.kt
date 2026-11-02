@@ -116,14 +116,17 @@ class PhotonPlaybackService : MediaSessionService() {
                 if (reason == androidx.media3.common.Player.DISCONTINUITY_REASON_SEEK) snapshot(true)
             }
             override fun onRenderedFirstFrame() {
-                (application as PhotonApplication).firstFrameVideo.value = player.currentMediaItem?.mediaId
                 val opened = player.currentMediaItem?.mediaMetadata?.extras?.getLong("photon_open_elapsed", 0) ?: 0
                 if (opened > 0) PhotonDiagnostics.event("First frame after open: ${android.os.SystemClock.elapsedRealtime() - opened} ms")
             }
             override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
                 if (isPhotonTv() && playWhenReady && !(application as PhotonApplication).tvForeground.value) player.pause()
             }
-            override fun onPlaybackStateChanged(state: Int) { PhotonDiagnostics.event("Playback state=$state") }
+            override fun onPlaybackStateChanged(state: Int) {
+                PhotonDiagnostics.event("Playback state=$state")
+                if (state == androidx.media3.common.Player.STATE_BUFFERING && player.playWhenReady && player.currentPosition > 0)
+                    PhotonDiagnostics.event("Rebuffer: buffered=${player.totalBufferedDuration} ms, speed=${player.playbackParameters.speed}")
+            }
             override fun onPlayerError(error: androidx.media3.common.PlaybackException) { PhotonDiagnostics.event("Playback error=${error.errorCodeName}") }
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 PhotonDiagnostics.event("Playing=$isPlaying")

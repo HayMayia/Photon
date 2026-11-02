@@ -79,9 +79,9 @@ class VideoRepository {
         .build()
     val artworkHttp: OkHttpClient = http.newBuilder().callTimeout(15, TimeUnit.SECONDS).build()
     // Prism's range/POST transport also handles current YouTube video streams.
-    val streamHttp: OkHttpClient = http.newBuilder()
-        .callTimeout(0, TimeUnit.SECONDS)
-        .addInterceptor(YouTubeStreamInterceptor(http))
+    private val mediaHttp = PlaybackNetworkPolicy.client(http)
+    val streamHttp: OkHttpClient = mediaHttp.newBuilder()
+        .addInterceptor(YouTubeStreamInterceptor(mediaHttp))
         .build()
 
     init {

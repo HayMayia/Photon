@@ -35,15 +35,8 @@ class ProjectionMetadataTest {
         ProjectionMetadata.observe("https://evil.example/youtubei/v1/player", body().replace("abcdefghijk", "otherVideo1"))
         assertEquals(VideoProjection.FLAT, ProjectionMetadata.get("otherVideo1", 137))
     }
-    @Test fun selectsOnlyNextRealItemAndNeverWrapsOrRepeats() {
-        val a = Video("abcdefghijk", "A", "Creator"); val b = Video("otherVideo1", "B", "Creator")
-        assertEquals(b, StartupPolicy.next(listOf(a, b), a.id))
-        assertNull(StartupPolicy.next(listOf(a, b), b.id))
-        assertNull(StartupPolicy.next(listOf(a), "unknown"))
-        assertNull(StartupPolicy.next(listOf(a, a), a.id))
-    }
     @Test fun startupThresholdDoesNotReduceRebufferProtection() {
-        assertEquals(500, StartupPolicy.START_BUFFER_MS)
+        assertEquals(750, StartupPolicy.START_BUFFER_MS)
         assertTrue(StartupPolicy.REBUFFER_MS >= 1500)
     }
 }

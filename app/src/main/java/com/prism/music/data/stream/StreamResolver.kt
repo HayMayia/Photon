@@ -232,18 +232,23 @@ class YouTubeStreamInterceptor(
 
         private val source = object : okio.Source {
             override fun read(sink: Buffer, byteCount: Long): Long {
+                require(byteCount >= 0)
+                if (byteCount == 0L) return 0
                 if (pos > end) return -1
                 while (true) {
                     val resp = current ?: run { open(); current!! }
+                    if (pos > currentEnd) {
+                        current?.close(); current = null
+                        continue
+                    }
                     if (next == null) prefetch()
-                    val n = resp.body.source().read(sink, minOf(byteCount, end - pos + 1))
+                    val n = resp.body.source().read(sink, minOf(byteCount, currentEnd - pos + 1))
                     if (n > 0) {
                         pos += n
                         return n
                     }
-                    if (pos > end) return -1
-                    current?.close()
-                    current = null
+                    if (n == -1L) throw java.io.EOFException("Stream chunk ended before its requested range was complete")
+                    return n
                 }
             }
 

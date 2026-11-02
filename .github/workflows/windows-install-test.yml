@@ -1,0 +1,47 @@
+name: Verify published Windows installer
+on:
+  push:
+    branches: ["arena/c217a41b-photon"]
+    paths: [".github/workflows/windows-install-test.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  installed-release:
+    runs-on: windows-2025
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v5
+      - name: Download the exact published installer and verify digest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          New-Item -ItemType Directory -Force artifacts | Out-Null
+          gh release download windows-v0.1.0-beta --repo $env:GITHUB_REPOSITORY --pattern Photon-Windows-x64-Setup.exe --dir artifacts
+          if ($LASTEXITCODE -ne 0) { throw 'Release download failed' }
+          $actual = (Get-FileHash artifacts/Photon-Windows-x64-Setup.exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actual -ne '15ee9b2c359ee4cde35b1c53689f7ffb7eab201fae0ab1857f7b410e160d44aa') { throw 'Published installer hash mismatch' }
+          "SHA256 verified: $actual" | Set-Content artifacts/verification.txt
+          Get-AuthenticodeSignature artifacts/Photon-Windows-x64-Setup.exe | Select-Object Status | Out-String | Add-Content artifacts/verification.txt
+      - name: Install per-user, initialize the installed app, and uninstall
+        run: |
+          $destination = Join-Path $env:RUNNER_TEMP 'Photon-installed-test'
+          $install = Start-Process artifacts/Photon-Windows-x64-Setup.exe -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/DIR=`"$destination`"") -PassThru
+          if (-not $install.WaitForExit(120000)) { $install.Kill(); throw 'Installation timed out' }
+          if ($install.ExitCode -ne 0) { throw "Installation failed: $($install.ExitCode)" }
+          $app = Start-Process (Join-Path $destination 'Photon.exe') -ArgumentList '--self-test' -PassThru
+          if (-not $app.WaitForExit(90000)) { $app.Kill(); throw 'Installed app smoke test timed out' }
+          if ($app.ExitCode -ne 0) { throw "Installed app startup failed: $($app.ExitCode)" }
+          'Published installer: install and native/tool initialization PASS.' | Add-Content artifacts/verification.txt
+          $uninstall = Start-Process (Join-Path $destination 'unins000.exe') -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART') -PassThru
+          if (-not $uninstall.WaitForExit(120000)) { $uninstall.Kill(); throw 'Uninstallation timed out' }
+          if ($uninstall.ExitCode -ne 0) { throw "Uninstallation failed: $($uninstall.ExitCode)" }
+          'Uninstallation PASS. No live YouTube/device/antivirus certification.' | Add-Content artifacts/verification.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Windows-published-installer-verification
+          path: artifacts/verification.txt

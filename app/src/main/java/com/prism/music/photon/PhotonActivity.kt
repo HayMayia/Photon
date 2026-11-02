@@ -415,7 +415,9 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                     Text("NOW WATCHING", Modifier.weight(1f), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = 2.sp)
                     IconButton(onClick = { controller?.stop(); controller?.clearMediaItems(); model.close(); expanded = false }) { Icon(PrismIcons.Close, "Close video") }
                 }
-                Box(if (immersive) Modifier.weight(1f).fillMaxWidth() else Modifier.fillMaxWidth().aspectRatio(VideoArtworkShape.ratio(video.short))) {
+                Box(if (immersive) Modifier.weight(1f).fillMaxWidth()
+                    else if (video.short) Modifier.fillMaxWidth().height((LocalConfiguration.current.screenHeightDp * 0.52f).dp)
+                    else Modifier.fillMaxWidth().aspectRatio(VideoArtworkShape.ratio(false))) {
                     VideoSurface(controller, Modifier.fillMaxSize(), true)
                     if (watch.busy || buffering || controller == null) CircularProgressIndicator(Modifier.align(Alignment.Center))
                     if (!immersive) IconButton(onClick = { fullscreen = true }, modifier = Modifier.align(Alignment.BottomEnd).background(Color.Black.copy(alpha = 0.6f), CircleShape)) {

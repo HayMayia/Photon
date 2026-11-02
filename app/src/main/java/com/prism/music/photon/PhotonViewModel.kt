@@ -222,7 +222,8 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
         if (more && (oldPage?.continuation == null || oldPage.continuation in accountLibraryTokens || accountLibraryTokens.size >= 200)) return
         if (!more) accountLibraryTokens.clear()
         val generation = if (more) previous.generation else ++accountLibraryGeneration
-        val cacheKey = playlist?.let { PlaylistQueuePolicy.key(library.value.youtubeSessionRevision, it) }
+        val playlistIdentity = playlist ?: if (shelf == AccountShelf.LIKED) "LL" else null
+        val cacheKey = playlistIdentity?.let { PlaylistQueuePolicy.key(library.value.youtubeSessionRevision, it) }
         val cached = cacheKey?.let { accountPlaylistCache[it] }
         if (!more && !force && cached != null && System.currentTimeMillis() - cached.first < 5 * 60_000L) {
             accountLibrary.value = AccountLibraryState(shelf, playlist, title, cached.second, generation = generation)
@@ -261,7 +262,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 accountLibrary.value = AccountLibraryState(shelf, playlist, title,
                     page.copy(items = accountLibrary.value.page?.items.orEmpty(), continuation = page.continuation?.takeUnless { it in accountLibraryTokens }), generation = generation)
                 if (cacheKey != null) accountLibrary.value.page?.let { accountPlaylistCache[cacheKey] = System.currentTimeMillis() to it }
-                if (playlist != null && playlistSource.value == PlaylistQueuePolicy.key(revision, playlist)) {
+                if (playlistIdentity != null && playlistSource.value == PlaylistQueuePolicy.key(revision, playlistIdentity)) {
                     // A tap during incremental admission must not freeze a partially admitted first page.
                     queue.value = PlaylistQueuePolicy.append(queue.value, accountLibrary.value.page?.items.orEmpty().mapNotNull { it.video })
                     queuedAccountPage = accountLibrary.value.page
@@ -542,7 +543,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     fun prepareAccountPlaylist(video: Video) {
         val state = accountLibrary.value
         val derivedMusic = state.shelf == AccountShelf.LIKED_MUSIC && state.playlist == null
-        val id = state.playlist ?: if (derivedMusic) "liked-music" else return
+        val id = state.playlist ?: if (derivedMusic) "liked-music" else if (state.shelf == AccountShelf.LIKED) "LL" else return
         clearPlaylistQueue()
         queue.value = state.page?.items.orEmpty().mapNotNull { it.video }.distinctBy { it.id }
         playlistSource.value = PlaylistQueuePolicy.key(library.value.youtubeSessionRevision, id)

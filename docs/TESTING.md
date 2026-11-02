@@ -505,3 +505,25 @@ YouTube compatibility, object-audio passthrough or antivirus reputation.
 Android published artifacts and the unsigned iOS foundation are unchanged.
 Google-account synchronization, casting, headset VR and full native parity remain
 unfinished. No local substitute account data or artificial surround was added.
+
+
+## Android v1.1.0.4 — account Liked Music / split background preferences
+
+Source `31bb45064ca547d527d0813a762e1731ae0365a5`, version code 33.
+[Hosted run 41447282769](https://github.com/HayMayia/Photon/actions/runs/41447282769)
+PASS in 6m17s: debug build, focused unit suite, registered permanent certificate
+verification, release build/signing and prerelease publication. Nine new tests cover
+old-library migration to music=true/video=false, independent setting persistence,
+source-only Music classification, unknown regular-video policy, all switch
+combinations, TV overriding both switches, source-proof serialization/old offline
+metadata, and exact real-playlist name/kind matching.
+
+Published prerelease target checked. Asset `Photon.apk` ID 701750823,
+25,353,008 bytes, SHA256
+`79e0e2ce979b327aa936f55b6835356c6bdb946cd8d1babd1546d5dc273b5aa2`.
+This records hosted build/unit/signing evidence, NOT live Google playlist-write,
+screen-off, MediaSession remote-resume, rotation, PiP or TV device certification.
+Music background is source-category-based; custom playlist membership does not
+reclassify a video. Liked Music is a real custom Google-account playlist, not the
+separate YouTube Music built-in liked collection or a private Prism-cache import.
+No public/private Windows or iOS artifacts were changed by this Android update.

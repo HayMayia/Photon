@@ -1,7 +1,7 @@
 # v1.1.0.4 Beta
 
-- **Liked Music** in Library and Prism Home shortcuts. Uses a real private playlist
-  on the signed-in Google account, not a local substitute. Searches returned account
+- **Liked Music** in Library and Prism Home shortcuts. Uses a real playlist
+  on the signed-in Google account (new playlists are private), not a local substitute. Searches returned account
   playlist pages for an existing exact-name playlist before creating one; lookup
   errors or incomplete pagination never trigger blind creation.
 - **Save → Save to Liked Music** creates/finds that playlist and adds the selected
@@ -22,3 +22,11 @@
 Permanent Android signing identity retained. Windows/iOS and the separate private
 music preview are unchanged. Automated checks do not certify live Google writes or
 physical-device lockscreen/PiP behavior; no such testing is claimed here.
+
+
+## Published verification
+
+[Run 41447282769](https://github.com/HayMayia/Photon/actions/runs/41447282769)
+PASS in 6m17s: debug/release builds, focused unit suite including nine new tests,
+permanent signing identity checks and publication. Source `31bb450`, code 33.
+Live account changes and physical phone lifecycle behavior remain unverified.

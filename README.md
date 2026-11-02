@@ -14,6 +14,21 @@ fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
 
 ## Android
 
+**Latest: v1.1.0.4 Beta — Liked Music and music-only background defaults.**
+Use **Home → Update to v1.1.0.4 Beta** (reopen Photon if the banner is cached).
+Library and Save now include **Liked Music**, a real Google-account playlist;
+newly created copies are private. It is not a local list or an import of Prism's
+built-in liked collection. Music background playback defaults **on**, regular-video
+background playback defaults **off**, with independent settings for both. Unknown
+music classification follows the regular-video setting; TV stays foreground-only.
+See [release notes](docs/RELEASE_1_1_0_4_BETA.md).
+[Build 41447282769](https://github.com/HayMayia/Photon/actions/runs/41447282769)
+**PASS in 6m17s**, source `31bb450`, version code 33: debug/release builds, focused
+unit tests including nine new music/background/playlist cases, permanent signing
+and Beta publication. Live Google mutations and phone background/PiP behavior
+remain physically unverified. Older background-behavior notes below are historical;
+these new defaults supersede unrestricted mobile background playback.
+
 > **v1.1.0.2 Beta — buffering regression safeguards.**
 > [Release notes](docs/RELEASE_1_1_0_2_BETA.md). Use **Home → Update to v1.1.0.2 Beta**; if cached, force-stop/reopen then Home. No uninstall or storage clearing.
 > Media and prefetched ranges now use independent streaming connections without the metadata client's 35-second whole-response deadline. Connection/read stalls are still bounded. Buffered/prefetched bodies can wait without expiring just because playback has sufficient data or is paused. Truncated chunks fail explicitly for loader recovery; normal chunk continuity is covered by tests.

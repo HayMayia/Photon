@@ -24,9 +24,6 @@ data class WatchProgress(val positionMs: Long = 0, val durationMs: Long = 0, val
 @Serializable
 data class PhotonLibrary(
     val saved: List<Video> = emptyList(),
-    val likedMusicCache: List<Video> = emptyList(),
-    val likedMusicRevision: Long = -1,
-    val likedMusicUpdatedAt: Long = 0,
     val history: List<Video> = emptyList(),
     val downloads: List<SavedDownload> = emptyList(),
     val dark: Boolean = true,

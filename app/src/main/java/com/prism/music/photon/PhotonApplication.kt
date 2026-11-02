@@ -17,6 +17,7 @@ class PhotonApplication : Application(), coil3.SingletonImageLoader.Factory {
     val youtubeHistory by lazy { YouTubeHistoryCoordinator(library) }
     val casting by lazy { PhotonCast(this, videos) }
     val library by lazy { PhotonStore(this) }
+    internal val likedMusicCache by lazy { LikedMusicCache(this) }
     lateinit var videos: VideoRepository
         private set
     override fun onCreate() {

@@ -273,12 +273,12 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
         accountLibraryJob?.cancel()
         val generation = ++accountLibraryGeneration
         val revision = library.value.youtubeSessionRevision
-        val cached = library.value.takeIf { it.likedMusicRevision == revision }
-        val snapshot = likedMusicSnapshot?.takeIf { likedMusicSnapshotRevision == revision } ?: cached?.likedMusicCache
+        val cached = app.likedMusicCache.snapshot.takeIf { it.revision == revision }
+        val snapshot = likedMusicSnapshot?.takeIf { likedMusicSnapshotRevision == revision } ?: cached?.videos
         val rows = snapshot.orEmpty().map { AccountEntry(it.id, it.title, AccountEntryKind.VIDEO, it) }
         accountLibrary.value = AccountLibraryState(AccountShelf.LIKED_MUSIC, title = LikedMusicPlaylist.NAME,
             page = snapshot?.let { AccountLibraryPage(rows) }, busy = snapshot == null, generation = generation)
-        if (force || cached == null || System.currentTimeMillis() - cached.likedMusicUpdatedAt > 6 * 60 * 60_000L) scanLikedMusic()
+        if (force || cached == null || System.currentTimeMillis() - cached.updatedAt > 6 * 60 * 60_000L) scanLikedMusic()
     }
 
     private val likedMusicProof = ExpiringVideoCache<Boolean>(4096, 6 * 60 * 60_000L)
@@ -292,7 +292,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
         val revision = library.value.youtubeSessionRevision
         likedMusicJob = viewModelScope.launch {
             fun active() = epoch == likedMusicEpoch && revision == library.value.youtubeSessionRevision && library.value.youtubeSessionReady && library.value.youtubeHome
-            val old = library.value.takeIf { it.likedMusicRevision == revision }?.likedMusicCache.orEmpty()
+            val old = app.likedMusicCache.snapshot.takeIf { it.revision == revision }?.videos.orEmpty()
             var found = emptyList<AccountEntry>()
             var unresolved = 0
             var scanned = 0
@@ -302,8 +302,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 val fresh = found.mapNotNull { it.video }.filter { googleLikes.value[it.id] != false }
                 val videos = if (done) fresh else (old + fresh).distinctBy { it.id }.filter { googleLikes.value[it.id] != false }
                 likedMusicSnapshot = videos; likedMusicSnapshotRevision = revision
-                if (done) app.library.update { it.copy(likedMusicCache = videos, likedMusicRevision = revision,
-                    likedMusicUpdatedAt = System.currentTimeMillis()) }
+                if (done) app.likedMusicCache.save(LikedMusicSnapshot(revision, videos, System.currentTimeMillis()))
                 if (accountLibrary.value.shelf == AccountShelf.LIKED_MUSIC && accountLibrary.value.playlist == null) {
                     accountLibrary.value = accountLibrary.value.copy(busy = false, moreBusy = false, error = error,
                         page = AccountLibraryPage(videos.map { AccountEntry(it.id, it.title, AccountEntryKind.VIDEO, it) },
@@ -343,16 +342,15 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     }
     private fun updateLikedMusicLike(video: Video, liked: Boolean, revision: Long) {
         viewModelScope.launch {
-            val known = library.value.takeIf { it.likedMusicRevision == revision }?.likedMusicCache.orEmpty()
+            val known = app.likedMusicCache.snapshot.takeIf { it.revision == revision }?.videos.orEmpty()
             val music = if (!liked) false else if (video.music || known.any { it.id == video.id }) true
                 else runCatching { app.accountLibrary.musicCategory(app.youtubeHistory.session(), video) }.getOrNull()
             if (revision != library.value.youtubeSessionRevision) return@launch
-            app.library.update { state ->
-                val old = state.takeIf { it.likedMusicRevision == revision }?.likedMusicCache.orEmpty()
-                state.copy(likedMusicCache = if (!liked) old.filterNot { it.id == video.id } else if (music == true) (listOf(video) + old).distinctBy { it.id } else old,
-                    likedMusicRevision = revision, likedMusicUpdatedAt = state.likedMusicUpdatedAt)
-            }
-            likedMusicSnapshot = library.value.likedMusicCache; likedMusicSnapshotRevision = revision
+            val snapshot = app.likedMusicCache.snapshot.takeIf { it.revision == revision } ?: LikedMusicSnapshot(revision)
+            val videos = if (!liked) snapshot.videos.filterNot { it.id == video.id }
+                else if (music == true) (listOf(video.copy(music = true)) + snapshot.videos).distinctBy { it.id } else snapshot.videos
+            app.likedMusicCache.save(snapshot.copy(videos = videos))
+            likedMusicSnapshot = videos; likedMusicSnapshotRevision = revision
             if (accountLibrary.value.shelf == AccountShelf.LIKED_MUSIC) openLikedMusic()
         }
     }

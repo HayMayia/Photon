@@ -29,7 +29,9 @@ internal class YouTubeCommentLikes(client: OkHttpClient = OkHttpClient()) {
             }
             // Only the comment section's continuation, not recommended video/feed continuations.
             val section = GoogleAccountControls.objects(root).firstOrNull {
-                (it["itemSectionRenderer"] as? JsonObject)?.get("sectionIdentifier")?.jsonPrimitive?.contentOrNull == "comment-item-section"
+                (it["itemSectionRenderer"] as? JsonObject)?.let { section ->
+                    section["sectionIdentifier"]?.jsonPrimitive?.contentOrNull == "comment-item-section" || section["targetId"]?.jsonPrimitive?.contentOrNull == "comments-section"
+                } == true
             }?.get("itemSectionRenderer") ?: root.takeIf { it.containsKey("onResponseReceivedEndpoints") }
             val token = section?.let { GoogleAccountControls.objects(it).mapNotNull { node ->
                 val endpoint = (node["continuationEndpoint"] as? JsonObject)?.get("continuationCommand") as? JsonObject
@@ -44,6 +46,23 @@ internal class YouTubeCommentLikes(client: OkHttpClient = OkHttpClient()) {
     internal data class Control(val action: String, val liked: Boolean)
     internal companion object {
         fun control(root: JsonObject, commentId: String): Control? {
+            val modern = GoogleAccountControls.objects(root).mapNotNull { it["commentViewModel"] as? JsonObject }
+                .firstOrNull { it["commentId"]?.jsonPrimitive?.contentOrNull == commentId }
+            if (modern != null) {
+                val surfaceKey = modern["toolbarSurfaceKey"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() } ?: return null
+                val stateKey = modern["toolbarStateKey"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() } ?: return null
+                val state = GoogleAccountControls.objects(root).mapNotNull { it["engagementToolbarStateEntityPayload"] as? JsonObject }
+                    .firstOrNull { it["key"]?.jsonPrimitive?.contentOrNull == stateKey } ?: return null
+                val likeState = state["likeState"]?.jsonPrimitive?.contentOrNull ?: return null
+                if (likeState == "TOOLBAR_LIKE_STATE_LIKED") return Control("", true)
+                if (likeState !in setOf("TOOLBAR_LIKE_STATE_INDIFFERENT", "TOOLBAR_LIKE_STATE_DISLIKED")) return null
+                val mutation = GoogleAccountControls.objects(root).firstOrNull { it["entityKey"]?.jsonPrimitive?.contentOrNull == surfaceKey } ?: return null
+                val surface = (mutation["payload"] as? JsonObject)?.get("engagementToolbarSurfaceEntityPayload") as? JsonObject ?: return null
+                val command = surface["likeCommand"] ?: return null
+                val endpoint = GoogleAccountControls.objects(command).mapNotNull { it["performCommentActionEndpoint"] as? JsonObject }.firstOrNull() ?: return null
+                val token = endpoint["action"]?.jsonPrimitive?.contentOrNull?.takeIf { it.length in 1..32768 } ?: return null
+                return Control(token, false)
+            }
             val comment = GoogleAccountControls.objects(root).mapNotNull { it["commentRenderer"] as? JsonObject }
                 .firstOrNull { it["commentId"]?.jsonPrimitive?.contentOrNull == commentId } ?: return null
             val button = (((comment["actionButtons"] as? JsonObject)?.get("commentActionButtonsRenderer") as? JsonObject)

@@ -14,6 +14,13 @@ class LikedMusicCacheTest {
         assertEquals(123456L, restored.updatedAt)
         assertFalse(Json.encodeToString(PhotonLibrary()).contains("likedMusicCache"))
     }
+    @Test fun completingAnOlderScanCannotLoseAConfirmedNewLikeOrRestoreAnUnlike() {
+        val old = Video("abcdefghijk", "Old", "Creator", music = true)
+        val new = Video("otherVideo1", "New", "Creator", music = true)
+        val changes = listOf(LikedMusicSnapshotUpdates.Change(2, new, true), LikedMusicSnapshotUpdates.Change(3, old, false))
+        assertEquals(listOf(new), LikedMusicSnapshotUpdates.merge(listOf(old), changes, 1))
+        assertEquals(listOf(old), LikedMusicSnapshotUpdates.merge(listOf(old), changes, 3))
+    }
     @Test fun olderInstallsStartWithoutPretendingToHaveAnAccountSnapshot() {
         val old = Json.decodeFromString<LikedMusicSnapshot>("{}")
         assertEquals(-1L, old.revision)

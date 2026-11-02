@@ -21,3 +21,13 @@ internal class LikedMusicCache(context: Context) {
         snapshot = value
     }
 }
+
+/** Preserve confirmed mutations that raced with a scan whose server page predates them. */
+internal object LikedMusicSnapshotUpdates {
+    data class Change(val sequence: Long, val video: Video, val liked: Boolean)
+    fun merge(videos: List<Video>, changes: List<Change>, startedAt: Long): List<Video> {
+        val newer = changes.filter { it.sequence > startedAt }.sortedByDescending { it.sequence }
+        val replaced = newer.map { it.video.id }.toSet()
+        return (newer.filter { it.liked }.map { it.video.copy(music = true) } + videos.filterNot { it.id in replaced }).distinctBy { it.id }
+    }
+}

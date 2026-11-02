@@ -287,9 +287,12 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     private var likedMusicSnapshotRevision = -1L
     private var likedMusicJob: Job? = null
     private var likedMusicEpoch = 0L
+    private var likedMusicMutationSequence = 0L
+    private val likedMusicMutations = mutableMapOf<String, LikedMusicSnapshotUpdates.Change>()
     private fun scanLikedMusic() {
         if (likedMusicJob?.isActive == true) return
         val epoch = ++likedMusicEpoch
+        val mutationStart = likedMusicMutationSequence
         val revision = library.value.youtubeSessionRevision
         likedMusicJob = viewModelScope.launch {
             fun active() = epoch == likedMusicEpoch && revision == library.value.youtubeSessionRevision && library.value.youtubeSessionReady && library.value.youtubeHome
@@ -301,10 +304,14 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
             fun publish(done: Boolean, error: String? = null) {
                 if (!active()) return
                 val fresh = found.mapNotNull { it.video }.filter { googleLikes.value[it.id] != false }
-                val videos = if (done) fresh else (old + fresh).distinctBy { it.id }.filter { googleLikes.value[it.id] != false }
+                val base = if (done) fresh else (old + fresh).distinctBy { it.id }.filter { googleLikes.value[it.id] != false }
+                val videos = LikedMusicSnapshotUpdates.merge(base, likedMusicMutations.values.toList(), mutationStart)
                 likedMusicSnapshot = videos; likedMusicSnapshotRevision = revision
                 if (playlistSource.value == PlaylistQueuePolicy.key(revision, "liked-music")) queue.value = videos
-                if (done) app.likedMusicCache.save(LikedMusicSnapshot(revision, videos, System.currentTimeMillis()))
+                if (done) {
+                    app.likedMusicCache.save(LikedMusicSnapshot(revision, videos, System.currentTimeMillis()))
+                    likedMusicMutations.entries.removeAll { it.value.sequence <= mutationStart }
+                }
                 if (accountLibrary.value.shelf == AccountShelf.LIKED_MUSIC && accountLibrary.value.playlist == null) {
                     accountLibrary.value = accountLibrary.value.copy(busy = false, moreBusy = false, error = error,
                         page = AccountLibraryPage(videos.map { AccountEntry(it.id, it.title, AccountEntryKind.VIDEO, it) },
@@ -348,6 +355,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
             val music = if (!liked) false else if (video.music || known.any { it.id == video.id }) true
                 else runCatching { app.accountLibrary.musicCategory(app.youtubeHistory.session(), video) }.getOrNull()
             if (revision != library.value.youtubeSessionRevision) return@launch
+            if (!liked || music == true) likedMusicMutations[video.id] = LikedMusicSnapshotUpdates.Change(++likedMusicMutationSequence, video, liked)
             val snapshot = app.likedMusicCache.snapshot.takeIf { it.revision == revision } ?: LikedMusicSnapshot(revision)
             val videos = if (!liked) snapshot.videos.filterNot { it.id == video.id }
                 else if (music == true) (listOf(video.copy(music = true)) + snapshot.videos).distinctBy { it.id } else snapshot.videos
@@ -360,7 +368,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     fun moreAccountShelf() { val state = accountLibrary.value; openAccountShelf(state.shelf, state.playlist, state.title, more = true) }
     private fun invalidateAccountLibrary() {
         ++likedMusicEpoch; likedMusicJob?.cancel(); likedMusicJob = null
-        likedMusicSnapshot = null; likedMusicSnapshotRevision = -1
+        likedMusicSnapshot = null; likedMusicSnapshotRevision = -1; likedMusicMutations.clear()
         commentLikes.value = emptySet(); commentLikeBusy.value = emptySet(); commentLikeError.value = null
         if (queuedAccountPage != null || playlistSource.value?.startsWith("account:") == true) clearPlaylistQueue()
         if (collection.value?.accountPage != null) { collectionJob?.cancel(); collection.value = null; collectionBusy.value = false }

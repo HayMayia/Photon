@@ -1,6 +1,6 @@
 # Photon Privacy Policy
 
-Effective date: 1 November 2026
+Effective date: 2 November 2026
 
 Photon is an independent, open-source Android YouTube client maintained through [HayMayia/Photon](https://github.com/HayMayia/Photon). It is not affiliated with or endorsed by Google or YouTube. This policy describes the current Photon implementation, including optional Google account features.
 
@@ -9,6 +9,7 @@ Photon is an independent, open-source Android YouTube client maintained through 
 - **Public content:** searches, video/channel identifiers and playback requests are sent to YouTube or its content-delivery providers to retrieve videos, images, subtitles, comments and metadata. Playback may warm metadata for one next known Short to reduce startup delays; this does not register a watched item or backfill history. The optional 2D headset viewer renders locally into two eye views and does not upload camera, motion or VR data.
 - **Connected account:** when you sign in, Photon uses an app-private Google/YouTube web session to request your account Home, available playlists, subscriptions, liked videos and history controls. This is an unofficial integration, distinct from the official authorization used for comments. Google handles the sign-in page; Photon does not read password fields. The embedded browser stores sensitive session cookies in the app's private storage; Photon uses session credentials for authenticated YouTube requests.
 - **Optional comment authorization:** Google Play services obtains the YouTube permission needed to identify your channel and post comments you explicitly approve. This permission is separate from account Home. Access tokens are held in process memory, not deliberately written to application preferences or diagnostic reports; Google Play services separately manages its authorization grant.
+- **Artwork cache:** Public thumbnails use a dedicated cookie-free image connection pool and bounded private memory/disk caches. Requests still disclose your IP/network metadata to the artwork host. Offline artwork files are kept separately from the disposable image cache. Optional format reads use the current account session when available; they do not write viewing history.
 - **Device storage:** Photon stores settings, downloaded media and artwork, and device playback/history/resume caches needed for its features. It may hold account content and state in memory while you use the app. Do not treat these caches as an independent backup of your Google account.
 - **Diagnostics:** a bounded, in-memory playback-event buffer supports a report that you can review and share yourself. Reports include app version, device make/model, Android API level and playback events. They are not automatically uploaded by this reporting feature and are designed to exclude credentials and stream URLs.
 

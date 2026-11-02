@@ -89,6 +89,27 @@ class YouTubeAccountLibraryTest {
         val api = api { request -> assertEquals("PL_account_list", request.url.queryParameter("list")); html(video) }
         assertEquals(1, api.load(session, AccountShelf.PLAYLISTS, "PL_account_list").items.size)
     }
+    @Test fun previewBootstrapHydratesTheExactPlaylistBeforeShowingEntries() = runBlocking {
+        var calls = 0
+        val rows = (0..19).joinToString(",") { index ->
+            """{"playlistVideoRenderer":{"videoId":"video${index.toString().padStart(6, '0')}","title":{"simpleText":"Song $index"}}}"""
+        }
+        val loader = api { request ->
+            calls++
+            if (request.method == "GET") cfg + """var ytInitialData = {"responseContext":{"mainAppWebResponseContext":{"loggedOut":false}},"contents":$video};"""
+            else {
+                val buffer = okio.Buffer(); request.body!!.writeTo(buffer)
+                assertEquals("VLPL_requested", Json.parseToJsonElement(buffer.readUtf8()).jsonObject["browseId"]!!.jsonPrimitive.content)
+                assertEquals("2", request.header("X-Goog-AuthUser"))
+                """{"contents":{"playlistVideoListRenderer":{"playlistId":"PL_requested","contents":[$rows]}}}"""
+            }
+        }
+        val page = loader.load(session, AccountShelf.PLAYLISTS, "PL_requested")
+        assertEquals(20, page.items.size)
+        assertEquals("video000000", page.items.first().id)
+        assertEquals("video000019", page.items.last().id)
+        assertEquals(2, calls)
+    }
     @Test fun signedOutLibraryIsRejectedRatherThanShownAsAccountData() = runBlocking {
         try { api { html(video, loggedOut = true) }.load(session, AccountShelf.HISTORY); fail("Expected signed-out rejection") }
         catch (_: java.io.IOException) { }

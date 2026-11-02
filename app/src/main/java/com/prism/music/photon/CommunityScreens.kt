@@ -55,7 +55,7 @@ internal fun CollectionScreen(model: PhotonViewModel, library: PhotonLibrary, op
                 }
             }
             if (current.description.isNotBlank()) Text(current.description, maxLines = 4, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
-            if (current.videos.isNotEmpty()) FilledTonalButton(onClick = { model.playAll(current.videos) }) { Icon(PrismIcons.Play, null); Text("Play loaded videos") }
+            if (current.videos.isNotEmpty()) FilledTonalButton(onClick = { val first = current.videos.first(); model.prepareCollectionPlaylist(first); open(first) }) { Icon(PrismIcons.Play, null); Text("Play") }
         }
         items(current.videos, key = { it.id }) { video -> CommunityVideoRow(video, { model.prepareCollectionPlaylist(video); open(video) }) }
         item {

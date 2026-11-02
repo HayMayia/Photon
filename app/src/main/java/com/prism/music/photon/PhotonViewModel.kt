@@ -133,7 +133,6 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
             try {
                 val session = app.youtubeHistory.session()
                 var page = app.accountLibrary.load(session, AccountShelf.LIKED)
-                val tokens = mutableSetOf<String>()
                 repeat(200) {
                     if (!active()) return@launch
                     val known = googleLikes.value
@@ -279,7 +278,6 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 val session = app.youtubeHistory.session()
                 var likesBeforePage = googleLikes.value
                 var page = app.accountLibrary.load(session, AccountShelf.LIKED_MUSIC)
-                val tokens = mutableSetOf<String>()
                 val seen = mutableSetOf<String>()
                 for (index in 0 until 200) {
                     if (!active()) return@launch
@@ -452,9 +450,13 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     private var queuedPublicUrl: String? = null
     private var queuedRevision = -1L
     private var queueJob: Job? = null
+    private var queueGeneration = 0L
+    private var queueAdvanceFrom: String? = null
+    private val queueTokens = mutableSetOf<String>()
     fun preparedPlaylistSelection(id: String) = queuedSelection == id && playlistSource.value != null
     fun prepareQueuedSelection(video: Video) { if (playlistSource.value != null && queue.value.any { it.id == video.id }) queuedSelection = video.id }
     private fun clearPlaylistQueue() {
+        ++queueGeneration; queueAdvanceFrom = null; queueTokens.clear()
         queueJob?.cancel(); queueJob = null; queue.value = emptyList(); playlistSource.value = null
         queuedSelection = null; queuedAccountPage = null; queuedPublicPage = null; queuedPublicUrl = null
         playlistMore.value = false; playlistQueueBusy.value = false; playlistQueueError.value = null
@@ -476,45 +478,51 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
         queuedAccountPage = page.accountPage; queuedPublicPage = page.next; queuedPublicUrl = collectionUrl
         playlistMore.value = page.next != null || page.accountPage?.continuation != null; queuedSelection = video.id
     }
-    fun upNext(): List<Video> = PlaylistQueuePolicy.upcoming(queue.value, watch.value.video?.id, playlistSource.value != null, watch.value.details?.related.orEmpty())
     fun morePlaylistQueue(playAfter: Boolean = false) {
-        if (playlistQueueBusy.value || !playlistMore.value) return
-        val source = playlistSource.value ?: return
+        if (!playlistMore.value) return
+        if (playAfter) queueAdvanceFrom = watch.value.video?.id
+        if (playlistQueueBusy.value) return
+        if (playlistSource.value == null) return
+        val generation = queueGeneration
         playlistQueueBusy.value = true; playlistQueueError.value = null
         queueJob = viewModelScope.launch {
             try {
-                val tokens = mutableSetOf<String>()
                 var appended = false
                 for (pageIndex in 0 until 200) {
-                    if (playlistSource.value != source) return@launch
+                    if (queueGeneration != generation) return@launch
                     val incoming: List<Video>
                     val account = queuedAccountPage
                     if (account != null) {
                         check(queuedRevision == library.value.youtubeSessionRevision && library.value.youtubeSessionReady)
                         val token = account.continuation ?: break
-                        check(tokens.add(token)) { "Repeated playlist page" }
+                        check(token !in queueTokens) { "Repeated playlist page" }
                         val page = app.accountLibrary.more(app.youtubeHistory.session(), account, AccountEntryKind.VIDEO)
+                        if (queueGeneration != generation) return@launch
+                        check(queuedRevision == library.value.youtubeSessionRevision && library.value.youtubeSessionReady)
+                        queueTokens += token
                         incoming = page.items.mapNotNull { it.video }; queuedAccountPage = page
                         playlistMore.value = page.continuation != null
                     } else {
                         val next = queuedPublicPage ?: break
                         val page = app.videos.playlist(requireNotNull(queuedPublicUrl), next)
+                        if (queueGeneration != generation) return@launch
                         incoming = page.videos; queuedPublicPage = page.next; playlistMore.value = page.next != null
                     }
-                    if (playlistSource.value != source) return@launch
+                    if (queueGeneration != generation) return@launch
                     val before = queue.value.size
                     queue.value = PlaylistQueuePolicy.append(queue.value, incoming)
                     appended = queue.value.size > before
                     if (appended || !playlistMore.value) break
                 }
                 check(appended || !playlistMore.value) { "Playlist pages could not advance" }
-                if (playAfter && playlistSource.value == source) {
-                    val index = queue.value.indexOfFirst { it.id == watch.value.video?.id }
-                    queue.value.getOrNull(index + 1)?.let { open(it, true) }
+                if (queueAdvanceFrom != null && queueAdvanceFrom == watch.value.video?.id && queueGeneration == generation) {
+                    val index = queue.value.indexOfFirst { it.id == queueAdvanceFrom }
+                    queueAdvanceFrom = null
+                    if (index >= 0) queue.value.getOrNull(index + 1)?.let { open(it, true) }
                 }
             } catch (cancelled: CancellationException) { throw cancelled }
-            catch (_: Exception) { if (playlistSource.value == source) playlistQueueError.value = "The next playlist page could not load. Retry; unrelated videos were not substituted." }
-            finally { if (playlistSource.value == source) playlistQueueBusy.value = false }
+            catch (_: Exception) { if (queueGeneration == generation) playlistQueueError.value = "The next playlist page could not load. Retry; unrelated videos were not substituted." }
+            finally { if (queueGeneration == generation) playlistQueueBusy.value = false }
         }
     }
     val shelves = MutableStateFlow<List<HomeShelf>>(emptyList())
@@ -684,7 +692,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
         val revision = library.value.youtubeSessionRevision
         PhotonDiagnostics.event("Open video requested")
         if (!fromQueue && !preparedPlaylistSelection(video.id)) clearPlaylistQueue()
-        queuedSelection = null
+        queuedSelection = null; queueAdvanceFrom = null
         watchJob?.cancel()
         watchJob = viewModelScope.launch {
             mutableWatch.value = WatchState(video = video, busy = true)

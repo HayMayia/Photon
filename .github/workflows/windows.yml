@@ -1,0 +1,87 @@
+name: Build native Photon for Windows
+on:
+  push:
+    branches: ["arena/c217a41b-photon"]
+    paths: ["desktop/windows/**", ".github/workflows/windows.yml"]
+  pull_request:
+    paths: ["desktop/windows/**", ".github/workflows/windows.yml"]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  windows:
+    runs-on: windows-2025
+    timeout-minutes: 35
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24.22.2'
+      - name: Core security and parser checks
+        run: |
+          dotnet run --project desktop/windows/Photon.Tests -c Release
+          if ($LASTEXITCODE -ne 0) { throw 'Core checks failed' }
+      - name: Publish native x64 application
+        run: |
+          dotnet publish desktop/windows/Photon.Windows -c Release -r win-x64 --self-contained true -o artifacts/publish -p:NuGetAuditMode=all '-p:WarningsAsErrors=NU1903;NU1904'
+          if ($LASTEXITCODE -ne 0) { throw 'Windows build failed' }
+      - name: Pin and verify bundled extractor and runtime
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          New-Item -ItemType Directory -Force artifacts/publish/tools | Out-Null
+          gh release download 2026.10.26 --repo yt-dlp/yt-dlp --pattern yt-dlp.exe --dir artifacts/publish/tools
+          if ($LASTEXITCODE -ne 0) { throw 'Extractor download failed' }
+          $extractor = (Get-FileHash artifacts/publish/tools/yt-dlp.exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($extractor -ne 'f5389d3698ecde4ef06f4e6b1ce0294fe9ac1396228c8990b8d3416d6d177a7d') { throw 'Extractor SHA256 differs from pinned official release' }
+          Copy-Item (Get-Command node.exe).Source artifacts/publish/tools/node.exe
+          $node = (Get-FileHash artifacts/publish/tools/node.exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          @{ 'yt-dlp.exe' = $extractor; 'node.exe' = $node } | ConvertTo-Json | Set-Content artifacts/publish/tools/SHA256.json
+          Get-AuthenticodeSignature artifacts/publish/tools/node.exe | Format-List Status,SignerCertificate | Out-File artifacts/Node-signature.txt
+          Copy-Item LICENSE artifacts/publish/LICENSE.txt
+          Copy-Item desktop/windows/README.md artifacts/publish/README-WINDOWS.md
+          Copy-Item desktop/windows/SECURITY.md artifacts/publish/SECURITY-WINDOWS.md
+          Copy-Item desktop/windows/THIRD_PARTY_NOTICES.md artifacts/publish/THIRD_PARTY_NOTICES.md
+          gh api repos/nodejs/node/contents/LICENSE?ref=v24.22.2 --jq .content | ForEach-Object { [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($_)) } | Set-Content artifacts/publish/tools/LICENSE-NODE.txt
+          gh api repos/yt-dlp/yt-dlp/contents/LICENSE?ref=2026.10.26 --jq .content | ForEach-Object { [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($_)) } | Set-Content artifacts/publish/tools/LICENSE-YTDLP.txt
+      - name: Native startup smoke test (no real video certification)
+        run: |
+          $p = Start-Process artifacts/publish/Photon.exe -ArgumentList '--self-test' -PassThru
+          if (-not $p.WaitForExit(90000)) { $p.Kill(); throw 'Native smoke test timed out' }
+          if ($p.ExitCode -ne 0) { throw "Native startup failed: $($p.ExitCode)" }
+      - name: Build per-user installer
+        run: |
+          $iscc = 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
+          if (!(Test-Path $iscc)) { choco install innosetup --yes --no-progress; if ($LASTEXITCODE -ne 0) { throw 'Installer tooling failed' } }
+          & $iscc desktop/windows/packaging/Photon.iss
+          if ($LASTEXITCODE -ne 0) { throw 'Installer compilation failed' }
+          Get-AuthenticodeSignature artifacts/Photon-Windows-x64-Setup.exe | Format-List Status | Out-File artifacts/Installer-signature.txt
+          $hash = (Get-FileHash artifacts/Photon-Windows-x64-Setup.exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  Photon-Windows-x64-Setup.exe" | Set-Content artifacts/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Photon-Windows-x64
+          path: |
+            artifacts/Photon-Windows-x64-Setup.exe
+            artifacts/SHA256SUMS.txt
+            artifacts/*signature.txt
+      - name: Publish Windows prerelease (separate from Android updater)
+        if: github.event_name == 'push' && contains(github.event.head_commit.message, '[desktop-release]')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create windows-v0.1.0-beta artifacts/Photon-Windows-x64-Setup.exe artifacts/SHA256SUMS.txt --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --prerelease --title 'Photon for Windows 0.1.0 Beta' --notes-file desktop/windows/RELEASE.md
+          if ($LASTEXITCODE -ne 0) { throw 'Windows publication failed' }
+      - name: Publish readable build failure
+        if: failure() && github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Windows-build-diagnostics
+          path: artifacts/*signature.txt
+          if-no-files-found: ignore

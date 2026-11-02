@@ -1,0 +1,6 @@
+<Application x:Class="Photon.Windows.App" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"><Application.Resources>
+<SolidColorBrush x:Key="PanelBrush" Color="#1C192A"/>
+<Style TargetType="Button"><Setter Property="Background" Value="#39304F"/><Setter Property="Foreground" Value="#FFFFFF"/><Setter Property="Padding" Value="16,10"/><Setter Property="Margin" Value="4"/><Setter Property="BorderThickness" Value="0"/></Style>
+<Style TargetType="TextBox"><Setter Property="Background" Value="#262233"/><Setter Property="Foreground" Value="White"/><Setter Property="CaretBrush" Value="White"/><Setter Property="Padding" Value="14,10"/><Setter Property="BorderThickness" Value="0"/></Style>
+<Style TargetType="ComboBox"><Setter Property="Margin" Value="6"/><Setter Property="MinWidth" Value="85"/><Setter Property="VerticalContentAlignment" Value="Center"/></Style>
+</Application.Resources></Application>

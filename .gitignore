@@ -20,3 +20,10 @@ CLAUDE.md
 
 __pycache__/
 *.pyc
+
+# Native ports: generated packages and third-party binaries stay in CI release artifacts.
+artifacts/
+**/bin/
+**/obj/
+*.exe
+*.msix

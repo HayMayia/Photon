@@ -133,6 +133,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
             try {
                 val session = app.youtubeHistory.session()
                 var page = app.accountLibrary.load(session, AccountShelf.LIKED)
+                val tokens = mutableSetOf<String>()
                 repeat(200) {
                     if (!active()) return@launch
                     val known = googleLikes.value
@@ -284,6 +285,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 val session = app.youtubeHistory.session()
                 var likesBeforePage = googleLikes.value
                 var page = app.accountLibrary.load(session, AccountShelf.LIKED_MUSIC)
+                val tokens = mutableSetOf<String>()
                 val seen = mutableSetOf<String>()
                 for (index in 0 until 200) {
                     if (!active()) return@launch

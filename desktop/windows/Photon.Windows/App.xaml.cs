@@ -12,6 +12,7 @@ public partial class App : Application
         {
             var extractor = new ExtractorProcess(System.IO.Path.Combine(AppContext.BaseDirectory, "tools"));
             extractor.VerifyTools();
+            new MediaTools(System.IO.Path.Combine(AppContext.BaseDirectory, "tools")).Verify();
             LibVLCSharp.Shared.Core.Initialize();
             var window = new MainWindow(extractor);
             if (e.Args.Contains("--self-test")) { window.Close(); Shutdown(0); return; }

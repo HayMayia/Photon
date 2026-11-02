@@ -16,14 +16,19 @@ public sealed class ExtractorProcess(string toolsDirectory)
             if (!CryptographicOperations.FixedTimeEquals(SHA256.HashData(file), Convert.FromHexString(expected))) throw new InvalidDataException("Bundled tool integrity check failed. Reinstall from the official release.");
         }
     }
-    public async Task<string> RunAsync(string source, bool details, CancellationToken token)
+    public async Task<string> RunAsync(string source, bool details, CancellationToken token, int startIndex = 1)
     {
         VerifyTools();
         var start = new ProcessStartInfo(Path.Combine(toolsDirectory, "yt-dlp.exe")) { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true, WorkingDirectory = toolsDirectory };
         foreach (var key in new[] { "NODE_OPTIONS", "NODE_PATH", "PYTHONPATH", "PYTHONHOME" }) start.Environment.Remove(key);
         foreach (var arg in new[] { "--ignore-config", "--no-plugin-dirs", "--no-cache-dir", "--no-update", "--no-warnings", "--no-progress", "--socket-timeout", "15", "--retries", "1", "--extractor-retries", "1", "--js-runtimes", "node:" + Path.Combine(toolsDirectory, "node.exe"), "--dump-single-json", "--skip-download" }) start.ArgumentList.Add(arg);
-        if (details) { start.ArgumentList.Add("--no-playlist"); start.ArgumentList.Add("--format"); start.ArgumentList.Add("best[ext=mp4]/best"); }
-        else { start.ArgumentList.Add("--flat-playlist"); start.ArgumentList.Add("--playlist-end"); start.ArgumentList.Add("50"); }
+        if (details) { start.ArgumentList.Add("--no-playlist"); start.ArgumentList.Add("--format"); start.ArgumentList.Add("bestvideo+bestaudio/best"); }
+        else {
+            if (startIndex < 1 || startIndex > 10000) throw new ArgumentOutOfRangeException(nameof(startIndex));
+            var pageSize = source.StartsWith("ytsearch20:", StringComparison.Ordinal) ? 20 : 50;
+            if (pageSize == 20) source = $"ytsearch{startIndex + pageSize - 1}:" + source[(source.IndexOf(':') + 1)..];
+            start.ArgumentList.Add("--flat-playlist"); start.ArgumentList.Add("--playlist-items"); start.ArgumentList.Add($"{startIndex}:{startIndex + pageSize - 1}");
+        }
         start.ArgumentList.Add("--"); start.ArgumentList.Add(source);
         using var process = Process.Start(start) ?? throw new IOException("Could not start the bundled extractor.");
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token); timeout.CancelAfter(TimeSpan.FromSeconds(120));

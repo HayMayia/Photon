@@ -52,6 +52,43 @@ jobs:
           Copy-Item desktop/windows/THIRD_PARTY_NOTICES.md artifacts/publish/THIRD_PARTY_NOTICES.md
           gh api repos/nodejs/node/contents/LICENSE?ref=v24.22.2 --jq .content | ForEach-Object { [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($_)) } | Set-Content artifacts/publish/tools/LICENSE-NODE.txt
           gh api repos/yt-dlp/yt-dlp/contents/LICENSE?ref=2026.10.26 --jq .content | ForEach-Object { [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($_)) } | Set-Content artifacts/publish/tools/LICENSE-YTDLP.txt
+      - name: Pin FFmpeg and generate real multichannel test sources
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download autobuild-2026-11-01-12-49 --repo BtbN/FFmpeg-Builds --pattern ffmpeg-n8.1.3-29-gad3b795b72-win64-lgpl-shared-8.1.zip --dir artifacts
+          if ($LASTEXITCODE -ne 0) { throw 'FFmpeg download failed' }
+          $archive = 'artifacts/ffmpeg-n8.1.3-29-gad3b795b72-win64-lgpl-shared-8.1.zip'
+          if ((Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant() -ne '786b43f77ea260af71fbb1bcdaabd43df83492122fb5575027f659d490d30b37') { throw 'FFmpeg pin mismatch' }
+          Expand-Archive $archive artifacts/ffmpeg
+          $bin = Get-ChildItem artifacts/ffmpeg -Recurse -Filter ffmpeg.exe | Select-Object -First 1 -ExpandProperty DirectoryName
+          Copy-Item "$bin/*" artifacts/publish/tools/
+          New-Item -ItemType Directory -Force artifacts/publish/tools/ffmpeg-distribution | Out-Null
+          Get-ChildItem (Split-Path $bin -Parent) | Where-Object { $_.Name -ne 'bin' } | Copy-Item -Destination artifacts/publish/tools/ffmpeg-distribution -Recurse
+          if (!(Get-ChildItem artifacts/publish/tools/ffmpeg-distribution -Recurse -File | Where-Object { $_.Name -match 'LICENSE|COPYING' })) { throw 'FFmpeg license notices missing' }
+          foreach ($channels in @(6,8)) {
+            $layout = if ($channels -eq 6) { '5.1' } else { '7.1' }
+            $expressions = for ($i=0; $i -lt $channels; $i++) {
+              $freq = if ($i -eq 3) { 80 } else { 440 + $i*80 }
+              "0.08*sin(2*PI*$freq*t)*between(t\,$($i*2)\,$($i*2+1.5))"
+            }
+            $filter = 'aevalsrc=' + ($expressions -join '|') + ':s=48000:d=' + ($channels*2) + ':c=' + $layout
+            & "$bin/ffmpeg.exe" -nostdin -hide_banner -loglevel error -y -f lavfi -i $filter -c:a pcm_s16le "artifacts/publish/tools/test-$layout.wav"
+            if ($LASTEXITCODE -ne 0) { throw 'Channel test generation failed' }
+            $actual = & "$bin/ffprobe.exe" -v error -select_streams a:0 -show_entries stream=channels -of default=noprint_wrappers=1:nokey=1 "artifacts/publish/tools/test-$layout.wav"
+            if ([int]$actual -ne $channels) { throw 'Generated channel count wrong' }
+          }
+          # A real video-only source plus six-channel audio, then stream-copy remux.
+          & "$bin/ffmpeg.exe" -nostdin -hide_banner -loglevel error -y -f lavfi -i 'color=c=black:s=160x90:r=10:d=2' -an -c:v mpeg4 artifacts/video-only.mp4
+          if ($LASTEXITCODE -ne 0) { throw 'Video fixture failed' }
+          & "$bin/ffmpeg.exe" -nostdin -hide_banner -loglevel error -y -i artifacts/video-only.mp4 -i artifacts/publish/tools/test-5.1.wav -map 0:v:0 -map 1:a:0 -c copy -f matroska artifacts/remux-test.mkv
+          if ($LASTEXITCODE -ne 0) { throw 'Source-copy remux failed' }
+          $channels = & "$bin/ffprobe.exe" -v error -select_streams a:0 -show_entries stream=channels -of default=noprint_wrappers=1:nokey=1 artifacts/remux-test.mkv
+          if ([int]$channels -ne 6) { throw 'Remux changed channel count' }
+          $manifest = @{}
+          Get-ChildItem artifacts/publish/tools -File | Where-Object { $_.Extension -in '.exe','.dll','.wav' -and $_.Name -notin 'node.exe','yt-dlp.exe' } | ForEach-Object { $manifest[$_.Name] = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() }
+          $manifest | ConvertTo-Json | Set-Content artifacts/publish/tools/SHA256-FFMPEG.json
+          Copy-Item desktop/windows/SURROUND_TESTING.md artifacts/publish/SURROUND_TESTING.md
       - name: Native startup smoke test (no real video certification)
         run: |
           $p = Start-Process artifacts/publish/Photon.exe -ArgumentList '--self-test' -PassThru
@@ -78,7 +115,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create windows-v0.1.0-beta artifacts/Photon-Windows-x64-Setup.exe artifacts/SHA256SUMS.txt --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --prerelease --title 'Photon for Windows 0.1.0 Beta' --notes-file desktop/windows/RELEASE.md
+          gh release create windows-v0.2.0-beta artifacts/Photon-Windows-x64-Setup.exe artifacts/SHA256SUMS.txt --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --prerelease --title 'Photon for Windows 0.2.0 Beta' --notes-file desktop/windows/RELEASE.md
           if ($LASTEXITCODE -ne 0) { throw 'Windows publication failed' }
       - name: Publish readable build failure
         if: failure() && github.event_name != 'pull_request'

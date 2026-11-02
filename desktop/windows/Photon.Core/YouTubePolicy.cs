@@ -6,7 +6,7 @@ namespace Photon.Core;
 public static partial class YouTubePolicy
 {
     [GeneratedRegex("^[A-Za-z0-9_-]{11}$")] private static partial Regex VideoIdPattern();
-    public static bool IsVideoId(string id) => VideoIdPattern().IsMatch(id);
+    public static bool IsVideoId(string id) => id.Length == 11 && VideoIdPattern().IsMatch(id);
     public static string VideoUrl(string id) => IsVideoId(id) ? $"https://www.youtube.com/watch?v={id}" : throw new ArgumentException("Invalid video ID.");
     public static bool TrySource(string input, out string source)
     {
@@ -39,12 +39,35 @@ public sealed record VideoCard(string Id, string Title, string Channel, string? 
 {
     public string Url => YouTubePolicy.VideoUrl(Id);
 }
-public sealed record StreamChoice(string Label, string Url, string UserAgent, string Referer);
-public sealed record VideoPlayback(VideoCard Video, IReadOnlyList<StreamChoice> Streams);
+public sealed record AudioChoice(string Id, string Url, string Codec, string Language, int Channels, double Bitrate, bool Original, bool Dubbed, double LanguagePreference)
+{
+    public string Label => $"{Language} · {(Channels > 0 ? Channels + " source channels" : "channels unknown")} · {Codec}" + (Original ? " · original" : Dubbed ? " · dubbed/descriptive" : " · source language unverified");
+}
+public sealed record CaptionChoice(string Label, string? Url);
+public sealed record StreamChoice(string Label, string Url, string UserAgent, string Referer, bool VideoOnly = false, int Height = 0);
+public sealed record VideoPlayback(VideoCard Video, IReadOnlyList<StreamChoice> Streams, IReadOnlyList<AudioChoice> Audio, IReadOnlyList<CaptionChoice> Captions);
+
+public static class SourceAudioPolicy
+{
+    public static AudioChoice? Pick(IEnumerable<AudioChoice> tracks)
+    {
+        var safe = tracks.Where(a => !a.Dubbed).ToArray();
+        var original = safe.Where(a => a.Original).ToArray();
+        // Never trade the original language for extra channels or bitrate.
+        var pool = original.Length > 0 ? original : safe.Where(a => a.LanguagePreference >= 0).ToArray();
+        if (original.Length == 0 && pool.Length > 0)
+        {
+            var preference = pool.Max(a => a.LanguagePreference);
+            pool = pool.Where(a => a.LanguagePreference == preference).ToArray();
+        }
+        return pool.OrderByDescending(a => a.Channels).ThenByDescending(a => a.Bitrate).FirstOrDefault();
+    }
+}
 
 public static class ExtractorJson
 {
-    private static string Text(JsonElement item, string key) => item.TryGetProperty(key, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() ?? "" : "";
+    private static string Text(JsonElement item, string key) => item.ValueKind == JsonValueKind.Object && item.TryGetProperty(key, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() ?? "" : "";
+    private static double Number(JsonElement item, string key) => item.TryGetProperty(key, out var v) && v.ValueKind == JsonValueKind.Number && v.TryGetDouble(out var result) && double.IsFinite(result) ? result : 0;
     private static VideoCard? Card(JsonElement item)
     {
         var id = Text(item, "id"); if (!YouTubePolicy.IsVideoId(id)) return null;
@@ -53,7 +76,7 @@ public static class ExtractorJson
         if (image.Length == 0 && item.TryGetProperty("thumbnails", out var thumbs) && thumbs.ValueKind == JsonValueKind.Array)
             image = thumbs.EnumerateArray().Select(t => Text(t, "url")).FirstOrDefault(u => YouTubePolicy.Artwork(u) != null) ?? "";
         var page = Text(item, "webpage_url"); if (page.Length == 0) page = Text(item, "url");
-        var shortProof = Uri.TryCreate(page, UriKind.Absolute, out var uri) && uri.Host is "www.youtube.com" or "youtube.com" && uri.AbsolutePath == $"/shorts/{id}";
+        var shortProof = Uri.TryCreate(page, UriKind.Absolute, out var uri) && uri.Scheme == "https" && uri.Host is "www.youtube.com" or "youtube.com" && uri.AbsolutePath == $"/shorts/{id}";
         return new(id, title, Text(item, "channel") is { Length: > 0 } owner ? owner : Text(item, "uploader"), YouTubePolicy.Artwork(image), shortProof);
     }
     public static IReadOnlyList<VideoCard> Cards(string json)
@@ -66,23 +89,47 @@ public static class ExtractorJson
     {
         using var doc = JsonDocument.Parse(json); var root = doc.RootElement;
         var card = Card(root) ?? throw new InvalidDataException("Video unavailable.");
-        var streams = new List<(int Height, StreamChoice Choice)>();
+        var video = new List<(int Height, StreamChoice Choice)>(); var combined = new List<(int Height, StreamChoice Choice)>();
+        var audio = new List<AudioChoice>(); var captions = new List<CaptionChoice> { new("Captions off", null) };
         var agent = "Mozilla/5.0"; var referer = "https://www.youtube.com/";
         if (root.TryGetProperty("http_headers", out var headers))
         {
             var ua = Text(headers, "User-Agent"); if (ua.Length > 0 && !ua.Any(char.IsControl)) agent = ua;
         }
         if (root.TryGetProperty("formats", out var formats) && formats.ValueKind == JsonValueKind.Array)
-            foreach (var format in formats.EnumerateArray())
+            foreach (var format in formats.EnumerateArray().Where(f => f.ValueKind == JsonValueKind.Object))
             {
                 if (Text(format, "protocol") is not ("" or "https")) continue;
-                if (Text(format, "ext") != "mp4" || Text(format, "vcodec") is "none" or "" || Text(format, "acodec") is "none" or "") continue;
                 var url = Text(format, "url");
                 try { YouTubePolicy.MediaUri(url); } catch (InvalidDataException) { continue; }
-                var height = format.TryGetProperty("height", out var h) && h.TryGetInt32(out var parsed) ? parsed : 0;
-                streams.Add((height, new(height > 0 ? $"{height}p" : "Source", url, agent, referer)));
+                var hasVideo = Text(format, "vcodec") is not ("none" or "");
+                var hasAudio = Text(format, "acodec") is not ("none" or "");
+                if (!hasVideo && hasAudio)
+                {
+                    var note = Text(format, "format_note").ToLowerInvariant();
+                    var language = Text(format, "language");
+                    audio.Add(new(Text(format, "format_id"), url, Text(format, "acodec"), language.Length > 0 ? language : "Source default", (int)Number(format, "audio_channels"), Number(format, "abr"), note.Contains("original"), note.Contains("dubbed") || note.Contains("descriptive") || note.Contains("audio description"), Number(format, "language_preference")));
+                }
+                if (!hasVideo || Text(format, "ext") is not ("mp4" or "webm")) continue;
+                var height = (int)Number(format, "height");
+                var choice = new StreamChoice(height > 0 ? $"{height}p" : "Source", url, agent, referer, !hasAudio, height);
+                (hasAudio ? combined : video).Add((height, choice));
             }
-        if (streams.Count == 0) throw new InvalidDataException("No supported combined audio/video stream. This Windows beta cannot yet merge separate tracks or play restricted/account-only videos.");
-        return new(card, streams.OrderByDescending(s => s.Height).DistinctBy(s => s.Height).Select(s => s.Choice).ToArray());
+        // A video-only stream plus real source audio avoids silently keeping a muxed stereo soundtrack.
+        var selected = SourceAudioPolicy.Pick(audio) != null && video.Count > 0 ? video : combined;
+        if (selected.Count == 0) throw new InvalidDataException("No compatible video/original audio pair was returned.");
+        foreach (var section in new[] { "subtitles", "automatic_captions" })
+            if (root.TryGetProperty(section, out var languages) && languages.ValueKind == JsonValueKind.Object)
+                foreach (var language in languages.EnumerateObject())
+                {
+                    if (language.Value.ValueKind != JsonValueKind.Array) continue;
+                    foreach (var caption in language.Value.EnumerateArray())
+                    {
+                        var url = Text(caption, "url");
+                        if (Text(caption, "ext") != "vtt" || !Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme != "https" || uri.Host != "www.youtube.com" || uri.AbsolutePath != "/api/timedtext" || !uri.IsDefaultPort || uri.UserInfo.Length != 0) continue;
+                        captions.Add(new(language.Name + (section == "automatic_captions" ? " · auto" : ""), url)); break;
+                    }
+                }
+        return new(card, selected.OrderByDescending(s => s.Height).DistinctBy(s => s.Height).Select(s => s.Choice).ToArray(), audio.DistinctBy(a => a.Id).ToArray(), captions);
     }
 }

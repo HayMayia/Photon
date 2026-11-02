@@ -1,7 +1,7 @@
 [Setup]
 AppId={{7A41EEAF-951D-4DE1-9365-82D2177F9B65}
 AppName=Photon
-AppVersion=0.1.0
+AppVersion=0.2.0
 AppPublisher=Photon contributors
 AppPublisherURL=https://github.com/HayMayia/Photon
 DefaultDirName={localappdata}\Programs\Photon

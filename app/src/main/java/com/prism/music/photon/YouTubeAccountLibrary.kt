@@ -12,12 +12,13 @@ enum class AccountShelf(val label: String, val path: String) {
 }
 enum class AccountEntryKind { VIDEO, PLAYLIST, CHANNEL }
 data class AccountEntry(val id: String, val title: String, val kind: AccountEntryKind, val video: Video? = null, val artwork: String = "", val layoutShort: Boolean? = null)
-data class AccountLibraryPage(val items: List<AccountEntry>, val continuation: String? = null, val context: JsonObject? = null, val message: String? = null)
+data class AccountLibraryPage(val items: List<AccountEntry>, val continuation: String? = null, val context: JsonObject? = null, val message: String? = null, val unsupportedRows: Int = 0)
 data class AccountLibraryState(val shelf: AccountShelf = AccountShelf.HISTORY, val playlist: String? = null, val title: String = "History",
     val page: AccountLibraryPage? = null, val busy: Boolean = false, val moreBusy: Boolean = false, val error: String? = null, val generation: Long = 0)
 
 internal class YouTubeAccountLibraryApi(client: OkHttpClient = OkHttpClient()) {
     private val transport = YouTubeWebTransport(client)
+    private val metadataTransport = YouTubeWebTransport(client, timeoutSeconds = 6)
     suspend fun load(session: YouTubeWebSession, shelf: AccountShelf, playlist: String? = null): AccountLibraryPage = withContext(Dispatchers.IO) {
         require(playlist == null || playlist.matches(Regex("[A-Za-z0-9_-]{2,150}")))
         val html = transport.html(playlist?.let { "/playlist?list=$it" } ?: shelf.path, session)
@@ -43,10 +44,11 @@ internal class YouTubeAccountLibraryApi(client: OkHttpClient = OkHttpClient()) {
         require(video.id.matches(Regex("[A-Za-z0-9_-]{11}")))
         // Read only metadata with the same pinned Google account; no format/stream lookup,
         // playlist mutations, playback reports, or separate YouTube Music login.
-        val html = transport.html("/watch?v=${video.id}", session)
+        val html = metadataTransport.html("/watch?v=${video.id}", session)
         val initial = YouTubeWebBootstrap.assigned(html, "ytInitialData")
         if (!YouTubeWebBootstrap.signedIn(initial, html)) throw IOException("Account metadata session expired")
-        YouTubeMusicCategory.parse(YouTubeWebBootstrap.assigned(html, "ytInitialPlayerResponse"), video.id)
+        val player = runCatching { YouTubeWebBootstrap.assigned(html, "ytInitialPlayerResponse") }.getOrNull()
+        player?.let { YouTubeMusicCategory.parse(it, video.id) } ?: YouTubeMusicEvidence.fromRenderer(initial, video.id)
     }
     suspend fun more(session: YouTubeWebSession, page: AccountLibraryPage, kind: AccountEntryKind): AccountLibraryPage = withContext(Dispatchers.IO) {
         val token = page.continuation?.takeIf { it.length in 1..32768 } ?: throw IOException("No further account page")
@@ -66,6 +68,7 @@ internal object YouTubeAccountLibraryParser {
         val rows = linkedMapOf<String, AccountEntry>()
         val messages = linkedSetOf<String>()
         var token: String? = null
+        var unsupportedRows = 0
         fun text(value: JsonElement?): String = when (value) {
             is JsonPrimitive -> value.contentOrNull.orEmpty()
             is JsonObject -> text(value["simpleText"] ?: value["content"]).ifBlank {
@@ -81,7 +84,8 @@ internal object YouTubeAccountLibraryParser {
             if (kind == entryKind && valid && title.isNotBlank()) rows.putIfAbsent(id, AccountEntry(id, title, entryKind, artwork = artwork))
         }
         fun walk(node: JsonElement, depth: Int = 0, tab: Boolean = false) {
-            if (depth > 70 || rows.size >= 250) return
+            if (depth > 70) return
+            if (rows.size > 5000) throw IOException("Account page exceeded the supported size; it was not marked complete")
             when (node) {
                 is JsonArray -> node.forEach { walk(it, depth + 1) }
                 is JsonObject -> {
@@ -89,6 +93,9 @@ internal object YouTubeAccountLibraryParser {
                     (node["continuationItemRenderer"] as? JsonObject)?.let {
                         val command = ((it["continuationEndpoint"] as? JsonObject)?.get("continuationCommand") as? JsonObject)
                         text(command?.get("token")).takeIf { it.length in 1..32768 }?.let { value -> token = value }
+                    }
+                    (node["continuationCommand"] as? JsonObject)?.get("token")?.let { value ->
+                        text(value).takeIf { it.length in 1..32768 }?.let { token = it }
                     }
                     (node["nextContinuationData"] as? JsonObject)?.let { text(it["continuation"]).takeIf { it.length in 1..32768 }?.let { value -> token = value } }
                     for (key in listOf("playlistRenderer", "gridPlaylistRenderer")) (node[key] as? JsonObject)?.let { addCollection(it, "playlistId", AccountEntryKind.PLAYLIST); return }
@@ -103,6 +110,22 @@ internal object YouTubeAccountLibraryParser {
                         }
                         return
                     }
+                    val musicRow = (node["musicResponsiveListItemRenderer"] ?: node["musicTwoRowItemRenderer"]) as? JsonObject
+                    if (kind == AccountEntryKind.VIDEO && musicRow != null) {
+                        val watch = (musicRow["navigationEndpoint"] as? JsonObject)?.get("watchEndpoint") as? JsonObject
+                        val id = text((musicRow["playlistItemData"] as? JsonObject)?.get("videoId")).ifBlank { text(watch?.get("videoId")) }
+                        val columns = musicRow["flexColumns"] as? JsonArray
+                        fun column(index: Int) = ((columns?.getOrNull(index) as? JsonObject)?.get("musicResponsiveListItemFlexColumnRenderer") as? JsonObject)?.get("text")
+                        val title = text(musicRow["title"] ?: column(0))
+                        if (id.matches(Regex("[A-Za-z0-9_-]{11}")) && title.isNotBlank()) {
+                            val thumb = GoogleAccountControls.objects(musicRow["thumbnail"] ?: musicRow["thumbnailRenderer"] ?: JsonObject(emptyMap()))
+                                .mapNotNull { it["thumbnails"] as? JsonArray }.firstOrNull()
+                            val video = Video(id, title, text(musicRow["subtitle"] ?: column(1)), ThumbnailPolicy.select(thumb, false),
+                                music = YouTubeMusicEvidence.fromRenderer(musicRow, id) == true)
+                            rows.putIfAbsent(id, AccountEntry(id, title, kind, video))
+                        } else unsupportedRows++
+                        return
+                    }
                     val videoKey = listOf("videoRenderer", "gridVideoRenderer", "videoWithContextRenderer", "playlistVideoRenderer", "playlistPanelVideoRenderer", "reelItemRenderer").firstOrNull { node[it] is JsonObject }
                     if (kind == AccountEntryKind.VIDEO && (videoKey != null || lockup != null || node["shortsLockupViewModel"] != null)) {
                         // Playlist rows use the same title/byline/thumbnail fields as ordinary video renderers.
@@ -111,7 +134,12 @@ internal object YouTubeAccountLibraryParser {
                             GoogleAccountControls.objects(lockup).any { (it["watchEndpoint"] as? JsonObject)?.get("videoId")?.jsonPrimitive?.contentOrNull == text(lockup["contentId"]) }) {
                             buildJsonObject { put("lockupViewModel", JsonObject(lockup + ("contentType" to JsonPrimitive("LOCKUP_CONTENT_TYPE_VIDEO")))) }
                         } else node
-                        YouTubeHomeParser.cards(source).videos.forEach { video -> rows.putIfAbsent(video.id, AccountEntry(video.id, video.title, kind, video)) }
+                        val parsed = YouTubeHomeParser.cards(source).videos
+                        if (parsed.isEmpty() && (videoKey != null || text(lockup?.get("contentType")) in setOf("", "LOCKUP_CONTENT_TYPE_VIDEO"))) unsupportedRows++
+                        parsed.forEach { video ->
+                            val proven = if (YouTubeMusicEvidence.fromRenderer(node, video.id) == true) video.copy(music = true) else video
+                            rows.putIfAbsent(video.id, AccountEntry(video.id, video.title, kind, proven))
+                        }
                         return
                     }
                     for (key in listOf("messageRenderer", "backgroundPromoRenderer", "feedNudgeRenderer")) (node[key] as? JsonObject)?.let { msg ->
@@ -123,7 +151,7 @@ internal object YouTubeAccountLibraryParser {
             }
         }
         walk(primary)
-        return AccountLibraryPage(rows.values.toList(), token, message = messages.joinToString("\n").ifBlank {
+        return AccountLibraryPage(rows.values.toList(), token, unsupportedRows = unsupportedRows, message = messages.joinToString("\n").ifBlank {
             if (rows.isEmpty()) "YouTube returned no supported items for this account list. It may be empty or its layout may be unsupported; local items were not substituted." else ""
         }.takeIf { it.isNotBlank() })
     }
@@ -137,5 +165,19 @@ internal object YouTubeMusicCategory {
         val renderer = (player["microformat"] as? JsonObject)?.get("playerMicroformatRenderer") as? JsonObject ?: return null
         val category = renderer["category"]?.jsonPrimitive?.contentOrNull?.trim()?.takeIf { it.isNotBlank() } ?: return null
         return MusicPlaybackPolicy.isMusicCategory(category)
+    }
+}
+
+/** Exact-ID music watch configuration is source proof, unlike titles/channel names. */
+internal object YouTubeMusicEvidence {
+    fun fromRenderer(node: JsonElement, expectedId: String): Boolean? {
+        for (part in GoogleAccountControls.objects(node)) {
+            val watch = part["watchEndpoint"] as? JsonObject ?: continue
+            if (watch["videoId"]?.jsonPrimitive?.contentOrNull != expectedId) continue
+            val supported = watch["watchEndpointMusicSupportedConfigs"] as? JsonObject ?: continue
+            val config = supported["watchEndpointMusicConfig"] as? JsonObject ?: continue
+            if (config["musicVideoType"]?.jsonPrimitive?.contentOrNull in setOf("MUSIC_VIDEO_TYPE_ATV", "MUSIC_VIDEO_TYPE_OMV", "MUSIC_VIDEO_TYPE_UGC")) return true
+        }
+        return null
     }
 }

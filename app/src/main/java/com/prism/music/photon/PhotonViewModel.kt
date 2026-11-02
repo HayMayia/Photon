@@ -291,8 +291,9 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
         val rows = snapshot.orEmpty().map { AccountEntry(it.id, it.title, AccountEntryKind.VIDEO, it) }
         googleLikes.value += rows.map { it.id }.filter { googleLikes.value[it] != false }.associateWith { true }
         accountLibrary.value = AccountLibraryState(AccountShelf.LIKED_MUSIC, title = LikedMusicPlaylist.NAME,
-            page = snapshot?.let { AccountLibraryPage(rows) }, busy = snapshot == null, generation = generation)
-        if (force || cached == null || System.currentTimeMillis() - cached.updatedAt > 6 * 60 * 60_000L) scanLikedMusic()
+            page = snapshot?.let { AccountLibraryPage(rows, message = if (likedMusicJob?.isActive == true) "Updating Liked Music…"
+                else cached?.takeIf { it.unresolved > 0 }?.let { "Some liked music is still being checked." }) }, busy = snapshot == null, generation = generation)
+        if (force || LikedMusicFreshness.needsRefresh(cached, System.currentTimeMillis())) scanLikedMusic()
     }
 
     private val likedMusicProof = ExpiringVideoCache<Boolean>(4096, 6 * 60 * 60_000L)
@@ -317,18 +318,19 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
             fun publish(done: Boolean, error: String? = null) {
                 if (!active()) return
                 val fresh = found.mapNotNull { it.video }.filter { googleLikes.value[it.id] != false }
-                val base = if (done) fresh else (old + fresh).distinctBy { it.id }.filter { googleLikes.value[it.id] != false }
+                val base = if (done && unresolved == 0) fresh else (old + fresh).distinctBy { it.id }.filter { googleLikes.value[it.id] != false }
                 val videos = LikedMusicSnapshotUpdates.merge(base, likedMusicMutations.values.toList(), mutationStart)
                 likedMusicSnapshot = videos; likedMusicSnapshotRevision = revision
                 if (playlistSource.value == PlaylistQueuePolicy.key(revision, "liked-music")) queue.value = videos
-                if (done) {
-                    app.likedMusicCache.save(LikedMusicSnapshot(revision, videos, System.currentTimeMillis()))
-                    likedMusicMutations.entries.removeAll { it.value.sequence <= mutationStart }
+                if (done || error != null) {
+                    app.likedMusicCache.save(LikedMusicSnapshot(revision, videos, System.currentTimeMillis(),
+                        schemaVersion = 1, scanComplete = done && unresolved == 0, unresolved = unresolved))
+                    if (done) likedMusicMutations.entries.removeAll { it.value.sequence <= mutationStart }
                 }
                 if (accountLibrary.value.shelf == AccountShelf.LIKED_MUSIC && accountLibrary.value.playlist == null) {
                     accountLibrary.value = accountLibrary.value.copy(busy = false, moreBusy = false, error = error,
                         page = AccountLibraryPage(videos.map { AccountEntry(it.id, it.title, AccountEntryKind.VIDEO, it) },
-                            message = if (done) LikedMusicRows.message(false, unresolved, scanned) else null))
+                            message = if (done) LikedMusicRows.message(false, unresolved, scanned) else if (error == null) "Updating Liked Music · $scanned checked" else null))
                 }
             }
             try {
@@ -339,6 +341,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 val seen = mutableSetOf<String>()
                 for (index in 0 until 200) {
                     if (!active()) return@launch
+                    unresolved += page.unsupportedRows
                     for (batch in page.items.filter { it.kind == AccountEntryKind.VIDEO && seen.add(it.id) }.chunked(2)) {
                         val classified = LikedMusicRows.classify(batch) { video ->
                             if (old.any { it.id == video.id }) true else {
@@ -643,10 +646,10 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
         // Background freshness checks do not depend on revisiting the shelf.
         viewModelScope.launch {
             while (true) {
-                kotlinx.coroutines.delay(30 * 60_000L)
+                kotlinx.coroutines.delay(2 * 60_000L)
                 val snapshot = app.likedMusicCache.snapshot
                 if (library.value.youtubeHome && library.value.youtubeSessionReady && snapshot.revision == library.value.youtubeSessionRevision &&
-                    System.currentTimeMillis() - snapshot.updatedAt > 6 * 60 * 60_000L) scanLikedMusic()
+                    LikedMusicFreshness.needsRefresh(snapshot, System.currentTimeMillis())) scanLikedMusic()
             }
         }
     }

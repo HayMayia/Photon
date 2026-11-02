@@ -6,7 +6,8 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 @Serializable
-internal data class LikedMusicSnapshot(val revision: Long = -1, val videos: List<Video> = emptyList(), val updatedAt: Long = 0)
+internal data class LikedMusicSnapshot(val revision: Long = -1, val videos: List<Video> = emptyList(), val updatedAt: Long = 0,
+    val schemaVersion: Int = 0, val scanComplete: Boolean = false, val unresolved: Int = 0)
 
 /** Separate from playback preferences: progress ticks must not reserialize thousands of likes. */
 internal class LikedMusicCache(context: Context) {
@@ -30,4 +31,9 @@ internal object LikedMusicSnapshotUpdates {
         val replaced = newer.map { it.video.id }.toSet()
         return (newer.filter { it.liked }.map { it.video.copy(music = true) } + videos.filterNot { it.id in replaced }).distinctBy { it.id }
     }
+}
+
+internal object LikedMusicFreshness {
+    fun needsRefresh(snapshot: LikedMusicSnapshot?, now: Long): Boolean = snapshot == null || snapshot.schemaVersion < 1 ||
+        now - snapshot.updatedAt >= if (snapshot.scanComplete) 6 * 60 * 60_000L else 2 * 60_000L
 }

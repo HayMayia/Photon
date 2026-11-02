@@ -27,3 +27,9 @@ artifacts/
 **/obj/
 *.exe
 *.msix
+
+# Generated native iOS projects and packages
+native/ios/Photon.xcodeproj/
+native/ios/**/.build/
+*.xcarchive/
+*.ipa

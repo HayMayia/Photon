@@ -1,0 +1,33 @@
+name: Photon
+options:
+  bundleIdPrefix: io.github.haymayia
+  deploymentTarget:
+    iOS: '17.0'
+packages:
+  YouTubeKit:
+    url: https://github.com/alexeichhorn/YouTubeKit.git
+    revision: 89854c93207ad0d2b3d78d6f1aea24595ca66552
+  PhotonPolicy:
+    path: PhotonPolicy
+settings:
+  base:
+    SWIFT_VERSION: '5.9'
+    MARKETING_VERSION: '0.1.0'
+    CURRENT_PROJECT_VERSION: '1'
+targets:
+  Photon:
+    type: application
+    platform: iOS
+    sources: [Photon]
+    dependencies:
+      - package: YouTubeKit
+      - package: PhotonPolicy
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.haymayia.photon
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
+        TARGETED_DEVICE_FAMILY: '1,2'
+        CODE_SIGN_STYLE: Automatic

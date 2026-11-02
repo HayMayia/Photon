@@ -23,3 +23,11 @@ including pages with no music. No separate Save action or second Google login.
   YouTube Music library type. Background defaults/settings from 1.1.0.4 are unchanged.
 
 Automated tests do not certify live-account pagination or device behavior.
+
+
+## Verified publication
+
+[Run 41449550707](https://github.com/HayMayia/Photon/actions/runs/41449550707)
+PASS: debug/release builds, focused unit tests including ten new automatic-music
+regressions, permanent signing checks and Beta publication. Source `3e51a8c`, code 34.
+Live-account scans/likes and physical phone behavior remain unverified.

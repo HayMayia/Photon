@@ -527,3 +527,24 @@ Music background is source-category-based; custom playlist membership does not
 reclassify a video. Liked Music is a real custom Google-account playlist, not the
 separate YouTube Music built-in liked collection or a private Prism-cache import.
 No public/private Windows or iOS artifacts were changed by this Android update.
+
+
+## Android 1.1.0.5 — automatic old/new Google music likes
+
+[Run 41449550707](https://github.com/HayMayia/Photon/actions/runs/41449550707)
+PASS: debug/release builds, focused unit suite, permanent signing verification and
+publication. Source `3e51a8cb34e778ccd6feaf1a8a8249bb11098177`, version code 34.
+Ten new tests cover shared LL source, music-only projection without manual membership,
+returned-order preservation under asynchronous lookup, failed/unknown classifications,
+known music without another lookup, duplicates, two-request metadata concurrency,
+cancellation, exact video-ID/category binding, unknown versus non-music metadata,
+and progress versus completed-list messaging. Existing background tests still pass.
+
+Published release target and artifact checked: Photon.apk, asset 701802102,
+25,369,392 bytes, SHA256
+`28afa46f475bd54d30109d6ac108183a0978c2281215a785cbab0810fddc0fec`.
+No live-account scan/like mutation or physical lifecycle/device testing is claimed.
+All old likes means traversing all Google-returned pages, subject to exposed-data
+limits, repeated-token protection and an explicit incomplete-load error at 200 pages.
+Missing/restricted metadata remains unresolved, not a proven non-music classification.
+An older manually created custom playlist is not silently deleted or repurposed.

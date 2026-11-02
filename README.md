@@ -14,20 +14,25 @@ fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
 
 ## Android
 
-**Latest: v1.1.0.4 Beta — Liked Music and music-only background defaults.**
-Use **Home → Update to v1.1.0.4 Beta** (reopen Photon if the banner is cached).
-Library and Save now include **Liked Music**, a real Google-account playlist;
-newly created copies are private. It is not a local list or an import of Prism's
-built-in liked collection. Music background playback defaults **on**, regular-video
-background playback defaults **off**, with independent settings for both. Unknown
-music classification follows the regular-video setting; TV stays foreground-only.
-See [release notes](docs/RELEASE_1_1_0_4_BETA.md).
-[Build 41447282769](https://github.com/HayMayia/Photon/actions/runs/41447282769)
-**PASS in 6m17s**, source `31bb450`, version code 33: debug/release builds, focused
-unit tests including nine new music/background/playlist cases, permanent signing
-and Beta publication. Live Google mutations and phone background/PiP behavior
-remain physically unverified. Older background-behavior notes below are historical;
-these new defaults supersede unrestricted mobile background playback.
+**Latest: v1.1.0.5 Beta — automatic Liked Music from Google likes.**
+Use **Home → Update to v1.1.0.5 Beta** (reopen Photon if the banner is cached).
+**Liked Music** is now a music-only view of the signed-in Google account's liked
+videos, not a custom playlist to fill manually. Like/unlike normally. Older likes
+are scanned automatically across returned account pages, with incremental results;
+a large list takes time. Missing/restricted metadata is explicitly unresolved and
+can be retried with Refresh. No local likes fallback or playlist-copy writes.
+Any custom playlist created using 1.1.0.4 is left untouched, not silently deleted.
+See [release notes](docs/RELEASE_1_1_0_5_BETA.md).
+[Build 41449550707](https://github.com/HayMayia/Photon/actions/runs/41449550707)
+**PASS**: debug/release builds, focused unit suite (including ten new automatic-liked-
+music tests), permanent signing checks and publication. Source `3e51a8c`, code 34.
+Live-account pagination and device behavior remain unverified. This supersedes the
+manual Liked Music destination from [1.1.0.4](docs/RELEASE_1_1_0_4_BETA.md).
+
+**Background defaults retained from 1.1.0.4:** music on, regular videos off, with
+independent switches. Source Music category, not titles or playlist membership,
+determines class; unknown items follow the regular-video switch. TV remains
+foreground-only. Older unrestricted-mobile-background notes below are historical.
 
 > **v1.1.0.2 Beta — buffering regression safeguards.**
 > [Release notes](docs/RELEASE_1_1_0_2_BETA.md). Use **Home → Update to v1.1.0.2 Beta**; if cached, force-stop/reopen then Home. No uninstall or storage clearing.

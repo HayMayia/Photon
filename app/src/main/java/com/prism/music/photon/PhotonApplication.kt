@@ -8,6 +8,7 @@ import com.prism.music.ui.theme.IconStyle
 class PhotonApplication : Application(), coil3.SingletonImageLoader.Factory {
     override fun newImageLoader(context: coil3.PlatformContext): coil3.ImageLoader = PhotonImageLoader.create(context)
     internal val updates by lazy { PhotonUpdates(this) }
+    internal val firstFrameVideo = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
     internal val tvForeground = kotlinx.coroutines.flow.MutableStateFlow(false)
     val account by lazy { YouTubeAccount() }
     internal val accountActions by lazy { YouTubeAccountActionsApi() }

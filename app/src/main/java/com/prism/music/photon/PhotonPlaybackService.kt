@@ -101,7 +101,7 @@ class PhotonPlaybackService : MediaSessionService() {
         val player = ExoPlayer.Builder(this).setMediaSourceFactory(sources)
             .setSeekBackIncrementMs(10_000).setSeekForwardIncrementMs(10_000)
             .setLoadControl(androidx.media3.exoplayer.DefaultLoadControl.Builder()
-                .setBufferDurationsMs(15_000, 50_000, 750, 1_500)
+                .setBufferDurationsMs(15_000, 50_000, StartupPolicy.START_BUFFER_MS, StartupPolicy.REBUFFER_MS)
                 .setPrioritizeTimeOverSizeThresholds(true).build())
             .build().apply {
             trackSelectionParameters = trackSelectionParameters.buildUpon().setMaxAudioChannelCount(Int.MAX_VALUE).build()
@@ -116,6 +116,7 @@ class PhotonPlaybackService : MediaSessionService() {
                 if (reason == androidx.media3.common.Player.DISCONTINUITY_REASON_SEEK) snapshot(true)
             }
             override fun onRenderedFirstFrame() {
+                (application as PhotonApplication).firstFrameVideo.value = player.currentMediaItem?.mediaId
                 val opened = player.currentMediaItem?.mediaMetadata?.extras?.getLong("photon_open_elapsed", 0) ?: 0
                 if (opened > 0) PhotonDiagnostics.event("First frame after open: ${android.os.SystemClock.elapsedRealtime() - opened} ms")
             }

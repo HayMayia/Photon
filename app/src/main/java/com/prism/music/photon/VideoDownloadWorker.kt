@@ -79,7 +79,7 @@ class VideoDownloadWorker(context: Context, parameters: WorkerParameters) : Coro
                 check(videoFile.renameTo(output)) { "Could not finalize downloaded video" }
             }
             val short = inputData.getBoolean("video_short", false) || details.video.short
-            val artworkVideo = details.video.copy(short = short, thumbnail = if (short) inputData.getString("video_thumbnail")?.takeIf { it.isNotBlank() } ?: details.video.thumbnail else details.video.thumbnail)
+            val artworkVideo = details.video.copy(short = short, projection = quality.projection, thumbnail = if (short) inputData.getString("video_thumbnail")?.takeIf { it.isNotBlank() } ?: details.video.thumbnail else details.video.thumbnail)
             val thumbnail = OfflineArtwork.save(app, artworkVideo, File(temp, "thumbnail"))
             currentCoroutineContext().ensureActive()
             val target = File(root, "$videoId-${quality.height}p.mp4")

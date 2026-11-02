@@ -15,7 +15,9 @@ import androidx.media3.ui.PlayerView
 
 /** Observe native touch routing rather than covering PlayerView with a gesture-stealing overlay. */
 @UnstableApi
-internal class PhotonPlayerView(context: Context) : PlayerView(context) {
+internal class PhotonPlayerView @JvmOverloads constructor(context: Context, attrs: android.util.AttributeSet? = null) : PlayerView(context, attrs) {
+    var panoramaSurface: View? = null
+    private var panning = false
     var shortsGestures = false
     var doubleTapLike: (() -> Unit)? = null
     var remoteBack: (() -> Unit)? = null
@@ -136,6 +138,14 @@ internal class PhotonPlayerView(context: Context) : PlayerView(context) {
     override fun onTouchEvent(event: MotionEvent): Boolean = if (useController) true else super.onTouchEvent(event)
 
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        panoramaSurface?.let { surface ->
+            if (event.actionMasked == MotionEvent.ACTION_DOWN) panning = !hitsControl(this, event.rawX, event.rawY)
+            if (panning) {
+                surface.dispatchTouchEvent(event)
+                if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) panning = false
+                return true
+            }
+        }
         if (event.actionMasked == MotionEvent.ACTION_DOWN) endBoost()
         if (event.pointerCount > 1) endBoost()
         gestures.onTouchEvent(event)

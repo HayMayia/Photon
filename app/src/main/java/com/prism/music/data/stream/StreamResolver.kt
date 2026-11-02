@@ -52,7 +52,7 @@ import org.schabi.newpipe.extractor.downloader.Response as NpResponse
 const val DESKTOP_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0"
 
 /** Bridges NewPipeExtractor's HTTP needs to OkHttp. */
-class NewPipeDownloader(private val client: OkHttpClient) : Downloader() {
+class NewPipeDownloader(private val client: OkHttpClient, private val responseObserver: ((String, String) -> Unit)? = null) : Downloader() {
     override fun execute(request: Request): NpResponse {
         val data = request.dataToSend()
         val body = when {
@@ -70,7 +70,9 @@ class NewPipeDownloader(private val client: OkHttpClient) : Downloader() {
         }
         client.newCall(builder.build()).execute().use { r ->
             if (r.code == 429) throw ReCaptchaException("reCaptcha challenge requested", request.url())
-            return NpResponse(r.code, r.message, r.headers.toMultimap(), r.body.string(), r.request.url.toString())
+            val content = r.body.string()
+            responseObserver?.let { observer -> runCatching { observer(r.request.url.toString(), content) } }
+            return NpResponse(r.code, r.message, r.headers.toMultimap(), content, r.request.url.toString())
         }
     }
 }

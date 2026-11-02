@@ -7,6 +7,7 @@ import androidx.work.WorkManager
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withPermit
@@ -556,6 +557,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
         if (!fromQueue) queue.value = emptyList()
         nextVideoWarmJob?.cancel()
         watchJob?.cancel()
+        app.firstFrameVideo.value = null
         watchJob = viewModelScope.launch {
             mutableWatch.value = WatchState(video = video, busy = true)
             try {
@@ -570,12 +572,16 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 mutableWatch.value = WatchState(details.video.copy(short = video.short || presentation.short || details.video.short, thumbnail = if (presentation.short && presentation.thumbnail.isNotBlank()) presentation.thumbnail else details.video.thumbnail), details, quality, request = System.nanoTime(), startPositionMs = library.value.progress[video.id]?.resumeMs() ?: 0, openedAtMs = opened, webRevision = revision)
                 // Playback is published first; account-only reads must not contend with startup.
                 viewModelScope.launch { kotlinx.coroutines.delay(1_000); if (mutableWatch.value.video?.id == video.id) { resolveVideoPresentation(proved); details.channel?.let(::resolveSubscription) } }
-                val feed = mutableBrowse.value.videos
-                val index = feed.indexOfFirst { it.id == video.id }
-                val next = if (index >= 0) feed.getOrNull(index + 1) else null
-                if (video.short && next?.short == true && next.id != video.id) nextVideoWarmJob = viewModelScope.launch {
-                    kotlinx.coroutines.delay(700)
-                    try { app.videos.details(next.id) } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { }
+                val next = StartupPolicy.next(queue.value, video.id) ?: StartupPolicy.next(mutableBrowse.value.videos, video.id)
+                if (next != null) nextVideoWarmJob = viewModelScope.launch {
+                    // Do not steal extraction/network work from the video the user just opened.
+                    try {
+                        kotlinx.coroutines.withTimeout(30_000) { app.firstFrameVideo.first { it == video.id } }
+                        kotlinx.coroutines.delay(1_000)
+                        if (mutableWatch.value.video?.id == video.id) app.videos.details(next.id)
+                    } catch (cancelled: kotlinx.coroutines.TimeoutCancellationException) { /* No first frame: no speculative work. */ }
+                    catch (cancelled: CancellationException) { throw cancelled }
+                    catch (_: Exception) { /* Optional warm-ahead never interrupts playback. */ }
                 }
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (error: Exception) { mutableWatch.value = WatchState(video = video, error = error.message ?: "This video could not be played") }

@@ -643,7 +643,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
         confirmButton = { TextButton(enabled = playlistName.isNotBlank(), onClick = { model.createGooglePlaylist(playlistName.trim()); createPlaylist = false; playlistName = "" }) { Text("Continue") } },
         dismissButton = { TextButton(onClick = { createPlaylist = false }) { Text("Cancel") } })
     val vr by model.vrViewing.collectAsStateWithLifecycle()
-    if (vr && watch.video != null) VrHeadsetDialog(controller) { model.vrViewing.value = false }
+    if (vr && watch.video != null) VrHeadsetDialog(controller, watch.quality?.projection ?: watch.video?.projection ?: VideoProjection.FLAT) { model.vrViewing.value = false }
     if (playerSettings || captionSettings) PlayerSettingsPanel(model, controller, captionSettings) { playerSettings = false; captionSettings = false }
 
 }
@@ -660,11 +660,15 @@ internal fun VideoSurface(controller: MediaController?, modifier: Modifier, cont
     val watched by model.watch.collectAsStateWithLifecycle()
     val vr by model.vrViewing.collectAsStateWithLifecycle()
     if (vr) { Box(modifier.background(Color.Black)); return }
+    val projection = watched.quality?.projection ?: watched.video?.projection ?: VideoProjection.FLAT
+    var panorama by remember(controller, projection) { mutableStateOf<PanoramaVideoView?>(null) }
     fun configure(view: PhotonPlayerView) {
         view.setControllerVisibilityListener(if (visibilityChanged == null) null as PlayerView.ControllerVisibilityListener? else
             PlayerView.ControllerVisibilityListener { visible -> onVisibility?.invoke(visible == android.view.View.VISIBLE) })
         view.controllerAutoShow = visibilityChanged == null
 
+        view.panoramaSurface = panorama
+        panorama?.setOnClickListener { if (view.isControllerFullyVisible) view.hideController() else view.showController() }
         view.shortsGestures = watched.video?.short == true
         view.doubleTapLike = { model.watch.value.video?.let(model::likeShort) }
         view.remoteBack = menus.back
@@ -682,15 +686,21 @@ internal fun VideoSurface(controller: MediaController?, modifier: Modifier, cont
                 android.graphics.Color.BLACK, null))
         }
     }
-    AndroidView(factory = { context -> PhotonPlayerView(context).apply { player = controller; useController = controls; resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT; setShowSubtitleButton(true); setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
+    Box(modifier.background(Color.Black)) {
+        if (projection != VideoProjection.FLAT) PanoramaSurface(controller, projection, stereo = false, modifier = Modifier.matchParentSize(), onView = { panorama = it })
+        key(projection) {
+    AndroidView(factory = { context -> (if (projection == VideoProjection.FLAT) PhotonPlayerView(context)
+        else android.view.LayoutInflater.from(context).inflate(com.prism.music.R.layout.photon_panorama_controls, null) as PhotonPlayerView).apply { player = controller; useController = controls; resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT; setShowSubtitleButton(true); setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
         configure(this)
         if (visibilityChanged != null) hideController()
         if (context.isPhotonTv() && controls) { isFocusable = true; isFocusableInTouchMode = true; requestFocus(); showController() }
         if (youtubeLayout) findViewById<androidx.media3.ui.DefaultTimeBar>(androidx.media3.ui.R.id.exo_progress)?.setPlayedColor(android.graphics.Color.rgb(255, 0, 51))
     } },
-        modifier = modifier.background(Color.Black),
+        modifier = Modifier.matchParentSize(),
         update = { it.player = controller; it.useController = controls; it.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT; configure(it) },
-        onRelease = { it.setControllerVisibilityListener(null as PlayerView.ControllerVisibilityListener?); it.player = null })
+        onRelease = { it.panoramaSurface = null; it.setControllerVisibilityListener(null as PlayerView.ControllerVisibilityListener?); it.player = null })
+        }
+    }
 }
 
 @Composable

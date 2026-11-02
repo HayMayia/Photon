@@ -36,6 +36,7 @@ data class Video(
     val channelUrl: String = "",
     val short: Boolean = false,
     val channelAvatar: String = "",
+    val projection: VideoProjection = VideoProjection.FLAT,
 ) {
     val url get() = "https://www.youtube.com/watch?v=$id"
 }
@@ -47,6 +48,7 @@ data class VideoQuality(
     val mime: String = "video/mp4",
     val downloadable: Boolean = true,
     val audioLabel: String = "Source default (language unverified)",
+    val projection: VideoProjection = VideoProjection.FLAT,
 ) {
     val label get() = if (height == 0) "Live" else "${height}p"
 }
@@ -84,7 +86,7 @@ class VideoRepository {
 
     init {
         val country = Locale.getDefault().country.ifBlank { "IN" }
-        NewPipe.init(NewPipeDownloader(http), Localization("en", country), ContentCountry(country))
+        NewPipe.init(NewPipeDownloader(http, ProjectionMetadata::observe), Localization("en", country), ContentCountry(country))
     }
 
     suspend fun search(query: String, next: Page? = null): VideoPage = withContext(Dispatchers.IO) {
@@ -145,10 +147,10 @@ class VideoRepository {
                 add(VideoQuality(0, info.hlsUrl, mime = "application/x-mpegURL", downloadable = false))
             }
             info.videoStreams.filter { it.isUrl && it.deliveryMethod == DeliveryMethod.PROGRESSIVE_HTTP && it.format?.mimeType == "video/mp4" }
-                .forEach { add(VideoQuality(it.height, it.content, audio, downloadable = downloadableAudio, audioLabel = audioLabel)) }
+                .forEach { add(VideoQuality(it.height, it.content, audio, downloadable = downloadableAudio, audioLabel = audioLabel, projection = ProjectionMetadata.get(id, it.itag))) }
             if (audio != null) info.videoOnlyStreams
                 .filter { it.isUrl && it.deliveryMethod == DeliveryMethod.PROGRESSIVE_HTTP && it.format?.mimeType == "video/mp4" && (it.codec?.startsWith("avc") != false) }
-                .forEach { add(VideoQuality(it.height, it.content, audio, downloadable = downloadableAudio, audioLabel = audioLabel)) }
+                .forEach { add(VideoQuality(it.height, it.content, audio, downloadable = downloadableAudio, audioLabel = audioLabel, projection = ProjectionMetadata.get(id, it.itag))) }
         }.distinctBy { it.height }.sortedByDescending { it.height }
         check(qualities.isNotEmpty()) { "YouTube did not provide a compatible stream. It may require sign-in, be restricted, or be temporarily unavailable." }
         val result = VideoDetails(

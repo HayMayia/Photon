@@ -6,6 +6,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  checks: write
 jobs:
   installed-release:
     runs-on: windows-2025
@@ -36,13 +37,9 @@ jobs:
           if (-not $app.WaitForExit(90000)) { $app.Kill(); throw 'Installed app smoke test timed out' }
           if ($app.ExitCode -ne 0) { throw "Installed app startup failed: $($app.ExitCode)" }
           'Published installer: install and native/tool initialization PASS.' | Add-Content artifacts/verification.txt
-          $fixture = Join-Path $env:RUNNER_TEMP 'Photon-native-video-only.mp4'
-          & "$destination/tools/ffmpeg.exe" -nostdin -hide_banner -loglevel error -y -f lavfi -i 'color=c=black:s=160x90:r=10:d=20' -an -c:v mpeg4 $fixture
-          if ($LASTEXITCODE -ne 0) { throw 'Native test video generation failed' }
-          $nativePath = Get-ChildItem $destination -Recurse -Filter libvlc.dll | Where-Object { $_.DirectoryName -notmatch 'win-x86' } | Select-Object -First 1 -ExpandProperty DirectoryName
-          Add-Type -Path "$destination/LibVLCSharp.dll"
-          Add-Type -Path desktop/windows/packaging/NativeMediaCheck.cs -ReferencedAssemblies "$destination/LibVLCSharp.dll"
-          [NativeMediaCheck]::Run($destination, $nativePath, $fixture) | Add-Content artifacts/verification.txt
+          & pwsh -NoProfile -File desktop/windows/packaging/NativeMediaCheck.ps1 -Root $destination 2>&1 | Tee-Object -FilePath artifacts/native-check.log
+          if ($LASTEXITCODE -ne 0) { throw 'Installed LibVLC media integration failed' }
+          Get-Content artifacts/native-check.log | Add-Content artifacts/verification.txt
           $uninstall = Start-Process (Join-Path $destination 'unins000.exe') -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART') -PassThru
           if (-not $uninstall.WaitForExit(120000)) { $uninstall.Kill(); throw 'Uninstallation timed out' }
           if ($uninstall.ExitCode -ne 0) { throw "Uninstallation failed: $($uninstall.ExitCode)" }
@@ -51,4 +48,14 @@ jobs:
         if: always()
         with:
           name: Windows-published-installer-verification
-          path: artifacts/verification.txt
+          path: |
+            artifacts/verification.txt
+            artifacts/native-check.log
+      - name: Readable installed-media diagnostics
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $details = if (Test-Path artifacts/native-check.log) { Get-Content artifacts/native-check.log -Tail 100 | Out-String } else { 'See installer verification steps.' }
+          @{ name = 'Installed Windows media diagnostics'; head_sha = $env:GITHUB_SHA; status = 'completed'; conclusion = 'failure'; output = @{ title = 'Installed Windows verification failure'; summary = $details } } | ConvertTo-Json -Depth 5 | Set-Content artifacts/diagnostic.json
+          gh api "repos/$env:GITHUB_REPOSITORY/check-runs" --method POST --input artifacts/diagnostic.json

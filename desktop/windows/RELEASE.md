@@ -22,3 +22,13 @@ unported. iOS remains an unsigned development archive, not an installable IPA.
 Installer is per-user x64, self-contained .NET, and unsigned. Windows reputation
 warnings are possible. Never disable antivirus or SmartScreen for this app.
 Checksums verify the downloaded artifact, not signing or universal trust.
+
+
+### Verification
+
+[Windows build 41435801177](https://github.com/HayMayia/Photon/actions/runs/41435801177)
+PASS, 40 core checks and real multichannel fixtures/remux.
+[Exact published installer verification 41436530109](https://github.com/HayMayia/Photon/actions/runs/41436530109)
+PASS: install/start, installed LibVLC 6/8-channel parsing and separate-track
+playback with dummy outputs, uninstall. No physical speaker/live YouTube certification.
+Installer SHA256: `c92dda12819bac8159043cea380cdab1a5585f0239aec65a46606f1aa8a12fe8`.

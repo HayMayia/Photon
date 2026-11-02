@@ -47,6 +47,23 @@ The installer is unsigned. Do not disable Defender/SmartScreen. See SECURITY.md.
 Checksums verify integrity, not universal trust. Use downloads only where you have
 permission and comply with content rights/platform terms.
 
+## Verified 0.2 publication
+
+Source `2fb7c352201def062f34a691da1b3a22a68bf914`,
+[build 41435801177](https://github.com/HayMayia/Photon/actions/runs/41435801177)
+PASS: 40 core checks, pinned tools, real six/eight-channel PCM fixtures,
+six-channel stream-copy remux, WPF/native startup, installer and publication.
+Installer: 204,474,136 bytes, SHA256
+`c92dda12819bac8159043cea380cdab1a5585f0239aec65a46606f1aa8a12fe8`.
+
+[Independent verification 41436530109](https://github.com/HayMayia/Photon/actions/runs/41436530109)
+PASS in 54s against that exact published installer: fixed digest, per-user install,
+installed native/tool startup, installed LibVLC parsing of both 6/8-channel WAVs,
+actual separate video/audio playback with an active audio track through dummy
+outputs, and uninstall. This tests native track attachment/playback, not physical
+speaker output or live YouTube URLs. The isolated test host exits before uninstall
+so its loaded DLLs are released.
+
 ## Verified first publication
 
 Source `a9ca38a1888b1d9e3c45d77a276e28062ac2227e`, [run 41431338162](https://github.com/HayMayia/Photon/actions/runs/41431338162) PASS in 3m55s: 25 core checks, WPF/native runtime initialization, pinned extractor verification, self-contained publication and per-user installer. Prerelease `windows-v0.1.0-beta` targets that exact source. Installer is 147,906,611 bytes, SHA256 `15ee9b2c359ee4cde35b1c53689f7ffb7eab201fae0ab1857f7b410e160d44aa`.

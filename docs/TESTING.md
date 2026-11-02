@@ -481,3 +481,27 @@ Native app source `a9ca38a1888b1d9e3c45d77a276e28062ac2227e`. Windows [414313381
 iOS [41431338241](https://github.com/HayMayia/Photon/actions/runs/41431338241) PASS in 1m53s: three Swift policy test methods and unsigned ARM64 archive, Xcode 16.4/iOS 18.5 SDK. Developer artifact ID 13134402183, 1,742,267 bytes. This is not a signed/installable IPA or Apple approval. No physical device/simulator/live-YouTube playback certification. Explicit local-only YouTubeKit pin, source-host checks and stale-request cancellation; remote extraction is not enabled.
 
 Initial Windows builds failed from a command-line MSBuild property parse and missing IO imports; initial iOS compile used an unavailable method on the pinned library. Corrected builds above passed before delivery. These native previews do not implement Android account, casting, VR or full source-stream feature parity; missing features are disclosed rather than simulated. See desktop/windows/README.md, SECURITY.md and native/ios/README.md for safety/distribution limitations.
+
+
+## Windows 0.2 source-channel audio and HD beta
+
+Published source `2fb7c352201def062f34a691da1b3a22a68bf914`; Windows build
+[41435801177](https://github.com/HayMayia/Photon/actions/runs/41435801177) PASS:
+40 core policy/parser checks (including original-language priority, no app 6/8-channel
+cap, no dubbed surround substitution, separate HD and caption URL admission,
+no-downmix stream-copy arguments and Windows-specific update discovery), generated
+real 6/8-channel sources checked with ffprobe, real six-channel remux, native WPF
+startup and per-user installer publication. EXE 204,474,136 bytes; SHA256
+`c92dda12819bac8159043cea380cdab1a5585f0239aec65a46606f1aa8a12fe8`.
+
+Independent exact-published-installer run
+[41436530109](https://github.com/HayMayia/Photon/actions/runs/41436530109) PASS in
+54s: fixed-digest validation, install, installed app/tool initialization, installed
+LibVLC parses 6/8-channel sources and plays separate video/audio with an active
+audio track through dummy outputs, then uninstall. Dummy outputs explicitly do not
+certify physical speakers/HDMI layout, GPU output, source codec coverage, live
+YouTube compatibility, object-audio passthrough or antivirus reputation.
+
+Android published artifacts and the unsigned iOS foundation are unchanged.
+Google-account synchronization, casting, headset VR and full native parity remain
+unfinished. No local substitute account data or artificial surround was added.

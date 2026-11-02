@@ -47,7 +47,7 @@ internal fun AccountLibraryScreen(model: PhotonViewModel, revision: Long, ready:
         item(span = { GridItemSpan(2) }) {
             AccountLibraryHeader(state, ready, onShelf = { model.openAccountShelf(it) },
                 onCreate = { creating = true }, onBack = { model.openAccountShelf(AccountShelf.PLAYLISTS) },
-                onSubscriptions = subscriptions, onRefresh = { if (state.shelf != AccountShelf.LIKED_MUSIC) model.loadGoogleLikedIndex(force = true); model.openAccountShelf(state.shelf, state.playlist, state.title) })
+                onSubscriptions = subscriptions, onRefresh = { if (state.shelf != AccountShelf.LIKED_MUSIC) model.loadGoogleLikedIndex(force = true); if (state.shelf == AccountShelf.LIKED_MUSIC) model.openLikedMusic(force = true) else model.openAccountShelf(state.shelf, state.playlist, state.title) })
         }
         items(state.page?.items.orEmpty(), key = AccountLibraryRows::key,
             span = { entry -> GridItemSpan(AccountGridPolicy.span(entry)) }) { entry ->

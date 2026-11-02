@@ -36,7 +36,7 @@ internal class YouTubeWebTransport(client: OkHttpClient = OkHttpClient(), timeou
         execute(builder(url, session).get().build())
     }
     suspend fun post(endpoint: String, context: JsonObject, body: JsonObject, session: YouTubeWebSession, permitted: () -> Boolean = { true }): JsonObject = withContext(Dispatchers.IO) {
-        require(endpoint in setOf("browse", "feedback", "like/like", "like/removelike", "subscription/subscribe", "subscription/unsubscribe", "playlist/create", "browse/edit_playlist", "playlist/delete"))
+        require(endpoint in setOf("browse", "next", "comment/perform_comment_action", "feedback", "like/like", "like/removelike", "subscription/subscribe", "subscription/unsubscribe", "playlist/create", "browse/edit_playlist", "playlist/delete"))
         val payload = JsonObject(body + ("context" to context))
         val request = builder("https://www.youtube.com/youtubei/v1/$endpoint".toHttpUrl(), session, context, permitted)
             .post(payload.toString().toRequestBody("application/json; charset=utf-8".toMediaType())).build()

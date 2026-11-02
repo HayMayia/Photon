@@ -113,7 +113,7 @@ class PhotonPlaybackService : MediaSessionService() {
         val player = ExoPlayer.Builder(this).setMediaSourceFactory(sources)
             .setSeekBackIncrementMs(10_000).setSeekForwardIncrementMs(10_000)
             .setLoadControl(androidx.media3.exoplayer.DefaultLoadControl.Builder()
-                .setBufferDurationsMs(15_000, 50_000, StartupPolicy.START_BUFFER_MS, StartupPolicy.REBUFFER_MS)
+                .setBufferDurationsMs(StartupPolicy.MIN_BUFFER_MS, StartupPolicy.MAX_BUFFER_MS, StartupPolicy.START_BUFFER_MS, StartupPolicy.REBUFFER_MS)
                 .setPrioritizeTimeOverSizeThresholds(true).build())
             .build().apply {
             trackSelectionParameters = trackSelectionParameters.buildUpon().setMaxAudioChannelCount(Int.MAX_VALUE).build()

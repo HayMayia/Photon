@@ -44,5 +44,7 @@ internal object ProjectionMetadata {
 internal object StartupPolicy {
     // Restore the pre-1.1.0.1 startup threshold; steady playback takes priority over 250 ms.
     const val START_BUFFER_MS = 750
-    const val REBUFFER_MS = 1500
+    const val REBUFFER_MS = 5000
+    const val MIN_BUFFER_MS = 45_000
+    const val MAX_BUFFER_MS = 120_000
 }

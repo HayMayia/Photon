@@ -102,6 +102,9 @@ internal fun CommentsPanel(model: PhotonViewModel, video: Video) {
     val account by model.account.collectAsStateWithLifecycle()
     val posting by model.commentPosting.collectAsStateWithLifecycle()
     val postError by model.commentPostError.collectAsStateWithLifecycle()
+    val commentLikes by model.commentLikes.collectAsStateWithLifecycle()
+    val liking by model.commentLikeBusy.collectAsStateWithLifecycle()
+    val likeError by model.commentLikeError.collectAsStateWithLifecycle()
     val published by model.lastPublished.collectAsStateWithLifecycle()
     var draft by rememberSaveable(video.id) { mutableStateOf("") }
     var seenId by remember(video.id) { mutableStateOf(model.lastPublished.value?.comment?.id) }
@@ -114,19 +117,15 @@ internal fun CommentsPanel(model: PhotonViewModel, video: Video) {
     val context = LocalContext.current
     Column(Modifier.fillMaxWidth().fillMaxHeight(0.85f).imePadding().padding(horizontal = 16.dp)) {
         Text(if (replies) "Replies" else "Comments", style = MaterialTheme.typography.headlineSmall)
-        Row {
-            TextButton(onClick = { replies = false; model.loadComments(video) }) { Text(if (replies) "Back to comments" else "Refresh") }
-            TextButton(onClick = { context.startActivity(browserIntent(video.url)) }) { Text("Open in browser") }
-        }
+        if (replies) TextButton(onClick = { replies = false; model.loadComments(video) }) { Text("Back to comments") }
         LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(vertical = 16.dp)) {
             if (!replies) item {
-                Text(account.identity?.let { "Comment as ${it.name}" } ?: "Connect Google to post", style = MaterialTheme.typography.labelMedium)
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     OutlinedTextField(value = draft, onValueChange = { draft = it.take(10_001) }, enabled = !posting,
                         placeholder = { Text("Add a comment…") }, modifier = Modifier.weight(1f), minLines = 1, maxLines = 3)
                     TextButton(onClick = { if (account.identity == null) (context as? PhotonActivity)?.signInToYouTube() else model.postComment(video, draft) },
                         enabled = CommentComposerPolicy.canReview(draft, posting, account.busy, page?.disabled == true)) {
-                        Text(if (posting) "Posting…" else if (account.identity == null) "Connect" else "Post")
+                        Text(if (posting) "Posting…" else "Publish Comment")
                     }
                 }
                 if (draft.length > 9500) Text("${draft.trim().length}/10000", style = MaterialTheme.typography.labelSmall)
@@ -135,8 +134,6 @@ internal fun CommentsPanel(model: PhotonViewModel, video: Video) {
                 postError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 published?.takeIf { it.videoId == video.id }?.let { result ->
                     Text("Posted", color = MaterialTheme.colorScheme.primary)
-                    Text(result.comment.author, fontWeight = FontWeight.Bold)
-                    Text(if (result.comment.html) android.text.Html.fromHtml(result.comment.text, android.text.Html.FROM_HTML_MODE_COMPACT).toString() else result.comment.text)
                 }
             }
             if (page?.disabled == true) item { Text("Comments are disabled for this video.") }
@@ -144,12 +141,15 @@ internal fun CommentsPanel(model: PhotonViewModel, video: Video) {
                 Column(Modifier.fillMaxWidth().padding(vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(comment.author, fontWeight = FontWeight.Bold)
                     Text(if (comment.html) android.text.Html.fromHtml(comment.text, android.text.Html.FROM_HTML_MODE_COMPACT).toString() else comment.text)
-                    if (comment.likes >= 0) Text("${comment.likes} likes", style = MaterialTheme.typography.labelSmall)
+                    TextButton(onClick = { model.likeComment(video, comment) }, enabled = comment.id !in liking && comment.id !in commentLikes) {
+                        Text(if (comment.id in liking) "Liking…" else if (comment.id in commentLikes) "Liked" else if (comment.likes > 0) "Like · ${comment.likes}" else "Like")
+                    }
                     comment.replyPage?.let { next -> TextButton(onClick = { replies = true; model.loadComments(video, replies = next) }) { Text("View replies (${comment.replies.coerceAtLeast(0)})") } }
                 }
                 HorizontalDivider()
             }
             item {
+                likeError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 if (busy) CircularProgressIndicator()
                 else if (page?.next != null) TextButton(onClick = { model.loadComments(video, more = true) }) { Text("Load more") }

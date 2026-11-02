@@ -245,6 +245,12 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 if (more) accountLibraryTokens += oldPage!!.continuation!!
                 accountLibrary.value = AccountLibraryState(shelf, playlist, title,
                     page.copy(items = accountLibrary.value.page?.items.orEmpty(), continuation = page.continuation?.takeUnless { it in accountLibraryTokens }), generation = generation)
+                if (playlist != null && playlistSource.value == PlaylistQueuePolicy.key(revision, playlist)) {
+                    // A tap during incremental admission must not freeze a partially admitted first page.
+                    queue.value = PlaylistQueuePolicy.append(queue.value, accountLibrary.value.page?.items.orEmpty().mapNotNull { it.video })
+                    queuedAccountPage = accountLibrary.value.page
+                    playlistMore.value = queuedAccountPage?.continuation != null
+                }
                 page.items.mapNotNull { it.video }.take(6).forEach { resolveVideoPresentation(it, includeLike = false) }
 
             } catch (cancelled: CancellationException) { throw cancelled }
@@ -770,12 +776,6 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     fun addToPlaylist(id: String, video: Video) = requestGoogleChange(GoogleChange(GoogleChangeKind.ADD_VIDEO, id, video.title, video))
     fun removeFromPlaylist(id: String, video: Video) = requestGoogleChange(GoogleChange(GoogleChangeKind.REMOVE_VIDEO, id, video.title, video))
     fun deletePlaylist(id: String, title: String) = requestGoogleChange(GoogleChange(GoogleChangeKind.DELETE_PLAYLIST, id, title))
-    fun playAll(videos: List<Video>) {
-        if (videos.isEmpty()) return
-        prepareCollectionPlaylist(videos.first())
-        if (playlistSource.value == null) { queue.value = videos; playlistSource.value = "loaded-playlist" }
-        open(videos.first(), true)
-    }
     fun next() {
         val index = queue.value.indexOfFirst { it.id == watch.value.video?.id }
         if (index >= 0) {

@@ -24,7 +24,7 @@ class YouTubeAccountLibraryTest {
     @Test fun everyUnselectedPlaylistRowRemainsVisible() {
         val rows = (0..19).joinToString(",") { index ->
             val id = "video" + index.toString().padStart(6, '0')
-            """{"playlistPanelVideoRenderer":{"videoId":"$id","selected":${index == 0},"title":{"simpleText":"Entry $index"}}}"""
+            """{"selected":${index == 0},"content":{"playlistPanelVideoRenderer":{"videoId":"$id","selected":${index == 0},"title":{"simpleText":"Entry $index"}}}}"""
         }
         assertEquals((0..19).map { "video" + it.toString().padStart(6, '0') }, parse("""{"contents":[$rows]}""").items.mapNotNull { it.video?.id })
     }

@@ -8,4 +8,10 @@
 - Portrait playlist playback leaves room for the details/Up next panel outside fullscreen; fullscreen stays portrait.
 - Playlist continuation can also be loaded from Up next. Account changes invalidate private queues. Normal non-playlist playback retains its own related-video behavior.
 
-Validation: targeted regression tests added for playlist rows, shared links, queue order/end/continuation merge, and signed Home browse vs bootstrap cards. Hosted Android build/test and publication pending. Live personalized feed and physical phone/TV checks have not been performed in this environment.
+Validation: hosted Android run **41454902703 PASS (6m44s)**, including debug/release builds, unit tests, permanent certificate verification, and publication. PR run **41454911976 PASS**. Regression coverage includes selected/unselected playlist rows, shared playlist links, queue order/end/continuation merge, and signed Home browse vs bootstrap cards. Existing Shorts geometry tests also pass. These are fixture/policy/build checks, not a live-account or physical phone/TV test.
+
+Published source: `531a066698ece9105df2ce1ef1be71bed514f8e3`, version code 37.
+Verified release asset: Photon.apk ID 701906199, 25,353,004 bytes;
+SHA256 `7d5423e02a0ad52355a5e08f27bf8bd96c345451db344a3b1a21031b4af371fb`.
+
+Live personalized feed and physical phone/TV checks have not been performed in this environment. No Google history setting was changed to force different recommendations.

@@ -571,3 +571,23 @@ This does not certify account-specific algorithm relevance, complete source-layo
 coverage, physical phone/TV appearance or Google's algorithm across different clients.
 No Google history setting is silently changed to force different recommendations.
 Intermediate builds were superseded; final 1.1.0.7 publication is the verified target.
+
+
+## Android 1.1.0.8 — playlist queue and hydrated account Home
+
+Source `531a066698ece9105df2ce1ef1be71bed514f8e3`, code 37.
+Hosted run 41454902703 PASS in 6m44s: debug/release, unit suite, permanent signing,
+and publication. PR run 41454911976 PASS. New checks cover shared Music/shortened/
+embedded playlist URLs, 20 selected/unselected playlist rows, playlist Up next
+order and end behavior, continuation merge, non-playlist recommendations, and
+account-specific queue keys. The Home transport test now returns different bootstrap
+and signed-browse cards, asserting only browse cards are used and account/auth
+headers are preserved. Existing source-isolation and rendered column tests pass.
+
+Verified Photon.apk asset 701906199, 25,353,004 bytes, SHA256
+`7d5423e02a0ad52355a5e08f27bf8bd96c345451db344a3b1a21031b4af371fb`.
+No live-account feed relevance, real playlist continuation, or physical phone/TV
+behavior is certified. Playlist-source state, generation/account checks and explicit
+UI origins are implemented; end-to-end device playback remains a manual check.
+The earlier compile failure 41454460281 was corrected before this successful release;
+intermediate cancelled sources were not published as this version.

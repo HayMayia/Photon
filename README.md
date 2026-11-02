@@ -14,19 +14,19 @@ fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
 
 ## Android
 
-**Latest: v1.1.0.7 Beta — account-only recommendations and aligned Home Shorts.**
-Use **Home → Update to v1.1.0.7 Beta** (reopen Photon if the banner is cached).
-Both layouts now show only the verified signed-in Google Home feed. Disconnected
-Home no longer substitutes local ranking, generic discovery shelves or the former
-science/technology search. Parser filtering excludes nested menus, sidebar/ad data,
-unselected tabs and non-video lockups. Consecutive Shorts use equal portrait columns
-with aligned title widths/heights; ordinary videos remain full-width landscape.
-Google's returned order is preserved, including Shorts positions; late row corrections
-wait for scroll idle. See [release notes](docs/RELEASE_1_1_0_7_BETA.md).
-[Build 41452067541](https://github.com/HayMayia/Photon/actions/runs/41452067541)
-**PASS in 7m56s**: debug/release builds, focused suite including feed-isolation/row
-policy and native-rendered Shorts geometry checks, permanent signing and publication.
-Source `b9588e6`, code 36. PR verification 41452079284 also passes. Actual Google
+**Latest: v1.1.0.8 Beta — playlist playback and authenticated Home hydration.**
+Use **Home → Update to v1.1.0.8 Beta** (reopen Photon if the banner is cached).
+Shared Music/shortened playlist links open the playlist rather than just the first
+video. Selecting an entry pins Up next and Next to that playlist, including later
+pages, on phone and TV; playlist ends never substitute unrelated recommendations.
+Connected playlist URLs use the Google-account loader. Home requests the signed
+account's browse response instead of using bootstrap HTML cards. Native Home rows
+keep their committed frame while late Shorts metadata resolves; Shorts pairing,
+landscape regular videos, and source order are retained.
+See [release notes](docs/RELEASE_1_1_0_8_BETA.md).
+[Build 41454902703](https://github.com/HayMayia/Photon/actions/runs/41454902703)
+**PASS in 6m44s**: debug/release builds, unit suite, permanent signing and publication.
+Source `531a066`, code 37. PR verification 41454911976 also passes. Actual Google
 relevance and physical-device behavior are not certified by these tests.
 
 **Liked Music remains automatic:** a music-only view of Google-account likes,

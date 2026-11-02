@@ -548,3 +548,26 @@ All old likes means traversing all Google-returned pages, subject to exposed-dat
 limits, repeated-token protection and an explicit incomplete-load error at 200 pages.
 Missing/restricted metadata remains unresolved, not a proven non-music classification.
 An older manually created custom playlist is not silently deleted or repurposed.
+
+
+## Android 1.1.0.7 — authoritative Home and aligned recommendation Shorts
+
+Source `b9588e6fba826f515f902d6faed8244a721fc7f9`, version code 36.
+[Run 41452067541](https://github.com/HayMayia/Photon/actions/runs/41452067541)
+PASS in 7m56s: debug/release assembly, focused unit suite, permanent certificate
+verification and publication. PR run 41452079284 PASS. Seven new tests cover
+source-order/Shorts pairing, never mixing regular videos into portrait pairs,
+duplicate/stable row keys, sidebar/menu/ad/unselected-tab isolation, rejecting
+playlist lockups as video cards, nested-card menu isolation, and native-rendered
+same-width/same-height portrait frames with aligned two-line titles using the
+production column container. The modern video fixture now explicitly marks its
+video content type; unknown playlist-shaped lockups are not inferred as videos.
+
+Published target and artifact checked: Photon.apk ID 701851642, 25,353,004 bytes;
+SHA256 `eb8e3b7a188b3fc847ef1843fc33cdf30e20c869e8dc078181ac3f50e43b45aa`.
+Late classification is observed from existing resolved metadata, without eagerly
+requesting every offscreen recommendation, and row corrections wait for scroll idle.
+This does not certify account-specific algorithm relevance, complete source-layout
+coverage, physical phone/TV appearance or Google's algorithm across different clients.
+No Google history setting is silently changed to force different recommendations.
+Intermediate builds were superseded; final 1.1.0.7 publication is the verified target.

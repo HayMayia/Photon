@@ -14,20 +14,26 @@ fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
 
 ## Android
 
-**Latest: v1.1.0.5 Beta — automatic Liked Music from Google likes.**
-Use **Home → Update to v1.1.0.5 Beta** (reopen Photon if the banner is cached).
-**Liked Music** is now a music-only view of the signed-in Google account's liked
-videos, not a custom playlist to fill manually. Like/unlike normally. Older likes
-are scanned automatically across returned account pages, with incremental results;
-a large list takes time. Missing/restricted metadata is explicitly unresolved and
-can be retried with Refresh. No local likes fallback or playlist-copy writes.
-Any custom playlist created using 1.1.0.4 is left untouched, not silently deleted.
-See [release notes](docs/RELEASE_1_1_0_5_BETA.md).
-[Build 41449550707](https://github.com/HayMayia/Photon/actions/runs/41449550707)
-**PASS**: debug/release builds, focused unit suite (including ten new automatic-liked-
-music tests), permanent signing checks and publication. Source `3e51a8c`, code 34.
-Live-account pagination and device behavior remain unverified. This supersedes the
-manual Liked Music destination from [1.1.0.4](docs/RELEASE_1_1_0_4_BETA.md).
+**Latest: v1.1.0.7 Beta — account-only recommendations and aligned Home Shorts.**
+Use **Home → Update to v1.1.0.7 Beta** (reopen Photon if the banner is cached).
+Both layouts now show only the verified signed-in Google Home feed. Disconnected
+Home no longer substitutes local ranking, generic discovery shelves or the former
+science/technology search. Parser filtering excludes nested menus, sidebar/ad data,
+unselected tabs and non-video lockups. Consecutive Shorts use equal portrait columns
+with aligned title widths/heights; ordinary videos remain full-width landscape.
+Google's returned order is preserved, including Shorts positions; late row corrections
+wait for scroll idle. See [release notes](docs/RELEASE_1_1_0_7_BETA.md).
+[Build 41452067541](https://github.com/HayMayia/Photon/actions/runs/41452067541)
+**PASS in 7m56s**: debug/release builds, focused suite including feed-isolation/row
+policy and native-rendered Shorts geometry checks, permanent signing and publication.
+Source `b9588e6`, code 36. PR verification 41452079284 also passes. Actual Google
+relevance and physical-device behavior are not certified by these tests.
+
+**Liked Music remains automatic:** a music-only view of Google-account likes,
+including older returned pages, not a manually filled custom playlist. Unknown or
+restricted category metadata is reported for retry rather than labeled non-music.
+See [1.1.0.5 notes](docs/RELEASE_1_1_0_5_BETA.md). Any custom playlist made with
+1.1.0.4 is left untouched. No local likes fallback or playlist-copy writes.
 
 **Background defaults retained from 1.1.0.4:** music on, regular videos off, with
 independent switches. Source Music category, not titles or playlist membership,

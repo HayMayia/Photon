@@ -20,3 +20,12 @@ Google controls its recommendation algorithm: this change prevents incorrect sou
 mixing, not a promise that Google itself will always return relevant recommendations
 or pixel-identical feeds across clients. Live account/physical-device verification
 is not claimed. Liked Music and independent background switches are unchanged.
+
+
+## Published verification
+
+[Run 41452067541](https://github.com/HayMayia/Photon/actions/runs/41452067541)
+PASS in 7m56s: debug/release builds, focused suite including native-rendered
+Shorts-column/title bounds, permanent signing checks and publication. PR run
+41452079284 also PASS. Source `b9588e6`, version code 36. Live-account relevance
+and physical-device appearance remain unverified.

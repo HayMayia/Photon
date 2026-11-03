@@ -110,6 +110,23 @@ class YouTubeAccountLibraryTest {
         assertEquals("video000019", page.items.last().id)
         assertEquals(2, calls)
     }
+    @Test fun bothLikedShelvesLoadModernAuthenticatedBrowseLayouts() = runBlocking {
+        for (shelf in listOf(AccountShelf.LIKED, AccountShelf.LIKED_MUSIC)) {
+            var calls = 0
+            val loader = api { request ->
+                calls++
+                if (request.method == "GET") cfg + """var ytInitialData = {"responseContext":{"mainAppWebResponseContext":{"loggedOut":false}},"contents":{"sectionListRenderer":{"contents":[]}}};"""
+                else {
+                    val buffer = okio.Buffer(); request.body!!.writeTo(buffer)
+                    assertEquals("VLLL", Json.parseToJsonElement(buffer.readUtf8()).jsonObject["browseId"]!!.jsonPrimitive.content)
+                    assertEquals("2", request.header("X-Goog-AuthUser"))
+                    """{"contents":{"twoColumnBrowseResultsRenderer":{"tabs":[{"tabRenderer":{"selected":true,"content":{"richGridRenderer":{"contents":[$video,$video]}}}}]}}}"""
+                }
+            }
+            assertEquals(listOf("abcdefghijk"), loader.load(session, shelf).items.map { it.id })
+            assertEquals(2, calls)
+        }
+    }
     @Test fun signedOutLibraryIsRejectedRatherThanShownAsAccountData() = runBlocking {
         try { api { html(video, loggedOut = true) }.load(session, AccountShelf.HISTORY); fail("Expected signed-out rejection") }
         catch (_: java.io.IOException) { }

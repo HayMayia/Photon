@@ -31,7 +31,7 @@ internal class YouTubeAccountLibraryApi(client: OkHttpClient = OkHttpClient()) {
                 // Some bootstrap pages expose a preview only. Hydrate the exact playlist, not Home/related cards.
                 val response = transport.post("browse", context ?: throw IOException("Playlist context unavailable"),
                     buildJsonObject { put("browseId", "VL$list") }, session)
-                PlaylistContents.primary(response, list) ?: throw IOException("The requested playlist's entries were not returned")
+                PlaylistContents.primary(response, list, requestBound = true) ?: throw IOException("The requested playlist's entries were not returned")
             }
         } else root["contents"] ?: throw IOException("Unrecognized account library page")
         YouTubeAccountLibraryParser.parse(primary, if (playlist != null) AccountEntryKind.VIDEO else when (shelf) {

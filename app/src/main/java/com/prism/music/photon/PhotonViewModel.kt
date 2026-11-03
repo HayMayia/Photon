@@ -399,7 +399,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 check(complete)
                 publish(true)
             } catch (cancelled: CancellationException) { throw cancelled }
-            catch (_: Exception) { publish(false, "Couldn't refresh Liked Music. Your loaded playlist is kept; Refresh to retry.") }
+            catch (_: Exception) { publish(false, if (old.isEmpty() && found.isEmpty()) "Liked Music couldn't load from the account. Refresh to retry." else "Couldn't finish refreshing Liked Music. Your loaded songs are kept.") }
         }
     }
     private fun updateLikedMusicLike(video: Video, liked: Boolean, revision: Long) {

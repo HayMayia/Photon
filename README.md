@@ -14,22 +14,19 @@ fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
 
 ## Android
 
-**Latest: v1.1.0.12 Beta — keep fast music opening, repair incomplete lists.**
-Use **Home → Update to v1.1.0.12 Beta** (reopen Photon if the banner is cached).
-Existing Liked Music stays visible while old snapshots are automatically repaired.
-Snapshots now distinguish completed scans from unresolved metadata; incomplete scans
-retry with a backoff instead of being silently considered fresh for six hours.
-Newest Google likes are checked incrementally at two-minute intervals while active,
-without rebuilding the whole list on each visit. Full reconciliation remains periodic.
-Large-page continuation tokens are no longer lost after 250 rows. Music row renderers
-and exact-video music watch configurations provide source proof without extra metadata
-lookups; unknown rows remain unresolved rather than silently disappearing.
-The playlist layout, cache and deletion confirmations from 1.1.0.10 are retained.
-See [release notes](docs/RELEASE_1_1_0_12_BETA.md).
-[Build 41465004904](https://github.com/HayMayia/Photon/actions/runs/41465004904)
-**PASS in 9m35s**: debug/release, focused unit suite, permanent signing and publication.
-Source `24cf6c5`, code 41; PR 41465017099 PASS. Seven recovery regressions pass.
-These tests do not establish the exact cause or completeness of a private live account.
+**Latest: v1.1.0.13 Beta — shared Liked videos/Music loader repair.**
+Use **Home → Update to v1.1.0.13 Beta** (reopen Photon if the banner is cached).
+The account loader now accepts selected modern richGrid/sectionList playlist layouts,
+not only the older playlistVideoListRenderer. Previously it rejected these even after
+an authenticated exact-playlist browse succeeded, affecting both liked shelves.
+Canonical/request identity binding, signed-out/error rejection and sidebar/unselected-tab
+exclusion remain in place. Fast music caching, incremental updates and playlist deletion
+confirmation are retained. See [release notes](docs/RELEASE_1_1_0_13_BETA.md).
+[Build 41611885395](https://github.com/HayMayia/Photon/actions/runs/41611885395)
+**PASS in 9m19s**: debug/release, focused unit suite, permanent signing and publication.
+Source `02d4ef4`, code 42; PR 41611892271 PASS. Six new regressions exercise modern
+layouts and both liked shelves through the authenticated browse transport. Private
+live-account responses were not available for verification.
 
 **Liked Music remains automatic:** a music-only view of Google-account likes,
 including older returned pages, not a manually filled custom playlist. Unknown or

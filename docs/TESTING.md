@@ -661,3 +661,21 @@ symptom (one row with empty space), not its precise source-side cause. 1.1.0.11'
 initial source published before cancellation; complete refresh source d73a639 built
 and passed tests but did not publish that already-existing version. 1.1.0.12 is the
 verified, independently versioned complete source; no release asset was overwritten.
+
+
+## Android 1.1.0.13 — shared account likes loader regression
+
+Source `02d4ef412aa7d30b08de19f665c036a18d062164`, code 42.
+Run 41611885395 PASS in 9m19s; PR 41611892271 PASS. Debug/release, focused Android
+unit suite, permanent signer and publication succeeded. Six new tests reproduce modern
+richGrid rejection and verify request-bound extraction, canonical identity, unbound/
+unselected exclusion, explicit mismatch rejection, signed-out rejection and loading
+both LIKED and LIKED_MUSIC through authenticated exact VLLL browse transport.
+The shared loader's legacy-renderer-only restriction was a reproducible regression;
+these fixtures are not a capture of the user's private account response.
+
+Verified asset 705073717, 25,385,772 bytes, SHA256
+`e1ef04047e6634691543d158226e44d0afc728876b386418a14e2986b8547d48`.
+Fast caching and update policies are unchanged. Initial empty-list errors no longer
+claim cached songs were retained. No private-account access, live library completion,
+Google account mutation or physical-device test is claimed.

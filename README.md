@@ -1,1 +1,226 @@
 # Photon
+
+**Your world, refracted.** A YouTube-video Android client built on
+[Yigder's Prism](https://github.com/Yigder/Prism), retaining its real Compose theme,
+fonts, spectrum accents and hand-drawn icons, adapted to widescreen video.
+
+## Native platform previews
+
+- **Windows x64:** [Download the EXE installer](https://github.com/HayMayia/Photon/releases/download/windows-v0.2.0-beta/Photon-Windows-x64-Setup.exe) · [scope/build guide](desktop/windows/README.md) · [security and free signing application procedure](desktop/windows/SECURITY.md). Native WPF + LibVLC, not a browser wrapper. Public search/link/list playback, separate-track HD, source multichannel audio, caption selection, 5.1/7.1 tests and source-copy MKV saving; **not Android feature parity**. Unsigned preview; no claim that SmartScreen warnings are eliminated.
+- **iOS:** [Native SwiftUI/AVPlayer foundation](native/ios/README.md), compiled as an **unsigned developer archive, not an installable IPA**. Public video-link playback foundation only. Apple signing/provisioning and distribution/content-rights review remain outstanding; no phone-only, free universal native installation is promised.
+- Windows 0.2 build [41435801177](https://github.com/HayMayia/Photon/actions/runs/41435801177) **PASS**: 40 core checks, actual 6/8-channel source fixtures, source-copy remux, native startup and installer. Exact published installer verification [41436530109](https://github.com/HayMayia/Photon/actions/runs/41436530109) **PASS**: install/start, LibVLC 6/8-channel parsing and separate-track dummy-output playback, uninstall. Physical speakers/live YouTube remain unverified.
+- Historical Windows 0.1 build [41431338162](https://github.com/HayMayia/Photon/actions/runs/41431338162) **PASS** (3m55s): 25 core checks, native startup, installer/publication. Exact published installer install/start/uninstall verification [41431997310](https://github.com/HayMayia/Photon/actions/runs/41431997310) **PASS** (48s). iOS [41431338241](https://github.com/HayMayia/Photon/actions/runs/41431338241) **PASS** (1m53s): 3 Swift policy tests and unsigned ARM64 archive. These are build/integration checks, not live YouTube/GPU/antivirus certification.
+- Android is unchanged by these previews; its Home updater ignores releases without `Photon.apk`.
+
+## Android
+
+**Latest: v1.1.0.13 Beta — shared Liked videos/Music loader repair.**
+Use **Home → Update to v1.1.0.13 Beta** (reopen Photon if the banner is cached).
+The account loader now accepts selected modern richGrid/sectionList playlist layouts,
+not only the older playlistVideoListRenderer. Previously it rejected these even after
+an authenticated exact-playlist browse succeeded, affecting both liked shelves.
+Canonical/request identity binding, signed-out/error rejection and sidebar/unselected-tab
+exclusion remain in place. Fast music caching, incremental updates and playlist deletion
+confirmation are retained. See [release notes](docs/RELEASE_1_1_0_13_BETA.md).
+[Build 41611885395](https://github.com/HayMayia/Photon/actions/runs/41611885395)
+**PASS in 9m19s**: debug/release, focused unit suite, permanent signing and publication.
+Source `02d4ef4`, code 42; PR 41611892271 PASS. Six new regressions exercise modern
+layouts and both liked shelves through the authenticated browse transport. Private
+live-account responses were not available for verification.
+
+**Liked Music remains automatic:** a music-only view of Google-account likes,
+including older returned pages, not a manually filled custom playlist. Unknown or
+restricted category metadata is reported for retry rather than labeled non-music.
+See [1.1.0.5 notes](docs/RELEASE_1_1_0_5_BETA.md). Any custom playlist made with
+1.1.0.4 is left untouched. No local likes fallback or playlist-copy writes.
+
+**Background defaults retained from 1.1.0.4:** music on, regular videos off, with
+independent switches. Source Music category, not titles or playlist membership,
+determines class; unknown items follow the regular-video switch. TV remains
+foreground-only. Older unrestricted-mobile-background notes below are historical.
+
+> **v1.1.0.2 Beta — buffering regression safeguards.**
+> [Release notes](docs/RELEASE_1_1_0_2_BETA.md). Use **Home → Update to v1.1.0.2 Beta**; if cached, force-stop/reopen then Home. No uninstall or storage clearing.
+> Media and prefetched ranges now use independent streaming connections without the metadata client's 35-second whole-response deadline. Connection/read stalls are still bounded. Buffered/prefetched bodies can wait without expiring just because playback has sufficient data or is paused. Truncated chunks fail explicitly for loader recovery; normal chunk continuity is covered by tests.
+> Restored the older 750 ms startup threshold and removed speculative next-video extraction while playing. Rebuffer protection, resolution choice and original supplied audio channels are unchanged. This prioritizes continuous playback over speculative first-frame savings; no claim that every network/device buffering event is fixed.
+> [Release run 41424687509](https://github.com/HayMayia/Photon/actions/runs/41424687509) **PASS in 9m30s**, source `397c533`, code 31: debug/release, 227-method focused suite, permanent certificates and publication. Official asset: 25,353,008 bytes. PR run 41424695349 also passes. Six local signing tests pass. Continuous phone playback, long pause/resume, weak-network and high-speed playback remain physically unverified.
+> Retains supported source-confirmed equirectangular touch-pan/paired-eye rendering, source stereo layout, viewer lifecycle/landscape corrections and new offline projection persistence from [1.1.0.1](docs/RELEASE_1_1_0_1_BETA.md). Not head tracking, lens calibration or support for every spherical format; actual GPU/headset appearance remains unverified.
+> **Additional v1.1.0.0 fixes:** modern video lockups no longer silently disappear; reopening retains proven Shorts; read-only replies no longer show a nonfunctional composer; closing playback resets headset state; headset waits for its controller and keeps the screen awake; four-part versions and highest-release update selection work correctly. Its thumbnail cache/transport and early-format recognition improvements remain. Source responses without format proof may still need later lookup. [Previous notes](docs/RELEASE_1_1_0_0_BETA.md).
+> Existing gestures, comments/controls, supplied original-channel audio, offline files, Google authority and TV/mobile behavior remain. Newly downloaded files retain selected projection; old files without that metadata are not retroactively classified offline. Hosted tests do not establish an error-free app.
+> **Retained subscriptions/navigation and prior fixes:**
+> Library has a Subscriptions shortcut; the feed now includes an authenticated channel/avatar strip with channel opening and channel pagination, on mobile and TV. Channel pages resolve canonical IDs and show **Subscribed** from actual account evidence. Modern channel-bound entity state and directory membership provide read-back; button variants alone never establish state. Unknown-state checks remain read-only; pre-mutation reads cannot override newer writes. Pixel parity, video-feed pagination and a grouped Shorts shelf remain outside this change.
+> [Build 41224699573](https://github.com/HayMayia/Photon/actions/runs/41224699573) **PASS in 6m8s**, source `ab98c61`, code 24: debug/release assembly, focused suite (192 methods), permanent certificates and publication. Added modern-entity/directory HTTP regressions; physical/live-account/TV checks remain pending.
+> **Music Photon, “Prism”** remains a separate upstream app. Its library/offline mirror is not live push-sync for external playlist edits. In Prism, use the same YouTube Music channel, Library's Sync action, then leave/reopen the playlist online. This Photon release does not patch Prism or read its private cache. [Source-backed scope](docs/PRISM_PLAYLIST_REFRESH.md).
+> **Retained v1.0.5 library pairing/stability:**
+> v1.0.9 retains nonblocking account-row admission, genuine order and canonical deduplication; the portrait fallback is removed. Late positive Shorts evidence is committed at idle rather than locking an incorrect frame forever.
+> [Build 41223617263](https://github.com/HayMayia/Photon/actions/runs/41223617263) **PASS in 7m37s**, source `bd7867f`, code 22: debug/release assembly, focused suite (188 methods), permanent certificates and publication. New admission tests cover out-of-order responses, initially unknown Shorts and unavailable formats; prior rendered scrolling/header/overlay tests pass. Physical/live-account verification remains pending.
+> **Retained v1.0.4 direct actions and Shorts playback overlay:**
+> Removed Photon-only confirmation/result popups for account actions, public posting, history controls, sign-in pre-disclosures, root exit, download removal and local-cache clearing. Tap actions send authenticated Google requests directly; account revision/in-flight guards and verification remain. Errors stay visible. Only actual Google/Android authorization, permission and installer approval remain mandatory; naming forms and user-opened troubleshooting are retained.
+> Shorts title/channel/actions now overlay the full-size video, hidden until native player controls are shown by a tap; another tap or controls timeout hides them. Includes real comments/replies/pagination/posting, returned description/views/date, like, save/share and available subscription/channel actions. No invented data or gesture-intercepting Compose layer.
+> [Build 41222693382](https://github.com/HayMayia/Photon/actions/runs/41222693382) **PASS in 9m3s**, source `77a0a31`, code 21: debug/release assembly, focused suite (186 test methods), permanent signing and publication. Rendered overlay visibility/action regression passed; physical/live-account checks remain pending.
+> **Retained v1.0.3 library stability fix:**
+> Library cards now retain committed spans and thumbnail-frame sizes while browsing, independent of late Shorts metadata or global cache eviction. v1.0.9 supersedes the prior format-preflight/fallback policies: unknown videos stay normal-sized, and positive Shorts corrections happen at rest.
+> Continuations merge by actual video ID, preserve first-seen order and current metadata, and reject stale dataset generations. Resolved presentation stays on the dataset so lazy remounts cannot lose it when the global cache evicts an entry.
+> [Build 41221594855](https://github.com/HayMayia/Photon/actions/runs/41221594855) **PASS in 9m36s**, source `d0a5021`: debug/release assembly, focused tests (185 methods), permanent certificates and Beta publication. Code 20, same package/key. Includes an actual Compose scroll/remount/overlapping-page regression using the production row/span/frame policy, plus pure stability tests. Physical/live-account verification remains pending.
+> Header overlap fix, wrapped titles, quiet Prism update banner, TV foreground-only playback, mobile background playback and player settings remain unchanged.
+> Back retraces tabs/pages/player before backgrounding at the root; fullscreen uses FIT and safe insets.
+> **Settings → Switch to YouTube layout** changes native presentation; **You → Settings → Switch to Photon** returns. Same player/accounts/downloads, no website-player replacement.
+> This is **not pixel-identical or the official YouTube interface**; some controls remain shared, and Android/Google permission screens keep the real app identity. [Scope and device checks](docs/INTERFACE_MODES.md).
+> Shorts cards use portrait 9:16 artwork; regular video cards use landscape 16:9. Valid drafts can authorize comments through Google; after authorization, **Post** submits directly. Sign-in never posts automatically.
+> Like/unlike, subscribe/unsubscribe and playlist actions now send authenticated, session-bound YouTube requests, not local saves.
+> Google is the default library; only downloads/device caches stay local. [Account writes and remaining scope](docs/ACCOUNT_WRITES.md).
+> Authenticated Home retains the Prism header and spectrum accents with compact shortcut chips.
+> **Library → YouTube account** reads History, Playlists, Liked videos and subscribed Channels;
+> **Downloads** retains necessary offline files; legacy device lists are no longer the account library. [Account library scope/testing](docs/ACCOUNT_LIBRARY.md).
+> The primary **Sign in with Google** now connects account Home automatically after Google's login.
+> Optional native comment permission is separately labelled **Authorize comments**; it does not connect Home.
+> No extra “Use this YouTube session” step; failed Home loads show errors rather than silently keeping the local feed.
+> Home follows authenticated YouTube continuations; native pause/resume submits on the action tap and requires read-back.
+> Optional history registration keeps its 15-second default, with separate explicit 1-second short-play consent; fresh enabled Google history and the original account/session are required. Downloaded videos played while online can qualify; no offline backfill.
+> **User confirmed 0.7.1 login/account Home works. Account lists/writes, Google pause changes and saved history reports still need device verification.**
+> HTTP acceptance is not proof of stored activity. Unknown/stale/paused state blocks tracking in connected mode;
+> [behavior, privacy and device checklist](docs/YOUTUBE_HOME.md).
+> Native comment authorization is separate; embedded sign-in may be blocked. Keep Cloud testing while validating;
+> public Google verification is separate. Stable-signed 0.5.1/0.6 should update without uninstalling.
+
+
+## Feature status
+
+| Feature | Current implementation |
+|---|---|
+| Home design | Prism section headers, typography, shape tokens and spectrum colours; shortcut tiles, Quick picks, Continue watching, Ready offline, Made for you and separate music/video discovery shelves; violet default and accent selection |
+| Videos | Standard YouTube search, topic discovery, result pagination, video/channel/public-playlist links and Android Share → Photon |
+| Channel pages | Native channel details, Videos and Shorts tabs, paginated uploads |
+| Subscriptions | Actual Google subscribe/unsubscribe with structured state checks/read-back; account Channels lists subscriptions. Video feed reads Google's authenticated first page, not local channel aggregation |
+| Playlists | Account list/rows, private creation/initial video, Google add/remove with entry IDs and read-back; per-playlist direct deletion uses request acceptance, not independent deletion verification. No local fallback; multi-page editing/rename/privacy controls remain incomplete |
+| Comments | Read comments/replies with pagination; native top-level composer with direct Post and official YouTube API posting, requiring Google setup/authorization; replies remain read-only |
+| Shorts | Swipeable vertical video feed using extracted Shorts and channel Shorts tabs; discovery is not YouTube's signed-in Shorts algorithm |
+| Recommendations | Optional native **YouTube account Home** through Prism-style Google-page sign-in, in server order; no local/search fallback in that mode. Auto continuation loading with deduplication/loop guards; unofficial; 0.7.1 login/Home user-confirmed, continuation/device cases remain pending. Original on-device related-video ranking remains a distinct local mode |
+| History pause | Reads explicit server watch-history controls; confirmed account pause/resume with read-back; connected-mode local tracking is blocked when Google state is paused/unknown/stale. Additional local pause stays independent. Device verification pending |
+| Account watch history | Separately opted-in single real-play report after 15 actual playing seconds (explicit short-play consent: 1 second); fresh Google enabled-state check and account-pinned item required. No offline backfill, fake watchtime stream or automatic report retry. HTTP acceptance is not proof of saved Google activity |
+| History/resume | Recorded by the playback service, including background playback; periodic positions, playing-time accumulation (not seek distance), and resume across app restarts; recently finished videos restart from the beginning |
+| Casting | LAN discovery/control for Google Cast and DLNA using Prism's protocols; proxies a combined MP4 or serves your downloaded merged MP4; **keep Photon open**; no live/adaptive-stream casting |
+| Audio language | Original AAC audio takes priority over bitrate. Explicit dubs/descriptive/secondary tracks are not selected automatically. Missing labels are shown as unverified; source availability still limits playback |
+| Downloads | Available MP4/AVC + AAC qualities; foreground progress/cancel; separate audio/video muxed on-device with MediaMuxer |
+| Offline | Play/delete downloaded MP4 files including sound; thumbnail images are real app-private files rather than only an evictable image cache; old-download artwork is repaired when an allowed network is available |
+| Player | Native CC subtitle language/off selector for extracted caption tracks, ±10-second side double-taps (except buttons/unseekable streams), background session, lock-screen/headset controls, fullscreen, PiP and mini-player |
+| Startup | 750 ms initial / 1.5 s rebuffer thresholds, bounded two-minute stream-detail cache and same-video extraction deduplication; retry refreshes signed URLs. Device latency reduction not yet measured |
+| Testing tools | Settings → **Share device test report**; bounded local playback events without credentials/stream URLs; [device checklist](docs/TESTING.md) and issue template |
+| Google authorization | Official native authorization for comments (memory-only token); separate optional app-private WebView session for account Home. These are not interchangeable. [Comment setup](docs/GOOGLE_SIGN_IN.md) · [Home/session/privacy limits](docs/YOUTUBE_HOME.md) |
+| YouTube account library | Actual History, Playlists, Liked videos (LL) and subscribed Channels with load-more. Google-bound likes/subscriptions/playlist actions replace local-only controls. No historical backfill, complete activity export or owned-channel management; not yet all-activity/search-history/offline synchronization |
+| Live | Extracted live HLS playback when available. **Live recording is not implemented**; the MP4 downloader is not misrepresented as a live recorder |
+
+Local saves are **bookmarks, not YouTube likes**. Local playlists/subscriptions do
+not modify your Google account. No account or Photon server is required for signed-out browsing/playback. Optional native commenting needs Google authorization and an app-owner Google Cloud registration. No passwords, cookies or client secrets should be pasted into issues or chat. Native authorization uses the broad YouTube API scope disclosed before Google's consent screen; it does not implement full account synchronization. Optional account Home separately uses sensitive website-session cookies kept by Android WebView; see the in-app disclosure and [Home privacy/limitations](docs/YOUTUBE_HOME.md).
+
+## Get an APK
+
+1. Open **[Actions → Build Photon APK](https://github.com/HayMayia/Photon/actions)**.
+2. Open the latest **successful** run for branch `arena/c217a41b-photon` and check
+   that its revision contains the features you want.
+3. Under **Artifacts**, download **Photon-Android-APK** (GitHub sign-in required).
+4. Extract the ZIP, transfer `app-debug.apk` to your Android 8+ phone, and open it.
+5. Allow installation from that browser/file manager if Android asks.
+
+Artifacts expire after 90 days. Keep a local APK/source copy. If a workflow is
+red, there is no verified APK for that revision. Earlier successful runs remain
+available but do not include later changes. The original 0.1 build passed at
+[revision 3a7501f](https://github.com/HayMayia/Photon/actions/runs/40852929196).
+
+**Upgrade warning:** 0.5.1 is the first verified APK using the permanent Photon
+certificate. Older CI debug APKs used unrelated temporary keys and may not accept
+an in-place update. **Do not uninstall a populated app casually:** uninstalling
+deletes its private library/downloads. Future trusted CI builds reuse the permanent
+key; PR-test APKs remain temporary-debug-signed. See [signing and recovery](signing/README.md).
+Never post the signing password or private key.
+
+## Build and test
+
+Verified toolchain baseline: JDK 21, explicit Android SDK platform **37.2**, and
+internet access to Google Maven, Maven Central, Gradle and JitPack. Gradle source
+is pinned to Prism's upstream dependency versions. CI resolves the minor SDK
+version explicitly rather than requesting the nonexistent `android-37` package.
+
+```sh
+chmod +x gradlew
+./gradlew :app:assembleDebug
+# app/build/outputs/apk/debug/app-debug.apk
+./gradlew :app:testDebugUnitTest --tests 'com.prism.music.photon.*'
+```
+
+The focused suite exercises link validation, library persistence and migration,
+subscriptions, playlist mutation/deduplication, progress accumulation/resume,
+bounded history retention, recommendation ranking, OAuth/API protocol safeguards,
+seek clamping and bounded cache expiry/eviction. It does not call YouTube.
+Inherited Prism tests remain, but many exercise live music/lyric services and are
+not a Photon acceptance suite. Local compilation is unavailable in the coding
+sandbox (no JDK/SDK and restricted Maven/Google/Gradle hosts); GitHub Actions is
+the external compilation/test gate.
+
+## Important remaining limitations
+
+- No native Google login, Google library import/sync, YouTube likes, posting
+  comments, or editing your account's online playlists. Official YouTube in a
+  browser can perform account actions, but those are **not Photon-native features**.
+- Live recording is not implemented. Live manifests can have rotating windows,
+  separate tracks, discontinuities and encryption; ordinary MP4 downloads cannot
+  safely record them.
+- Only compatible available progressive MP4/AVC + AAC streams are offered. No
+  guaranteed 1080p/4K; device codecs, IP/region restrictions and source availability vary.
+- The original-audio policy can pair a separate original track even with a combined
+  MP4. For such sources, download/mux first and cast the merged copy; the live
+  proxy does not merge tracks on the fly.
+- Cast quality uses a combined MP4 source rather than silently sending video-only
+  adaptive media. If unavailable, download/mux first and cast the offline copy.
+  Keep Photon open while casting; background cast lifecycle and TV compatibility
+  remain device-test items. No live casting.
+- Downloads restart rather than resume partial files. Android may restrict long
+  background work. Downloads and thumbnail files are app-private and **removed on
+  uninstall**. Public export is not implemented. A missing/failed thumbnail does
+  not fail the video download; Settings → Save offline thumbnails retries older
+  or missing images, respecting Wi-Fi-only. Artwork unavailable from YouTube cannot
+  be guaranteed offline.
+- Original soundtracks are selected when labelled and available in compatible AAC.
+  Unlabelled audio remains unverified; if only explicitly dubbed alternatives are
+  available, playback fails rather than silently changing language. Existing
+  downloads must be downloaded again to replace a previously selected dub.
+- Live HLS retains its source-defined audio; the new progressive-audio policy does
+  not promise original-language selection for live manifests.
+- Discovery shelves use explicit public YouTube queries and are labelled as such;
+  they are not signed-in YouTube Music album charts or a clone of every Prism
+  feature. All standard YouTube video links/searches remain supported.
+- Local history/progress covers 100 recent videos. Progress is periodically saved
+  (up to about five seconds may be lost on abrupt process death). Seeking does not
+  add the seek distance to watched time. Queue continuation requires the active
+  Photon UI/controller; it is not a persisted background playlist service.
+- Subscriptions and playlist collections are local; remote playlist playback queues
+  only the videos loaded so far. Subscription refresh currently covers 20 channels.
+- YouTube may change extraction or refuse a request. Network errors and disabled
+  comments/absent channel tabs are reported rather than replaced with fake data.
+
+Download/record only content you own or have permission to save, following
+applicable terms and laws. No DRM, paid-access or age/sign-in restriction bypass.
+
+## Code map
+
+Active application: `app/src/main/java/com/prism/music/photon/`.
+
+- `VideoRepository.kt`: public YouTube extraction, channels, playlists, comments,
+  safe links and local recommendation ranking.
+- `PhotonActivity.kt`, `CommunityScreens.kt`: Prism-themed video/community UI.
+- `PhotonPlaybackService.kt`: Media3 session, merged playback and service-owned progress.
+- `VideoDownloadWorker.kt`: foreground downloads, cancellation, MP4 muxing.
+- `PhotonStore.kt`, `PhotonViewModel.kt`: local data, collections, retained state and queues.
+- `PhotonCast.kt`: independently wired Prism LAN discovery/control and media server.
+- `PhotonDiagnostics.kt`: bounded, local, URL-free playback test report.
+
+Original Prism sources remain for design reuse, but the manifest starts **Photon**,
+not Prism's music container/jobs. Music-only features are not advertised as Photon
+features. Future cleanup can remove unused inherited dependencies.
+
+## License and credits
+
+**GPL-3.0-or-later**. Original Prism copyright (C) 2026 Yigder.
+See [LICENSE](LICENSE), [UPSTREAM.md](UPSTREAM.md), and the
+[original README](docs/upstream/README.md). Independent project, not an official
+Prism product and not affiliated with Google/YouTube.

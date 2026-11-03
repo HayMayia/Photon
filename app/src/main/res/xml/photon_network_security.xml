@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- UPnP TVs use HTTP at dynamically discovered private IP addresses. PhotonCast
+     validates LAN addresses before using these endpoints. YouTube uses HTTPS. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors><certificates src="system" /></trust-anchors>
+    </base-config>
+</network-security-config>

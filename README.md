@@ -218,6 +218,11 @@ Original Prism sources remain for design reuse, but the manifest starts **Photon
 not Prism's music container/jobs. Music-only features are not advertised as Photon
 features. Future cleanup can remove unused inherited dependencies.
 
+## Contributors
+
+1. Nimit Joshi
+2. Vaibhav Rajput
+
 ## License and credits
 
 **GPL-3.0-or-later**. Original Prism copyright (C) 2026 Yigder.

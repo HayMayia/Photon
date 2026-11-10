@@ -878,6 +878,7 @@ private fun SettingsPage(library: PhotonLibrary, model: PhotonViewModel, notific
         if (about) item {
             SettingsGroup(if (library.youtubeLayout) "ABOUT" else "ABOUT PHOTON") {
                 ListItem(headlineContent = { Text(if (library.youtubeLayout) "Version ${BuildConfig.VERSION_NAME}" else "Photon ${BuildConfig.VERSION_NAME}") }, supportingContent = { Text("Early Android preview · not affiliated with Google or YouTube") }, leadingContent = { Icon(PrismIcons.Play, null) })
+                ListItem(headlineContent = { Text("Contributors") }, supportingContent = { Text("Nimit Joshi\nVaibhav Rajput") })
                 ListItem(headlineContent = { Text("Share device test report") }, supportingContent = { Text("Device/API, app version and URL-free playback events. Review before sending.") }, leadingContent = { Icon(PrismIcons.Share, null) }, modifier = Modifier.clickable {
                     context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, PhotonDiagnostics.report()), "Share test report"))
                 })

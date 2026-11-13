@@ -1,6 +1,8 @@
 package com.prism.music.photon
 
 import androidx.compose.foundation.border
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -44,21 +46,26 @@ internal fun PhotonTvScreen(model: PhotonViewModel, selected: Int, select: (Int)
         else -> browse.videos
     }
     LaunchedEffect(Unit) { if (selected == 0 && videos.isEmpty()) model.home() }
-    LaunchedEffect(selected, videos.map { it.id }) {
-        if (focusedVideo == null || videos.none { it.id == focusedVideo }) { focusedVideo = null; navFocus.requestFocus() }
+    LaunchedEffect(selected) { navFocus.requestFocus() }
+    LaunchedEffect(videos.map { it.id }) {
+        if (focusedVideo != null && videos.none { it.id == focusedVideo }) focusedVideo = null
     }
     Row(Modifier.fillMaxSize().safeDrawingPadding().padding(24.dp), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-        Column(Modifier.width(150.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(Modifier.width(164.dp).fillMaxHeight().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(if (library.youtubeLayout) "Home" else "Photon", style = MaterialTheme.typography.headlineMedium)
-            listOf(0 to "Home", 1 to "Search", 5 to "Subscriptions", 6 to "Shorts", 2 to "Library", 4 to "Downloads", 3 to "Settings").forEachIndexed { index, (tab, label) ->
+            listOf(0 to "Home", 1 to "Search", 5 to "Subscriptions", 6 to "Shorts", 2 to "Library", 4 to "Downloads", 3 to "Settings").forEach { (tab, label) ->
                 FilledTonalButton(onClick = { focusedVideo = null; select(tab); if (tab == 0) model.home(); if (tab == 5) model.subscriptionsFeed(); if (tab == 6) model.shorts() },
-                    modifier = Modifier.fillMaxWidth().then(if (index == 0) Modifier.focusRequester(navFocus) else Modifier).remoteFocus()) {
-                    Text(if (tab == selected) "• $label" else label)
+                    colors = ButtonDefaults.filledTonalButtonColors(containerColor = if (tab == selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainer,
+                        contentColor = if (tab == selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).then(if (tab == selected) Modifier.focusRequester(navFocus) else Modifier).remoteFocus()) {
+                    Text(label, style = MaterialTheme.typography.titleMedium)
                 }
             }
             if (resume != null) OutlinedButton(onClick = resume, modifier = Modifier.fillMaxWidth().remoteFocus()) { Text("Now playing") }
         }
         Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(when (selected) { 0 -> "For you"; 1 -> "Search"; 2 -> "Your library"; 3 -> "Settings"; 4 -> "Downloads"; 5 -> "Subscriptions"; else -> "Shorts" },
+                style = MaterialTheme.typography.headlineMedium)
             if (selected == 0) PhotonUpdateCard()
             when (selected) {
                 3 -> settings()
@@ -75,24 +82,17 @@ internal fun PhotonTvScreen(model: PhotonViewModel, selected: Int, select: (Int)
                     val error = if (selected == 0 && library.youtubeHome) home.error else browse.error.takeIf { selected != 4 }
                     if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
                     error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                    LazyVerticalGrid(columns = GridCells.Adaptive(220.dp), modifier = Modifier.weight(1f),
+                    LazyVerticalGrid(columns = GridCells.Adaptive(220.dp), modifier = Modifier.weight(1f), contentPadding = PaddingValues(8.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         items(videos, key = { it.id }) { source ->
                             val video = resolvedVideo(source)
                             val focus = remember { FocusRequester() }
                             LaunchedEffect(video.id) { if (focusedVideo == video.id) focus.requestFocus() }
-                            OutlinedCard(onClick = { focusedVideo = video.id
+                            TvPosterCard(video, open = {
+                                focusedVideo = video.id
                                 if (selected == 4) library.downloads.firstOrNull { it.video.id == video.id }?.let(offline) else open(video)
-                            }, modifier = Modifier.fillMaxWidth().focusRequester(focus).remoteFocus()) {
-                                Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Box(Modifier.fillMaxWidth().height(145.dp), contentAlignment = Alignment.Center) {
-                                        VideoThumbnail(video, if (selected == 4) library.downloads.firstOrNull { it.video.id == video.id }?.thumbnailPath else null, Modifier.fillMaxHeight().aspectRatio(VideoArtworkShape.ratio(video.short)))
-                                    }
-                                    Text(video.title, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleMedium)
-                                    Text(video.channel, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    if (selected == 4) TextButton(onClick = { library.downloads.firstOrNull { it.video.id == video.id }?.let(remove) }, modifier = Modifier.remoteFocus()) { Text("Delete download") }
-                                }
-                            }
+                            }, modifier = Modifier.focusRequester(focus), focused = { focusedVideo = video.id },
+                                remove = if (selected == 4) ({ library.downloads.firstOrNull { it.video.id == video.id }?.let(remove); Unit }) else null)
                         }
                         item {
                             if (selected == 0 && library.youtubeHome && home.page?.continuation != null) Button(onClick = model::moreYouTubeHome, modifier = Modifier.remoteFocus()) { Text("More") }
@@ -127,7 +127,7 @@ internal fun TvVideoDetails(model: PhotonViewModel, controller: androidx.media3.
                 OutlinedButton(onClick = close, modifier = Modifier.remoteFocus()) { Text("Browse") }
             }
         }
-        androidx.compose.foundation.lazy.LazyColumn(Modifier.weight(.42f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        androidx.compose.foundation.lazy.LazyColumn(Modifier.weight(.42f), contentPadding = PaddingValues(6.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item { Text(video.title, style = MaterialTheme.typography.headlineSmall) }
             item { Text(video.channel) }
             item { Text(listOf(video.published, if (video.views >= 0) "${video.views} views" else "").filter { it.isNotBlank() }.joinToString(" · ")) }

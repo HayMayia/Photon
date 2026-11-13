@@ -41,12 +41,12 @@ class PhotonPlaybackService : MediaSessionService() {
 
     private fun playbackAllowed(): Boolean {
         val app = application as PhotonApplication
-        if (isPhotonTv()) return app.tvForeground.value
-        if (app.playbackForeground.value) return true
+        val television = isPhotonTv()
+        if (if (television) app.tvForeground.value else app.playbackForeground.value) return true
         val library = app.library.state.value
         val raw = session?.player?.currentMediaItem?.mediaMetadata?.extras?.getString("photon_video")
         val music = raw?.let { runCatching { json.decodeFromString<Video>(it).music }.getOrDefault(false) } ?: false
-        return MusicPlaybackPolicy.backgroundAllowed(music, library.musicBackground, library.videoBackground, false)
+        return MusicPlaybackPolicy.backgroundAllowed(music, library.musicBackground, library.videoBackground, television, library.tvMusicBackground)
     }
 
     private fun snapshot(savePosition: Boolean = false) {
@@ -162,7 +162,7 @@ class PhotonPlaybackService : MediaSessionService() {
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = session
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-        if (isPhotonTv() || !playbackAllowed()) { session?.player?.pause(); stopSelf(); return }
+        if (!playbackAllowed()) { session?.player?.pause(); stopSelf(); return }
         // An explicitly paused session can stop; playing media keeps its foreground notification.
         if (session?.player?.playWhenReady != true) stopSelf()
     }

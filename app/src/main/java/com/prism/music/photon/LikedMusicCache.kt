@@ -7,7 +7,8 @@ import kotlinx.serialization.json.Json
 
 @Serializable
 internal data class LikedMusicSnapshot(val revision: Long = -1, val videos: List<Video> = emptyList(), val updatedAt: Long = 0,
-    val schemaVersion: Int = 0, val scanComplete: Boolean = false, val unresolved: Int = 0)
+    val schemaVersion: Int = 0, val scanComplete: Boolean = false, val unresolved: Int = 0,
+    val classifications: Map<String, MusicClassification> = emptyMap())
 
 /** Separate from playback preferences: progress ticks must not reserialize thousands of likes. */
 internal class LikedMusicCache(context: Context) {
@@ -34,7 +35,7 @@ internal object LikedMusicSnapshotUpdates {
 }
 
 internal object LikedMusicFreshness {
-    fun needsRefresh(snapshot: LikedMusicSnapshot?, now: Long): Boolean = snapshot == null || snapshot.schemaVersion < 1 ||
+    fun needsRefresh(snapshot: LikedMusicSnapshot?, now: Long): Boolean = snapshot == null || snapshot.schemaVersion < 2 ||
         now - snapshot.updatedAt >= if (snapshot.scanComplete) 6 * 60 * 60_000L else 2 * 60_000L
 }
 
@@ -45,4 +46,19 @@ internal object LikedMusicHeadUpdates {
         val headIds = headOrder.toSet()
         return (headOrder.mapNotNull { byId[it] } + cached.filterNot { it.id in headIds }).distinctBy { it.id }
     }
+}
+
+@Serializable
+internal data class MusicClassification(val music: Boolean, val checkedAt: Long)
+
+/** Cache both yes and no decisions; cached list membership itself is never classification proof. */
+internal object MusicClassificationPolicy {
+    const val TTL_MS = 6 * 60 * 60_000L
+    fun verdict(snapshot: LikedMusicSnapshot, revision: Long, id: String, now: Long): Boolean? {
+        if (snapshot.revision != revision || snapshot.schemaVersion < 2) return null
+        val proof = snapshot.classifications[id] ?: return null
+        return proof.music.takeIf { now >= proof.checkedAt && now - proof.checkedAt < TTL_MS }
+    }
+    fun verified(snapshot: LikedMusicSnapshot, revision: Long): List<Video> =
+        if (snapshot.revision == revision && snapshot.schemaVersion >= 2) snapshot.videos.filter { snapshot.classifications[it.id]?.music == true } else emptyList()
 }

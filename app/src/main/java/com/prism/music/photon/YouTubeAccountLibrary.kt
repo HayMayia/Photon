@@ -176,7 +176,7 @@ internal object YouTubeMusicEvidence {
             if (watch["videoId"]?.jsonPrimitive?.contentOrNull != expectedId) continue
             val supported = watch["watchEndpointMusicSupportedConfigs"] as? JsonObject ?: continue
             val config = supported["watchEndpointMusicConfig"] as? JsonObject ?: continue
-            if (config["musicVideoType"]?.jsonPrimitive?.contentOrNull in setOf("MUSIC_VIDEO_TYPE_ATV", "MUSIC_VIDEO_TYPE_OMV", "MUSIC_VIDEO_TYPE_UGC")) return true
+            if (config["musicVideoType"]?.jsonPrimitive?.contentOrNull in setOf("MUSIC_VIDEO_TYPE_ATV", "MUSIC_VIDEO_TYPE_OMV")) return true
         }
         return null
     }

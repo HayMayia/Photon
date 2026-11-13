@@ -46,7 +46,7 @@ class LikedMusicRowsTest {
             val count = running.incrementAndGet(); highest.updateAndGet { maxOf(it, count) }
             delay(10); running.decrementAndGet(); true
         }
-        assertTrue(highest.get() <= 2)
+        assertTrue(highest.get() <= 4)
     }
     @Test fun cancellationIsNotReportedAsNonMusic() = runBlocking {
         try {

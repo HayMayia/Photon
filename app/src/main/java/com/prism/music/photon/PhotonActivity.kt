@@ -271,8 +271,9 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
         activity.lifecycle.addObserver(observer); updateAwake()
         onDispose { activity.lifecycle.removeObserver(observer); activity.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
     }
-    LaunchedEffect(tv, expanded, controller) {
-        if (tv && !expanded) controller?.pause()
+    LaunchedEffect(tv, expanded, controller, library.tvMusicBackground, watch.video?.music) {
+        if (tv && !expanded && !MusicPlaybackPolicy.backgroundAllowed(watch.video?.music == true,
+                library.musicBackground, library.videoBackground, true, library.tvMusicBackground)) controller?.pause()
     }
     val latestPreferences by rememberUpdatedState(library)
     DisposableEffect(controller) {
@@ -859,7 +860,7 @@ private fun SettingsPage(library: PhotonLibrary, model: PhotonViewModel, notific
                     ListItem(headlineContent = { Text("Regular videos in background") },
                         supportingContent = { Text("Off by default. Also applies when music classification is unavailable") },
                         trailingContent = { Switch(library.videoBackground, model::videoBackground) })
-                } else Text("Background playback is disabled on TV.", Modifier.padding(16.dp))
+                } else TvMusicBackgroundSetting(library.tvMusicBackground, model::tvMusicBackground)
                 ListItem(headlineContent = { Text("Download on Wi-Fi only") }, supportingContent = { Text("Uses unmetered networks; turn off to use mobile data") }, leadingContent = { Icon(PrismIcons.Download, null) }, trailingContent = { Switch(library.wifiOnly, model::wifi) })
                 Text("Preferred playback quality", Modifier.padding(horizontal = 16.dp, vertical = 8.dp), fontWeight = FontWeight.SemiBold)
                 Row(Modifier.padding(horizontal = 16.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -44,6 +44,7 @@ data class PhotonLibrary(
     val playbackSpeed: Float = 1f,
     val repeatVideo: Boolean = false,
     val musicBackground: Boolean = true,
+    val tvMusicBackground: Boolean = false,
     val videoBackground: Boolean = false,
     val captionsEnabled: Boolean = true,
     val captionLanguage: String = "",

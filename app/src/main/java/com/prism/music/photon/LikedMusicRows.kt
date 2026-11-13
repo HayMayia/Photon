@@ -11,7 +11,7 @@ import kotlinx.coroutines.sync.withPermit
 internal object LikedMusicRows {
     data class Batch(val items: List<AccountEntry>, val unresolved: Int)
     suspend fun classify(rows: List<AccountEntry>, proof: suspend (Video) -> Boolean?): Batch = coroutineScope {
-        val slots = Semaphore(2)
+        val slots = Semaphore(4)
         val classified = rows.map { row -> async {
             val video = row.video
             if (row.kind != AccountEntryKind.VIDEO || video == null) return@async null to false

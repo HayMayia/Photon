@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.unit.dp
@@ -34,7 +35,10 @@ class TvPresentationTest {
             }
             LaunchedEffect(Unit) { request.requestFocus() }
         } }
-        compose.onNodeWithTag("tv-video-abcdefghijk").assertIsDisplayed().assertIsFocused()
+        // Request focus after the host window is attached; Robolectric's first window-focus
+        // event can otherwise replace an early LaunchedEffect request.
+        compose.onNodeWithTag("tv-video-abcdefghijk").assertIsDisplayed()
+            .performSemanticsAction(SemanticsActions.RequestFocus) { it() }.assertIsFocused()
         compose.onNodeWithTag("tv-video-abcdefghijk").performKeyInput { pressKey(Key.DirectionRight) }
         compose.onNodeWithTag("tv-video-otherVideo1").assertIsFocused()
         compose.onNodeWithTag("tv-video-otherVideo1").performKeyInput { pressKey(Key.DirectionCenter) }

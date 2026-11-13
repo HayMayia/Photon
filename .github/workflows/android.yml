@@ -105,7 +105,12 @@ jobs:
         shell: bash
         run: |
           python3 - <<'PY'
-          import json, os, pathlib
+          import json, os, pathlib, xml.etree.ElementTree as ET
+          failures = []
+          for report in pathlib.Path('app/build/test-results').glob('**/TEST-*.xml'):
+              for case in ET.parse(report).getroot().iter('testcase'):
+                  for failure in list(case.findall('failure')) + list(case.findall('error')):
+                      failures.append(case.get('classname', '') + '.' + case.get('name', '') + '\n' + (failure.text or failure.get('message', ''))[:8000])
           logs = []
           for name in ['sdk.log', 'build.log', 'tests.log']:
               path = pathlib.Path(name)
@@ -113,7 +118,7 @@ jobs:
                   lines = path.read_text(errors='replace').splitlines()
                   errors = [x for x in lines if x.startswith('e: ') or 'error:' in x.lower() or 'Could not' in x or 'FAILURE' in x]
                   logs.append(name + '\n' + '\n'.join(errors[:80]) + '\n' + '\n'.join(lines[-100:]))
-          text = '\n\n'.join(logs)[-60000:] or 'Build failed before command logs were created. See Actions step results.'
+          text = ('\n\n'.join(failures)[:16000] + '\n\n' + '\n\n'.join(logs)[-42000:]) or 'Build failed before command logs were created. See Actions step results.'
           pathlib.Path('diagnostics.json').write_text(json.dumps({'name': 'Photon build diagnostics', 'head_sha': os.environ['GITHUB_SHA'], 'status': 'completed', 'conclusion': 'failure', 'output': {'title': 'Build failure details', 'summary': '```text\n' + text + '\n```'}}))
           PY
           gh api "repos/$GITHUB_REPOSITORY/check-runs" --method POST --input diagnostics.json

@@ -445,7 +445,9 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
             val verified = MusicClassificationPolicy.verified(snapshot, revision)
             val videos = if (!liked) verified.filterNot { it.id == video.id }
                 else if (music == true) (listOf(video.copy(music = true)) + verified).distinctBy { it.id } else verified
-            app.likedMusicCache.save(snapshot.copy(videos = videos, classifications = musicProofs(revision).toMap(), schemaVersion = 2))
+            app.likedMusicCache.save(snapshot.copy(videos = videos, classifications = musicProofs(revision).toMap(), schemaVersion = 2,
+                scanComplete = snapshot.schemaVersion >= 2 && snapshot.scanComplete,
+                updatedAt = if (snapshot.schemaVersion >= 2) snapshot.updatedAt else 0))
             likedMusicSnapshot = videos; likedMusicSnapshotRevision = revision
             if (accountLibrary.value.shelf == AccountShelf.LIKED_MUSIC) openLikedMusic()
         }

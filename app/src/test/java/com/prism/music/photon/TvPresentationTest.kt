@@ -8,6 +8,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -33,7 +35,8 @@ class TvPresentationTest {
                 TvPosterCard(Video("abcdefghijk", "First video", "Creator"), { opened = "first" }, Modifier.weight(1f).focusRequester(request))
                 TvPosterCard(Video("otherVideo1", "Second video with a longer title", "Creator"), { opened = "second" }, Modifier.weight(1f))
             }
-            LaunchedEffect(Unit) { request.requestFocus() }
+            val inputMode = LocalInputModeManager.current
+            LaunchedEffect(Unit) { inputMode.requestInputMode(InputMode.Keyboard); request.requestFocus() }
         } }
         // Request focus after the host window is attached; Robolectric's first window-focus
         // event can otherwise replace an early LaunchedEffect request.

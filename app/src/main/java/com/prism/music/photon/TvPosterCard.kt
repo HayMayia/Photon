@@ -8,6 +8,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
@@ -23,6 +24,7 @@ internal fun TvPosterCard(video: Video, open: () -> Unit, modifier: Modifier = M
         border = BorderStroke(if (hasFocus) 3.dp else 1.dp, if (hasFocus) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
         colors = CardDefaults.outlinedCardColors(containerColor = if (hasFocus) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer),
         modifier = modifier.fillMaxWidth().testTag("tv-video-${video.id}").graphicsLayer { scaleX = scale; scaleY = scale }
+            .focusProperties { canFocus = true }
             .onFocusChanged { hasFocus = it.hasFocus; if (it.hasFocus) focused() }) {
         Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f), contentAlignment = Alignment.Center) {

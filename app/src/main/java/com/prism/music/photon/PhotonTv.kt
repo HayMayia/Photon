@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
@@ -57,7 +58,7 @@ internal fun PhotonTvScreen(model: PhotonViewModel, selected: Int, select: (Int)
                 FilledTonalButton(onClick = { focusedVideo = null; select(tab); if (tab == 0) model.home(); if (tab == 5) model.subscriptionsFeed(); if (tab == 6) model.shorts() },
                     colors = ButtonDefaults.filledTonalButtonColors(containerColor = if (tab == selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainer,
                         contentColor = if (tab == selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface),
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).then(if (tab == selected) Modifier.focusRequester(navFocus) else Modifier).remoteFocus()) {
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).focusProperties { canFocus = true }.then(if (tab == selected) Modifier.focusRequester(navFocus) else Modifier).remoteFocus()) {
                     Text(label, style = MaterialTheme.typography.titleMedium)
                 }
             }

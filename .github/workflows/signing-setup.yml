@@ -1,0 +1,61 @@
+name: Set up permanent Photon signing
+on:
+  push:
+    branches: ["arena/c217a41b-photon"]
+    paths: ["signing/SETUP_REQUEST"]
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Create the first permanent key (cannot update old temporary-debug-key APKs in place)'
+        required: true
+        type: boolean
+        default: false
+permissions:
+  contents: write
+  actions: write
+concurrency:
+  group: photon-signing-bootstrap
+  cancel-in-progress: false
+jobs:
+  signing:
+    if: github.ref == 'refs/heads/arena/c217a41b-photon' && (github.event_name == 'push' || inputs.confirm == true)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: arena/c217a41b-photon
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Check signing safety gates
+        run: python3 -m unittest discover -s signing -p 'test_*.py'
+      - name: Generate and encrypt signing identity once
+        env:
+          PHOTON_SIGNING_PASSWORD: ${{ secrets.PHOTON_SIGNING_PASSWORD }}
+        run: python3 signing/ci-signing.py bootstrap
+      - name: Save only encrypted key and public identity
+        run: |
+          test "$(git branch --show-current)" = 'arena/c217a41b-photon'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add signing/photon-signing.p12.enc signing/photon-signing-cert.pem signing/ANDROID_OAUTH.txt
+          git commit -m 'Provision permanent encrypted Photon signing identity'
+          git push origin arena/c217a41b-photon
+      - name: Publish public fingerprint and encrypted backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: Photon-Signing-Identity-Encrypted-Backup
+          path: |
+            signing/photon-signing.p12.enc
+            signing/photon-signing-cert.pem
+            signing/ANDROID_OAUTH.txt
+          retention-days: 90
+      - name: Start APK build with permanent signing identity
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run android.yml --ref arena/c217a41b-photon
+      - name: Remove plaintext private files
+        if: always()
+        run: rm -f "$RUNNER_TEMP/photon-signing.p12" keystore.properties

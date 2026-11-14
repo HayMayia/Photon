@@ -1,0 +1,41 @@
+package com.prism.music.photon
+
+import android.app.Application
+import com.prism.music.ui.theme.AppFonts
+import com.prism.music.ui.theme.IconStyle
+
+/** Photon deliberately does not start Prism's music jobs, account sync, or update installer. */
+class PhotonApplication : Application(), coil3.SingletonImageLoader.Factory {
+    override fun newImageLoader(context: coil3.PlatformContext): coil3.ImageLoader = PhotonImageLoader.create(context)
+    internal val updates by lazy { PhotonUpdates(this) }
+    internal val playbackForeground = kotlinx.coroutines.flow.MutableStateFlow(false)
+    internal val tvForeground = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val account by lazy { YouTubeAccount() }
+    internal val accountActions by lazy { YouTubeAccountActionsApi() }
+    internal val accountLibrary by lazy { YouTubeAccountLibraryApi() }
+    val youtubeHome by lazy { YouTubeHomeApi() }
+    val youtubeHistory by lazy { YouTubeHistoryCoordinator(library) }
+    val casting by lazy { PhotonCast(this, videos) }
+    val library by lazy { PhotonStore(this) }
+    internal val likedMusicCache by lazy { LikedMusicCache(this) }
+    lateinit var videos: VideoRepository
+        private set
+    override fun onCreate() {
+        super.onCreate()
+        registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
+            override fun onActivityResumed(activity: android.app.Activity) { if (activity is PhotonActivity) tvForeground.value = true }
+            override fun onActivityPaused(activity: android.app.Activity) { if (activity is PhotonActivity) tvForeground.value = false }
+            override fun onActivityCreated(activity: android.app.Activity, state: android.os.Bundle?) {}
+            override fun onActivityStarted(activity: android.app.Activity) { if (activity is PhotonActivity) playbackForeground.value = true }
+            override fun onActivityStopped(activity: android.app.Activity) {
+                if (activity is PhotonActivity && !activity.isChangingConfigurations) playbackForeground.value = false
+            }
+            override fun onActivitySaveInstanceState(activity: android.app.Activity, state: android.os.Bundle) {}
+            override fun onActivityDestroyed(activity: android.app.Activity) {}
+        })
+        IconStyle.load(this)
+        AppFonts.init(this)
+        videos = VideoRepository()
+        if (library.state.value.downloads.isNotEmpty()) OfflineArtwork.schedule(this, library.state.value.wifiOnly)
+    }
+}

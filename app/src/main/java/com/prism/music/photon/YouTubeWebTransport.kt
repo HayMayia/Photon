@@ -14,13 +14,13 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 /** Ephemeral, account-pinned credentials. Never persisted or included in toString/diagnostics. */
-class YouTubeWebSession(val account: Int, val revision: Long, private val youtubeCookie: String, private val statsCookie: String) {
-    init { require(account in 0..9); require(listOf(youtubeCookie, statsCookie).none { it.contains('\r') || it.contains('\n') }) }
-    internal fun cookie(host: String): String = when (host) { "www.youtube.com" -> youtubeCookie; "s.youtube.com" -> statsCookie; else -> throw IOException("Untrusted YouTube host") }
+class YouTubeWebSession(val account: Int, val revision: Long, private val youtubeCookie: String, private val statsCookie: String, private val musicCookie: String = "") {
+    init { require(account in 0..9); require(listOf(youtubeCookie, statsCookie, musicCookie).none { it.contains('\r') || it.contains('\n') }) }
+    internal fun cookie(host: String): String = when (host) { "www.youtube.com" -> youtubeCookie; "s.youtube.com" -> statsCookie; "music.youtube.com" -> musicCookie; else -> throw IOException("Untrusted YouTube host") }
     override fun toString() = "YouTubeWebSession(redacted)"
 }
 
-internal class YouTubeWebTransport(client: OkHttpClient = OkHttpClient(), timeoutSeconds: Long = 30) {
+internal class YouTubeWebTransport(client: OkHttpClient = OkHttpClient(), timeoutSeconds: Long = 30, private val music: Boolean = false) {
     private class NoReplay(val permitted: () -> Boolean) { val sent = AtomicBoolean(false) }
     private val http = client.newBuilder().followRedirects(false).followSslRedirects(false).retryOnConnectionFailure(false)
         .addNetworkInterceptor { chain ->
@@ -32,13 +32,14 @@ internal class YouTubeWebTransport(client: OkHttpClient = OkHttpClient(), timeou
         .callTimeout(timeoutSeconds, TimeUnit.SECONDS).build()
     suspend fun html(path: String, session: YouTubeWebSession): String = withContext(Dispatchers.IO) {
         require(path in setOf("/", "/feed/history", "/feed/playlists", "/feed/channels", "/feed/subscriptions") || Regex("/playlist\\?list=[A-Za-z0-9_-]{2,150}").matches(path) || Regex("/channel/UC[A-Za-z0-9_-]{20,30}").matches(path) || Regex("/shorts/[A-Za-z0-9_-]{11}").matches(path) || path.startsWith("/watch?v=") && Regex("/watch\\?v=[A-Za-z0-9_-]{11}").matches(path))
-        val url = "https://www.youtube.com$path".toHttpUrl().newBuilder().addQueryParameter("authuser", session.account.toString()).addQueryParameter("hl", "en").build()
+        val url = "https://${if (music) "music.youtube.com" else "www.youtube.com"}$path".toHttpUrl().newBuilder().addQueryParameter("authuser", session.account.toString()).addQueryParameter("hl", "en").build()
         execute(builder(url, session).get().build())
     }
     suspend fun post(endpoint: String, context: JsonObject, body: JsonObject, session: YouTubeWebSession, permitted: () -> Boolean = { true }): JsonObject = withContext(Dispatchers.IO) {
         require(endpoint in setOf("browse", "next", "comment/perform_comment_action", "feedback", "like/like", "like/removelike", "subscription/subscribe", "subscription/unsubscribe", "playlist/create", "browse/edit_playlist", "playlist/delete"))
+        require(!music || endpoint == "browse") // Music integration is strictly read-only.
         val payload = JsonObject(body + ("context" to context))
-        val request = builder("https://www.youtube.com/youtubei/v1/$endpoint".toHttpUrl(), session, context, permitted)
+        val request = builder("https://${if (music) "music.youtube.com" else "www.youtube.com"}/youtubei/v1/$endpoint".toHttpUrl(), session, context, permitted)
             .post(payload.toString().toRequestBody("application/json; charset=utf-8".toMediaType())).build()
         val response = execute(request)
         runCatching { Json.parseToJsonElement(response).jsonObject }.getOrElse { throw IOException("YouTube returned an unreadable account response") }
@@ -50,7 +51,7 @@ internal class YouTubeWebTransport(client: OkHttpClient = OkHttpClient(), timeou
         }
     }
     private fun builder(url: HttpUrl, session: YouTubeWebSession, context: JsonObject? = null, permitted: () -> Boolean = { true }): Request.Builder {
-        require(url.scheme == "https" && url.host in setOf("www.youtube.com", "s.youtube.com") && url.port == 443 && url.username.isEmpty() && url.password.isEmpty())
+        require(url.scheme == "https" && url.host in setOf("www.youtube.com", "s.youtube.com", "music.youtube.com") && url.port == 443 && url.username.isEmpty() && url.password.isEmpty())
         val cookie = session.cookie(url.host)
         if (cookie.isBlank()) throw IOException("YouTube web session is unavailable")
         return Request.Builder().url(url).tag(NoReplay::class.java, NoReplay(permitted)).header("Cookie", cookie).header("X-Goog-AuthUser", session.account.toString())
@@ -60,12 +61,13 @@ internal class YouTubeWebTransport(client: OkHttpClient = OkHttpClient(), timeou
                     val client = context["client"] as? JsonObject ?: throw IOException("Missing YouTube web context")
                     val version = client["clientVersion"]?.jsonPrimitive?.content.orEmpty()
                     require(version.matches(Regex("[A-Za-z0-9._-]{1,100}")))
-                    header("Origin", "https://www.youtube.com"); header("Referer", "https://www.youtube.com/")
-                    header("X-Origin", "https://www.youtube.com"); header("X-YouTube-Client-Name", "1"); header("X-YouTube-Client-Version", version)
+                    val origin = if (music) "https://music.youtube.com" else "https://www.youtube.com"
+                    header("Origin", origin); header("Referer", "$origin/")
+                    header("X-Origin", origin); header("X-YouTube-Client-Name", if (music) "67" else "1"); header("X-YouTube-Client-Version", version)
                     val sid = cookie.split(';').mapNotNull { part -> part.indexOf('=').takeIf { it > 0 }?.let { part.substring(0, it).trim() to part.substring(it + 1).trim() } }.toMap()
                     val secret = sid["SAPISID"]?.takeIf { it.isNotBlank() } ?: sid["__Secure-3PAPISID"]?.takeIf { it.isNotBlank() } ?: throw IOException("YouTube session authorization is unavailable")
                     val now = System.currentTimeMillis() / 1000
-                    val digest = MessageDigest.getInstance("SHA-1").digest("$now $secret https://www.youtube.com".toByteArray()).joinToString("") { "%02x".format(it) }
+                    val digest = MessageDigest.getInstance("SHA-1").digest("$now $secret $origin".toByteArray()).joinToString("") { "%02x".format(it) }
                     header("Authorization", "SAPISIDHASH ${now}_$digest")
                     (context["user"] as? JsonObject)?.get("onBehalfOfUser")?.jsonPrimitive?.contentOrNull
                         ?.takeIf { it.matches(Regex("[0-9]{1,80}")) }?.let { header("X-Goog-PageId", it) }
@@ -102,12 +104,12 @@ internal object YouTubeWebBootstrap {
         }
         throw IOException("Incomplete YouTube account page")
     }
-    fun context(html: String): JsonObject? {
+    fun context(html: String, music: Boolean = false): JsonObject? {
         for (match in Regex("ytcfg\\.set\\(\\s*\\{").findAll(html)) {
             val cfg = runCatching { objectAt(html, html.indexOf('{', match.range.first)) }.getOrNull() ?: continue
             val context = cfg["INNERTUBE_CONTEXT"] as? JsonObject ?: continue
             val client = context["client"] as? JsonObject ?: continue
-            if (client["clientName"]?.jsonPrimitive?.content == "WEB" && !client["clientVersion"]?.jsonPrimitive?.content.isNullOrBlank()) return context
+            if (client["clientName"]?.jsonPrimitive?.content == (if (music) "WEB_REMIX" else "WEB") && !client["clientVersion"]?.jsonPrimitive?.content.isNullOrBlank()) return context
         }
         return null
     }

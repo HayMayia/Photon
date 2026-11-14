@@ -18,6 +18,20 @@ data class AccountLibraryState(val shelf: AccountShelf = AccountShelf.HISTORY, v
 
 internal class YouTubeAccountLibraryApi(client: OkHttpClient = OkHttpClient()) {
     private val transport = YouTubeWebTransport(client)
+    private val musicTransport = YouTubeWebTransport(client, music = true)
+    suspend fun likedSongs(session: YouTubeWebSession, previous: AccountLibraryPage? = null): AccountLibraryPage = withContext(Dispatchers.IO) {
+        val context = previous?.context ?: run {
+            val html = musicTransport.html("/", session)
+            if (!YouTubeWebBootstrap.signedIn(JsonObject(emptyMap()), html)) throw IOException("Your existing Google session did not open YouTube Music")
+            YouTubeWebBootstrap.context(html, music = true) ?: throw IOException("YouTube Music context unavailable")
+        }
+        val body = buildJsonObject {
+            if (previous == null) put("browseId", "VLLM")
+            else put("continuation", previous.continuation ?: throw IOException("No more liked songs"))
+        }
+        val response = musicTransport.post("browse", context, body, session)
+        YouTubeLikedSongs.parse(response, continuation = previous != null).copy(context = context)
+    }
     private val metadataTransport = YouTubeWebTransport(client, timeoutSeconds = 6)
     suspend fun load(session: YouTubeWebSession, shelf: AccountShelf, playlist: String? = null): AccountLibraryPage = withContext(Dispatchers.IO) {
         require(playlist == null || playlist.matches(Regex("[A-Za-z0-9_-]{2,150}")))
@@ -179,5 +193,24 @@ internal object YouTubeMusicEvidence {
             if (config["musicVideoType"]?.jsonPrimitive?.contentOrNull in setOf("MUSIC_VIDEO_TYPE_ATV", "MUSIC_VIDEO_TYPE_OMV")) return true
         }
         return null
+    }
+}
+
+/** Only the native Liked Songs playlist shelf, never recommendations or all-video likes. */
+internal object YouTubeLikedSongs {
+    fun parse(root: JsonObject, continuation: Boolean = false): AccountLibraryPage {
+        if (root.containsKey("error") || ((root["responseContext"] as? JsonObject)?.get("mainAppWebResponseContext") as? JsonObject)
+                ?.get("loggedOut")?.jsonPrimitive?.booleanOrNull == true) throw IOException("YouTube Music account request rejected")
+        val primary = GoogleAccountControls.objects(root["contents"] ?: root["continuationContents"] ?: JsonObject(emptyMap()))
+            .mapNotNull { (it["musicPlaylistShelfRenderer"] ?: it["musicPlaylistShelfContinuation"]) as? JsonObject }.firstOrNull()
+            ?: if (continuation) GoogleAccountControls.objects(root["onResponseReceivedActions"] ?: JsonObject(emptyMap()))
+                .mapNotNull { it["appendContinuationItemsAction"] as? JsonObject }.firstOrNull()
+                ?.let { buildJsonObject { put("contents", it["continuationItems"] ?: JsonArray(emptyList())) } }
+                ?: throw IOException("YouTube Music did not return more liked songs")
+            else throw IOException("YouTube Music did not return its Liked Songs shelf")
+        val id = primary["playlistId"]?.jsonPrimitive?.contentOrNull
+        if (id != null && id != "LM") throw IOException("A different music playlist was returned")
+        val page = YouTubeAccountLibraryParser.parse(primary, AccountEntryKind.VIDEO)
+        return page.copy(items = page.items.map { row -> row.copy(video = row.video?.copy(music = true)) })
     }
 }

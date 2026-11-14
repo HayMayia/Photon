@@ -142,7 +142,7 @@ class YouTubeHistoryCoordinator(private val store: PhotonStore, client: OkHttpCl
         check(library.youtubeHome && library.youtubeSessionReady) { "Reconnect the YouTube website session" }
         val cookies = CookieManager.getInstance()
         YouTubeWebSession(library.youtubeWebUser, library.youtubeSessionRevision,
-            cookies.getCookie("https://www.youtube.com").orEmpty(), cookies.getCookie("https://s.youtube.com").orEmpty())
+            cookies.getCookie("https://www.youtube.com").orEmpty(), cookies.getCookie("https://s.youtube.com").orEmpty(), cookies.getCookie("https://music.youtube.com").orEmpty())
     }
     }
     private fun same(session: YouTubeWebSession): Boolean = store.state.value.let {

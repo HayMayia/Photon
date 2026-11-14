@@ -17,7 +17,7 @@ class LikedMusicRecoveryTest {
         assertEquals(listOf(new, old), LikedMusicHeadUpdates.merge(listOf(new, old), listOf(new), listOf(new.id)))
     }
     @Test fun incompleteScanIsNotFrozenForSixHoursOrRetriedOnEveryOpen() {
-        val partial = LikedMusicSnapshot(1, updatedAt = 1000, schemaVersion = 2, scanComplete = false, unresolved = 8)
+        val partial = LikedMusicSnapshot(1, updatedAt = 1000, schemaVersion = 3, scanComplete = false, unresolved = 8)
         assertFalse(LikedMusicFreshness.needsRefresh(partial, 1001))
         assertTrue(LikedMusicFreshness.needsRefresh(partial, 121000))
         assertFalse(LikedMusicFreshness.needsRefresh(partial.copy(scanComplete = true), 121000))

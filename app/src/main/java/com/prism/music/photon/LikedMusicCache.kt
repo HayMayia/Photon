@@ -35,7 +35,7 @@ internal object LikedMusicSnapshotUpdates {
 }
 
 internal object LikedMusicFreshness {
-    fun needsRefresh(snapshot: LikedMusicSnapshot?, now: Long): Boolean = snapshot == null || snapshot.schemaVersion < 2 ||
+    fun needsRefresh(snapshot: LikedMusicSnapshot?, now: Long): Boolean = snapshot == null || snapshot.schemaVersion < 3 ||
         now - snapshot.updatedAt >= if (snapshot.scanComplete) 6 * 60 * 60_000L else 2 * 60_000L
 }
 
@@ -63,5 +63,8 @@ internal object MusicClassificationPolicy {
         return proof.music.takeIf { now >= proof.checkedAt && now - proof.checkedAt < TTL_MS }
     }
     fun verified(snapshot: LikedMusicSnapshot, revision: Long): List<Video> =
-        if (snapshot.revision == revision && snapshot.schemaVersion >= 2) snapshot.videos.filter { snapshot.classifications[it.id]?.music == true } else emptyList()
+        if (snapshot.revision != revision) emptyList()
+        else if (snapshot.schemaVersion >= 3) snapshot.videos
+        else if (snapshot.schemaVersion == 2) snapshot.videos.filter { snapshot.classifications[it.id]?.music == true }
+        else emptyList()
 }

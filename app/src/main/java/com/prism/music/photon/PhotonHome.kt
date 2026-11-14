@@ -94,18 +94,18 @@ private fun ActualYouTubeHome(model: PhotonViewModel, open: (Video) -> Unit, set
         item {
             val scheme = MaterialTheme.colorScheme
             Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(32.dp))
-                .background(Brush.linearGradient(listOf(Color(0xFF402880), Color(0xFF175C75), Color(0xFF172B46))))
+                .background(Brush.linearGradient(listOf(scheme.primaryContainer, scheme.surfaceContainerHigh, scheme.tertiaryContainer)))
                 .border(1.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = .45f), Color.White.copy(alpha = .06f))), RoundedCornerShape(32.dp))) {
                 Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("PHOTON", Modifier.weight(1f), color = Color.White.copy(alpha = .8f),
+                        Text("PHOTON", Modifier.weight(1f), color = scheme.onSurfaceVariant,
                             style = MaterialTheme.typography.labelMedium, letterSpacing = 4.sp)
-                        IconButton(onClick = settings) { Icon(PrismIcons.Settings, "Settings", tint = Color.White) }
+                        IconButton(onClick = settings) { Icon(PrismIcons.Settings, "Settings", tint = scheme.onSurface) }
                     }
-                    Text("Your world.\nIn full colour.", color = Color.White,
+                    Text("Your world.\nIn full colour.", color = scheme.onSurface,
                         style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
-                    Surface(onClick = search, shape = RoundedCornerShape(22.dp), color = Color.White.copy(alpha = .15f),
-                        contentColor = Color.White, modifier = Modifier.fillMaxWidth()) {
+                    Surface(onClick = search, shape = RoundedCornerShape(22.dp), color = scheme.surface.copy(alpha = .65f),
+                        contentColor = scheme.onSurface, modifier = Modifier.fillMaxWidth()) {
                         Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(PrismIcons.Search, null)
                             Text("Find your next favourite", style = MaterialTheme.typography.bodyLarge)

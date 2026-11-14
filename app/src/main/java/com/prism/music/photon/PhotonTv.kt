@@ -1,5 +1,8 @@
 package com.prism.music.photon
 
+import com.prism.music.ui.theme.PrismIcons
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.background
 import androidx.compose.ui.graphics.Brush
 import com.prism.music.ui.theme.GlassSurface
@@ -63,24 +66,35 @@ internal fun PhotonTvScreen(model: PhotonViewModel, selected: Int, select: (Int)
         Box(Modifier.fillMaxSize().hazeSource(backdrop).background(Brush.linearGradient(listOf(
             MaterialTheme.colorScheme.primary.copy(alpha = .18f), MaterialTheme.colorScheme.background,
             MaterialTheme.colorScheme.tertiary.copy(alpha = .10f)))))
-    Row(Modifier.fillMaxSize().safeDrawingPadding().padding(24.dp), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-        GlassSurface(Modifier.width(184.dp).fillMaxHeight(), shape = RoundedCornerShape(28.dp)) {
+    Row(Modifier.fillMaxSize().safeDrawingPadding().padding(24.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+        GlassSurface(Modifier.width(180.dp).fillMaxHeight(), shape = RoundedCornerShape(28.dp)) {
         Column(Modifier.fillMaxSize().padding(10.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(if (library.youtubeLayout) "Home" else "Photon", style = MaterialTheme.typography.headlineMedium)
+            Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
+                Text(if (library.youtubeLayout) "YouTube" else "Photon", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text("WATCH · LISTEN", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             listOf(0 to "Home", 1 to "Search", 5 to "Subscriptions", 6 to "Shorts", 2 to "Library", 4 to "Downloads", 3 to "Settings").forEach { (tab, label) ->
                 FilledTonalButton(onClick = { focusedVideo = null; select(tab); if (tab == 0) model.home(); if (tab == 5) model.subscriptionsFeed(); if (tab == 6) model.shorts() },
                     colors = ButtonDefaults.filledTonalButtonColors(containerColor = if (tab == selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainer,
                         contentColor = if (tab == selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface),
                     modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).focusProperties { canFocus = true }.then(if (tab == selected) Modifier.focusRequester(navFocus) else Modifier).remoteFocus()) {
-                    Text(label, style = MaterialTheme.typography.titleMedium)
+                    Icon(when (tab) { 0 -> PrismIcons.Home; 1 -> PrismIcons.Search; 5 -> PrismIcons.Person;
+                        6 -> PrismIcons.Phone; 2 -> PrismIcons.Library; 4 -> PrismIcons.Download; else -> PrismIcons.Settings }, null, Modifier.size(20.dp))
+                    Spacer(Modifier.width(10.dp))
+                    Text(label, Modifier.weight(1f), style = MaterialTheme.typography.labelLarge)
                 }
             }
             if (resume != null) OutlinedButton(onClick = resume, modifier = Modifier.fillMaxWidth().remoteFocus()) { Text("Now playing") }
         }
         }
         Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(when (selected) { 0 -> "For you"; 1 -> "Search"; 2 -> "Your library"; 3 -> "Settings"; 4 -> "Downloads"; 5 -> "Subscriptions"; else -> "Shorts" },
-                style = MaterialTheme.typography.headlineMedium)
+                modifier = Modifier.weight(1f), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                if (resume != null) FilledTonalButton(onClick = resume, modifier = Modifier.remoteFocus()) {
+                    Icon(PrismIcons.Play, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Resume")
+                }
+            }
             if (selected == 0) PhotonUpdateCard()
             when (selected) {
                 3 -> settings()
@@ -95,8 +109,15 @@ internal fun PhotonTvScreen(model: PhotonViewModel, selected: Int, select: (Int)
                     }
                     val busy = if (selected == 0 && library.youtubeHome) home.busy else browse.busy && selected != 4
                     val error = if (selected == 0 && library.youtubeHome) home.error else browse.error.takeIf { selected != 4 }
+                    if (selected == 0 && videos.isNotEmpty()) TvFocusedPreview(videos.firstOrNull { it.id == focusedVideo } ?: videos.first())
+                    if (selected == 0 && videos.isEmpty()) home.page?.message?.let { TvCollectionNotice(it) }
+                    if (!busy && error == null && videos.isEmpty() && selected != 5 && !(selected == 0 && home.page?.message != null))
+                        TvCollectionNotice(if (selected == 4) "Your downloaded videos will appear here." else if (selected == 1) "Search for videos, songs or creators using your remote." else "No videos were returned for this section.")
                     if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-                    error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                    error?.let { message ->
+                        TvCollectionNotice(message)
+                        OutlinedButton(onClick = { when (selected) { 0 -> if (library.youtubeHome) model.refreshYouTubeHome() else model.home(); 1 -> model.search(query); 5 -> model.subscriptionsFeed(); 6 -> model.shorts() } }, modifier = Modifier.remoteFocus()) { Text("Retry") }
+                    }
                     LazyVerticalGrid(columns = GridCells.Adaptive(220.dp), modifier = Modifier.weight(1f), contentPadding = PaddingValues(8.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         items(videos, key = { it.id }) { source ->
@@ -119,6 +140,31 @@ internal fun PhotonTvScreen(model: PhotonViewModel, selected: Int, select: (Int)
         }
     }
     }
+    }
+}
+
+/** Stable, non-focusable preview: arrow navigation never starts playback or changes layout height. */
+@Composable
+internal fun TvFocusedPreview(video: Video) {
+    Surface(shape = RoundedCornerShape(22.dp), color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = .45f),
+        modifier = Modifier.fillMaxWidth().testTag("tv-preview")) {
+        Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(if (video.short) "SHORTS" else if (video.music) "MUSIC" else "SPOTLIGHT", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                Text(video.title, minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text(video.channel, maxLines = 1, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium)
+            }
+            Icon(PrismIcons.Play, null, Modifier.size(36.dp), tint = MaterialTheme.colorScheme.primary)
+        }
+    }
+}
+
+@Composable
+private fun TvCollectionNotice(message: String) {
+    Surface(shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {
+        Text(message, Modifier.padding(18.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

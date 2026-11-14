@@ -47,6 +47,17 @@ class TvPresentationTest {
         compose.onNodeWithTag("tv-video-otherVideo1").performKeyInput { pressKey(Key.DirectionCenter) }
         assertEquals("second", opened)
     }
+    @Test fun previewUpdatesWithFocusedTitleWithoutBecomingAnAction() {
+        var video by mutableStateOf(Video("abcdefghijk", "First title", "First creator"))
+        compose.setContent { MaterialTheme { TvFocusedPreview(video) } }
+        compose.onNodeWithTag("tv-preview").assertIsDisplayed().assertHasNoClickAction()
+        compose.onNodeWithText("First title").assertIsDisplayed()
+        val firstHeight = compose.onNodeWithTag("tv-preview").fetchSemanticsNode().boundsInRoot.height
+        compose.runOnIdle { video = Video("otherVideo1", "A much longer focused title that should remain within the same stable preview area", "Second creator", music = true) }
+        compose.onNodeWithText("Second creator").assertIsDisplayed()
+        compose.onNodeWithText("MUSIC").assertIsDisplayed()
+        assertEquals(firstHeight, compose.onNodeWithTag("tv-preview").fetchSemanticsNode().boundsInRoot.height, 1f)
+    }
     @Test fun tvMusicSwitchStartsOffAndCanBeEnabledExplicitly() {
         var enabled by mutableStateOf(false)
         compose.setContent { MaterialTheme { TvMusicBackgroundSetting(enabled) { enabled = it } } }

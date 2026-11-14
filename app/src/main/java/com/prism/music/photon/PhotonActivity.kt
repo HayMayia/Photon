@@ -526,7 +526,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                     }
                 }
             ) { padding ->
-                Box(Modifier.fillMaxSize().hazeSource(glassBackdrop).padding(padding).then(if (library.youtubeLayout) Modifier else Modifier.background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.055f), Color.Transparent))))) {
+                Box(Modifier.fillMaxSize().hazeSource(glassBackdrop).padding(padding).then(if (library.youtubeLayout) Modifier else Modifier.background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f), MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.09f)))))) {
                     when (tab) {
                         0 -> if (library.youtubeLayout) YouTubeLayoutHome(model, library, ::open,
                             search = { navigateTo(1) }, settings = { navigateTo(3) },

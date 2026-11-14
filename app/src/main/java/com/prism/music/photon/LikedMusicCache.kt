@@ -41,6 +41,7 @@ internal object LikedMusicFreshness {
 
 /** A first-page check cannot delete older songs simply because they are on later pages. */
 internal object LikedMusicHeadUpdates {
+    fun progressive(cached: List<Video>, fresh: List<Video>): List<Video> = (fresh + cached).distinctBy { it.id }
     fun merge(cached: List<Video>, incoming: List<Video>, headOrder: List<String>): List<Video> {
         val byId = (cached + incoming).associateBy { it.id }
         val headIds = headOrder.toSet()
@@ -53,7 +54,9 @@ internal data class MusicClassification(val music: Boolean, val checkedAt: Long)
 
 /** Cache both yes and no decisions; cached list membership itself is never classification proof. */
 internal object MusicClassificationPolicy {
-    const val TTL_MS = 6 * 60 * 60_000L
+    // Classification metadata changes much less often than the account's like membership.
+    // Keep source reconciliation at six hours without re-fetching every watch page each time.
+    const val TTL_MS = 30L * 24 * 60 * 60_000L
     fun verdict(snapshot: LikedMusicSnapshot, revision: Long, id: String, now: Long): Boolean? {
         if (snapshot.revision != revision || snapshot.schemaVersion < 2) return null
         val proof = snapshot.classifications[id] ?: return null

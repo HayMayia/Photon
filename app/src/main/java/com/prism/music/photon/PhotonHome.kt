@@ -1,5 +1,9 @@
 package com.prism.music.photon
 
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -88,18 +92,28 @@ private fun ActualYouTubeHome(model: PhotonViewModel, open: (Video) -> Unit, set
     LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(22.dp)) {
         item { PhotonUpdateCard() }
         item {
-            val ui = LocalUi.current
             val scheme = MaterialTheme.colorScheme
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("Photon", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
-                }
-                IconButton(onClick = search) { Icon(PrismIcons.Search, "Search all YouTube") }
-                Surface(shape = CircleShape, color = scheme.primaryContainer, onClick = settings) {
-                    Icon(PrismIcons.Settings, "Settings", Modifier.padding(13.dp).size(22.dp), tint = scheme.primary)
+            Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(32.dp))
+                .background(Brush.linearGradient(listOf(Color(0xFF402880), Color(0xFF175C75), Color(0xFF172B46))))
+                .border(1.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = .45f), Color.White.copy(alpha = .06f))), RoundedCornerShape(32.dp))) {
+                Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("PHOTON", Modifier.weight(1f), color = Color.White.copy(alpha = .8f),
+                            style = MaterialTheme.typography.labelMedium, letterSpacing = 4.sp)
+                        IconButton(onClick = settings) { Icon(PrismIcons.Settings, "Settings", tint = Color.White) }
+                    }
+                    Text("Your world.\nIn full colour.", color = Color.White,
+                        style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+                    Surface(onClick = search, shape = RoundedCornerShape(22.dp), color = Color.White.copy(alpha = .15f),
+                        contentColor = Color.White, modifier = Modifier.fillMaxWidth()) {
+                        Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(PrismIcons.Search, null)
+                            Text("Find your next favourite", style = MaterialTheme.typography.bodyLarge)
+                        }
+                    }
                 }
             }
-            Box(Modifier.padding(vertical = 14.dp).fillMaxWidth().height(2.dp).background(PrismTokens.spectrum))
+            Spacer(Modifier.height(20.dp))
             val shortcuts = listOf(
                 Triple("Videos", PrismIcons.Play, { discover("popular videos documentaries") }),
                 Triple("Music", PrismIcons.Song, { discover("official music videos songs") }),
@@ -111,13 +125,27 @@ private fun ActualYouTubeHome(model: PhotonViewModel, open: (Video) -> Unit, set
                 Triple("Shorts", PrismIcons.Phone, shorts),
                 Triple("Downloads", PrismIcons.Download, downloads)
             )
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                shortcuts.forEach { (label, icon, action) ->
-                    AssistChip(onClick = action, label = { Text(label) }, leadingIcon = { Icon(icon, null, Modifier.size(18.dp)) })
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                shortcuts.chunked(2).forEachIndexed { group, entries ->
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        entries.forEachIndexed { index, (label, icon, action) ->
+                            val accent = if ((group + index) % 2 == 0) scheme.primary else scheme.tertiary
+                            Surface(onClick = action, shape = RoundedCornerShape(22.dp),
+                                color = accent.copy(alpha = .13f), modifier = Modifier.width(150.dp).height(76.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, accent.copy(alpha = .25f))) {
+                                Row(Modifier.padding(14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(icon, null, Modifier.size(22.dp), tint = accent)
+                                    Text(label, style = MaterialTheme.typography.labelLarge, maxLines = 2)
+                                }
+                            }
+                        }
+                    }
                 }
             }
-            SectionHeader("For you")
-            TextButton(enabled = !feed.busy, onClick = { model.refreshYouTubeHome() }) { Text("Refresh") }
+            Row(Modifier.padding(top = 24.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("Made for you", Modifier.weight(1f), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                TextButton(enabled = !feed.busy, onClick = { model.refreshYouTubeHome() }) { Text("Refresh") }
+            }
             if (feed.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
             feed.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             feed.page?.message?.let { Text(it, Modifier.padding(vertical = 12.dp)) }

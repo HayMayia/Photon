@@ -1,5 +1,8 @@
 package com.prism.music.photon
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -16,7 +19,10 @@ import androidx.compose.ui.unit.dp
 internal fun HomeRecommendationRow(row: HomeFeedRows.Row, open: (Video) -> Unit) {
     HomeRecommendationColumns(row) { source, column ->
             val video = resolvedVideo(source)
-            Column(column.remoteFocus().clickable { open(video) }) {
+            Column(column.clip(RoundedCornerShape(24.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = .85f))
+                .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = .15f), RoundedCornerShape(24.dp))
+                .remoteFocus().clickable { open(video) }.padding(10.dp)) {
                 // Both thumbnail AND text use the same column, never a narrow image in a full-width card.
                 VideoThumbnail(video, video.title, Modifier.fillMaxWidth()
                     .aspectRatio(VideoArtworkShape.ratio(row.portrait)).clip(MaterialTheme.shapes.medium))

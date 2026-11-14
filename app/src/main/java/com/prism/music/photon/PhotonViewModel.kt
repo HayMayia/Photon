@@ -342,24 +342,32 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
             fun active() = revision == library.value.youtubeSessionRevision && library.value.youtubeHome && library.value.youtubeSessionReady
             try {
                 val session = app.youtubeHistory.session()
-                val page = app.accountLibrary.load(session, AccountShelf.LIKED_MUSIC)
-                val known = app.likedMusicCache.snapshot.videos.map { it.id }.toSet()
-                for (batch in page.items.filter { it.video != null && it.id !in known && googleLikes.value[it.id] != false }.chunked(4)) {
-                    val result = LikedMusicRows.classify(batch) { video ->
-                        musicProof(session, video, revision)
+                var page = app.accountLibrary.load(session, AccountShelf.LIKED_MUSIC)
+                val baseline = musicProofs(revision).keys.toSet()
+                val headOrder = mutableListOf<String>()
+                val tokens = mutableSetOf<String>()
+                for (pageIndex in 0 until 20) {
+                    val rows = page.items.filter { it.video != null && googleLikes.value[it.id] != false }
+                    headOrder += rows.map { it.id }
+                    for (batch in rows.chunked(4)) {
+                        val result = LikedMusicRows.classify(batch) { video -> musicProof(session, video, revision) }
+                        if (!active()) return@launch
+                        rememberProvenMusic(result.items, revision)
+                        val snapshot = app.likedMusicCache.snapshot
+                        val videos = LikedMusicHeadUpdates.merge(snapshot.videos, result.items.mapNotNull { it.video }, headOrder)
+                            .filter { googleLikes.value[it.id] != false && musicProofs(revision)[it.id]?.music == true }
+                        app.likedMusicCache.save(snapshot.copy(videos = videos, classifications = musicProofs(revision).toMap()))
+                        likedMusicSnapshot = videos; likedMusicSnapshotRevision = revision
+                        googleLikes.value += result.items.map { it.id }.filter { googleLikes.value[it] != false }.associateWith { true }
+                        if (playlistSource.value == PlaylistQueuePolicy.key(revision, "liked-music")) queue.value = videos
+                        if (accountLibrary.value.shelf == AccountShelf.LIKED_MUSIC && accountLibrary.value.playlist == null)
+                            accountLibrary.value = accountLibrary.value.copy(page = AccountLibraryPage(videos.map { AccountEntry(it.id, it.title, AccountEntryKind.VIDEO, it) }), busy = false)
                     }
-                    if (!active()) return@launch
-                    rememberProvenMusic(result.items, revision)
-                    if (result.items.isEmpty()) continue
-                    val snapshot = app.likedMusicCache.snapshot
-                    val videos = LikedMusicHeadUpdates.merge(snapshot.videos, result.items.mapNotNull { it.video }, page.items.map { it.id })
-                        .filter { googleLikes.value[it.id] != false }
-                    app.likedMusicCache.save(snapshot.copy(videos = videos, classifications = musicProofs(revision).toMap()))
-                    likedMusicSnapshot = videos; likedMusicSnapshotRevision = revision
-                    googleLikes.value += result.items.map { it.id }.filter { googleLikes.value[it] != false }.associateWith { true }
-                    if (playlistSource.value == PlaylistQueuePolicy.key(revision, "liked-music")) queue.value = videos
-                    if (accountLibrary.value.shelf == AccountShelf.LIKED_MUSIC && accountLibrary.value.playlist == null)
-                        accountLibrary.value = accountLibrary.value.copy(page = AccountLibraryPage(videos.map { AccountEntry(it.id, it.title, AccountEntryKind.VIDEO, it) }), busy = false)
+                    // Continue past the first page when many new likes arrived since the last visit.
+                    if (rows.isNotEmpty() && rows.all { it.id in baseline }) break
+                    val token = page.continuation ?: break
+                    if (!tokens.add(token)) break
+                    page = app.accountLibrary.more(session, page, AccountEntryKind.VIDEO)
                 }
                 if (active()) app.likedMusicCache.save(app.likedMusicCache.snapshot.copy(classifications = musicProofs(revision).toMap()))
             } catch (cancelled: CancellationException) { throw cancelled }
@@ -383,7 +391,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
             fun publish(done: Boolean, error: String? = null, checkpoint: Boolean = false) {
                 if (!active()) return
                 val fresh = found.mapNotNull { it.video }.filter { googleLikes.value[it.id] != false }
-                val base = if (done && unresolved == 0) fresh else (old + fresh).distinctBy { it.id }.filter { googleLikes.value[it.id] != false }
+                val base = if (done && unresolved == 0) fresh else LikedMusicHeadUpdates.progressive(old, fresh).filter { googleLikes.value[it.id] != false }
                 val videos = LikedMusicSnapshotUpdates.merge(base, likedMusicMutations.values.toList(), mutationStart)
                     .filter { musicProofs(revision)[it.id]?.music == true }
                 likedMusicSnapshot = videos; likedMusicSnapshotRevision = revision
@@ -406,6 +414,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 var page = app.accountLibrary.load(session, AccountShelf.LIKED_MUSIC)
                 val tokens = mutableSetOf<String>()
                 val seen = mutableSetOf<String>()
+                val metadataPending = mutableListOf<AccountEntry>()
                 for (index in 0 until 200) {
                     if (!active()) return@launch
                     unresolved += page.unsupportedRows
@@ -415,7 +424,8 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                     val now = System.currentTimeMillis()
                     val (ready, pending) = incoming.partition { row -> row.video?.music == true ||
                         musicProofs(revision)[row.id]?.let { now >= it.checkedAt && now - it.checkedAt < MusicClassificationPolicy.TTL_MS } == true }
-                    for (batch in ready.chunked(32) + pending.chunked(4)) {
+                    metadataPending += pending
+                    for (batch in ready.chunked(32)) {
                         val classified = LikedMusicRows.classify(batch) { video -> musicProof(session, video, revision) }
                         if (!active()) return@launch
                         rememberProvenMusic(classified.items, revision)
@@ -430,6 +440,15 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                     page = app.accountLibrary.more(session, page, AccountEntryKind.VIDEO)
                 }
                 check(complete)
+                // Discover all source-proven songs before slow unknown watch metadata.
+                for (batch in metadataPending.chunked(4)) {
+                    val classified = LikedMusicRows.classify(batch) { video -> musicProof(session, video, revision) }
+                    if (!active()) return@launch
+                    rememberProvenMusic(classified.items, revision)
+                    unresolved += classified.unresolved; scanned += batch.size
+                    found = AccountLibraryRows.append(found, classified.items).sortedBy { sourceOrder[it.id] ?: Int.MAX_VALUE }
+                    publish(false, checkpoint = true)
+                }
                 publish(true)
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { publish(false, if (old.isEmpty() && found.isEmpty()) "Liked Music couldn't load from the account. Refresh to retry." else "Couldn't finish refreshing Liked Music. Your loaded songs are kept.") }

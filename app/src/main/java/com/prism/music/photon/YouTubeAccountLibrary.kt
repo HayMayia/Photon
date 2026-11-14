@@ -21,8 +21,9 @@ internal class YouTubeAccountLibraryApi(client: OkHttpClient = OkHttpClient()) {
     private val musicTransport = YouTubeWebTransport(client, music = true)
     suspend fun likedSongs(session: YouTubeWebSession, previous: AccountLibraryPage? = null): AccountLibraryPage = withContext(Dispatchers.IO) {
         val context = previous?.context ?: run {
-            val html = musicTransport.html("/", session)
-            if (!YouTubeWebBootstrap.signedIn(JsonObject(emptyMap()), html)) throw IOException("Your existing Google session did not open YouTube Music")
+            val html = musicTransport.html("/playlist?list=LM", session)
+            // Music bootstrap pages do not consistently expose WEB's LOGGED_IN flag.
+            // The authenticated private VLLM response below is the authority, not that optional flag.
             YouTubeWebBootstrap.context(html, music = true) ?: throw IOException("YouTube Music context unavailable")
         }
         val body = buildJsonObject {
@@ -128,6 +129,9 @@ internal object YouTubeAccountLibraryParser {
                     if (kind == AccountEntryKind.VIDEO && musicRow != null) {
                         val watch = (musicRow["navigationEndpoint"] as? JsonObject)?.get("watchEndpoint") as? JsonObject
                         val id = text((musicRow["playlistItemData"] as? JsonObject)?.get("videoId")).ifBlank { text(watch?.get("videoId")) }
+                            .ifBlank { GoogleAccountControls.objects(musicRow["overlay"] ?: JsonObject(emptyMap()))
+                                .mapNotNull { (it["watchEndpoint"] as? JsonObject)?.get("videoId")?.jsonPrimitive?.contentOrNull }
+                                .firstOrNull { it.matches(Regex("[A-Za-z0-9_-]{11}")) }.orEmpty() }
                         val columns = musicRow["flexColumns"] as? JsonArray
                         fun column(index: Int) = ((columns?.getOrNull(index) as? JsonObject)?.get("musicResponsiveListItemFlexColumnRenderer") as? JsonObject)?.get("text")
                         val title = text(musicRow["title"] ?: column(0))
@@ -203,7 +207,7 @@ internal object YouTubeLikedSongs {
                 ?.get("loggedOut")?.jsonPrimitive?.booleanOrNull == true) throw IOException("YouTube Music account request rejected")
         val primary = GoogleAccountControls.objects(root["contents"] ?: root["continuationContents"] ?: JsonObject(emptyMap()))
             .mapNotNull { (it["musicPlaylistShelfRenderer"] ?: it["musicPlaylistShelfContinuation"]) as? JsonObject }.firstOrNull()
-            ?: if (continuation) GoogleAccountControls.objects(root["onResponseReceivedActions"] ?: JsonObject(emptyMap()))
+            ?: if (continuation) GoogleAccountControls.objects(root["onResponseReceivedActions"] ?: root["onResponseReceivedEndpoints"] ?: JsonObject(emptyMap()))
                 .mapNotNull { it["appendContinuationItemsAction"] as? JsonObject }.firstOrNull()
                 ?.let { buildJsonObject { put("contents", it["continuationItems"] ?: JsonArray(emptyList())) } }
                 ?: throw IOException("YouTube Music did not return more liked songs")

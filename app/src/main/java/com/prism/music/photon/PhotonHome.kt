@@ -93,27 +93,31 @@ private fun ActualYouTubeHome(model: PhotonViewModel, open: (Video) -> Unit, set
         item { PhotonUpdateCard() }
         item {
             val scheme = MaterialTheme.colorScheme
-            Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(32.dp))
-                .background(Brush.linearGradient(listOf(scheme.primaryContainer, scheme.surfaceContainerHigh, scheme.tertiaryContainer)))
-                .border(1.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = .45f), Color.White.copy(alpha = .06f))), RoundedCornerShape(32.dp))) {
-                Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("PHOTON", Modifier.weight(1f), color = scheme.onSurfaceVariant,
-                            style = MaterialTheme.typography.labelMedium, letterSpacing = 4.sp)
-                        IconButton(onClick = settings) { Icon(PrismIcons.Settings, "Settings", tint = scheme.onSurface) }
-                    }
-                    Text("Your world.\nIn full colour.", color = scheme.onSurface,
-                        style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
-                    Surface(onClick = search, shape = RoundedCornerShape(22.dp), color = scheme.surface.copy(alpha = .65f),
+            Row(Modifier.fillMaxWidth().padding(bottom = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Photon", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                    Text("Watch. Listen. Discover.", style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
+                }
+                FilledTonalIconButton(onClick = settings) { Icon(PrismIcons.Settings, "Settings") }
+            }
+            Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp))
+                .background(Brush.linearGradient(listOf(scheme.primary.copy(alpha = .20f), scheme.surfaceContainerHigh, scheme.primary.copy(alpha = .08f))))
+                .border(1.dp, scheme.primary.copy(alpha = .25f), RoundedCornerShape(28.dp))) {
+                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Text("A little more you.", color = scheme.onSurface,
+                        style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+                    Surface(onClick = search, shape = RoundedCornerShape(18.dp), color = scheme.surface.copy(alpha = .78f),
                         contentColor = scheme.onSurface, modifier = Modifier.fillMaxWidth()) {
-                        Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(PrismIcons.Search, null)
-                            Text("Find your next favourite", style = MaterialTheme.typography.bodyLarge)
+                        Row(Modifier.padding(15.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(PrismIcons.Search, null, tint = scheme.primary)
+                            Text("Search videos, songs & creators", style = MaterialTheme.typography.bodyMedium)
                         }
                     }
                 }
             }
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(22.dp))
+            Text("Your collection", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(12.dp))
             val shortcuts = listOf(
                 Triple("Videos", PrismIcons.Play, { discover("popular videos documentaries") }),
                 Triple("Music", PrismIcons.Song, { discover("official music videos songs") }),
@@ -125,20 +129,21 @@ private fun ActualYouTubeHome(model: PhotonViewModel, open: (Video) -> Unit, set
                 Triple("Shorts", PrismIcons.Phone, shorts),
                 Triple("Downloads", PrismIcons.Download, downloads)
             )
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                shortcuts.chunked(2).forEachIndexed { group, entries ->
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        entries.forEachIndexed { index, (label, icon, action) ->
-                            val accent = if ((group + index) % 2 == 0) scheme.primary else scheme.tertiary
-                            Surface(onClick = action, shape = RoundedCornerShape(22.dp),
-                                color = accent.copy(alpha = .13f), modifier = Modifier.width(150.dp).height(76.dp),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, accent.copy(alpha = .25f))) {
-                                Row(Modifier.padding(14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(icon, null, Modifier.size(22.dp), tint = accent)
-                                    Text(label, style = MaterialTheme.typography.labelLarge, maxLines = 2)
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                shortcuts.chunked(3).forEach { entries ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        entries.forEach { (label, icon, action) ->
+                            Surface(onClick = action, shape = RoundedCornerShape(20.dp),
+                                color = scheme.surfaceContainerHigh.copy(alpha = .85f), modifier = Modifier.weight(1f).heightIn(min = 96.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, scheme.outlineVariant.copy(alpha = .6f))) {
+                                Column(Modifier.padding(horizontal = 8.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(9.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(icon, null, Modifier.size(24.dp), tint = scheme.primary)
+                                    Text(label, style = MaterialTheme.typography.labelMedium, maxLines = 2,
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                                 }
                             }
                         }
+                        repeat(3 - entries.size) { Spacer(Modifier.weight(1f)) }
                     }
                 }
             }
@@ -148,7 +153,17 @@ private fun ActualYouTubeHome(model: PhotonViewModel, open: (Video) -> Unit, set
             }
             if (feed.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
             feed.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            feed.page?.message?.let { Text(it, Modifier.padding(vertical = 12.dp)) }
+            feed.page?.message?.let { message ->
+                Surface(shape = RoundedCornerShape(22.dp), color = scheme.surfaceContainerHigh,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
+                    Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(PrismIcons.Play, null, tint = scheme.primary)
+                        Text(if (message.contains("watch history is off", ignoreCase = true)) "Your history is paused" else "From YouTube",
+                            style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        Text(message, color = scheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
             if (feed.error != null || (feed.page == null && !feed.busy)) YouTubeHomeConnection(model)
         }
         items(rows, key = { it.key }) { row ->

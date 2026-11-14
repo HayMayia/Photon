@@ -323,6 +323,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
             val old = cached?.videos.orEmpty()
             val known = old.map { it.id }.toSet()
             val found = linkedMapOf<String, Video>()
+            var unavailable = 0
             fun publish(complete: Boolean, error: String? = null) {
                 if (!active()) return
                 val base = if (complete) found.values.toList() else LikedMusicHeadUpdates.progressive(old, found.values.toList())
@@ -331,13 +332,19 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 likedMusicSnapshot = videos; likedMusicSnapshotRevision = revision
                 app.likedMusicCache.save(LikedMusicSnapshot(revision, videos,
                     if (full || complete) System.currentTimeMillis() else cached?.updatedAt ?: 0, schemaVersion = 3,
-                    scanComplete = complete || (!full && cached?.scanComplete == true)))
+                    scanComplete = complete || (!full && cached?.scanComplete == true), unresolved = unavailable))
                 if (playlistSource.value == PlaylistQueuePolicy.key(revision, "liked-music")) queue.value = videos
                 googleLikes.value += videos.map { it.id }.associateWith { true }
                 if (accountLibrary.value.shelf == AccountShelf.LIKED_MUSIC && accountLibrary.value.playlist == null)
                     accountLibrary.value = accountLibrary.value.copy(busy = false, moreBusy = false, error = error,
                         page = AccountLibraryPage(videos.map { AccountEntry(it.id, it.title, AccountEntryKind.VIDEO, it) },
-                            message = if (error == null && !complete) "Updating liked songs…" else null))
+                            message = when {
+                                error != null -> null
+                                !complete -> "Updating liked songs…"
+                                unavailable > 0 -> "$unavailable unavailable songs were skipped. Your playable songs are shown."
+                                videos.isEmpty() -> "No liked songs were returned by YouTube Music for this account."
+                                else -> null
+                            }))
             }
             try {
                 check(active())
@@ -346,7 +353,8 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 val tokens = mutableSetOf<String>()
                 for (index in 0 until 200) {
                     if (!active()) return@launch
-                    if (page.unsupportedRows > 0) throw java.io.IOException("Some liked songs could not be read")
+                    // Deleted/private rows must not abort every readable song on the page.
+                    unavailable += page.unsupportedRows
                     page.items.mapNotNull { it.video }.forEach { found.putIfAbsent(it.id, it) }
                     publish(false)
                     if (page.continuation == null) {
@@ -363,8 +371,14 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 }
                 throw java.io.IOException("Liked Songs page limit reached")
             } catch (cancelled: CancellationException) { throw cancelled }
-            catch (_: Exception) {
-                publish(false, "YouTube Music’s Liked Songs couldn’t finish loading. Your cached songs are kept. Refresh to retry.")
+            catch (error: Exception) {
+                val reason = when {
+                    error is java.net.SocketTimeoutException || error is java.io.InterruptedIOException -> "YouTube Music took too long to respond."
+                    error.message == "YouTube Music context unavailable" -> "YouTube Music’s account page could not be read."
+                    error.message == "YouTube web session is unavailable" || error.message == "YouTube session authorization is unavailable" -> "Your Google session is not available on YouTube Music yet."
+                    else -> "YouTube Music’s liked songs could not finish loading."
+                }
+                publish(false, reason + if (old.isNotEmpty() || found.isNotEmpty()) " Loaded songs are kept. Tap Refresh to retry." else " Tap Refresh to retry with your current Google account.")
             }
         }
     }

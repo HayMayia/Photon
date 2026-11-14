@@ -113,10 +113,18 @@ internal fun ChannelAvatar(entry: AccountEntry, model: PhotonViewModel) {
 internal fun AccountLibraryHeader(state: AccountLibraryState, ready: Boolean,
     onShelf: (AccountShelf) -> Unit = {}, onSubscriptions: () -> Unit = {}, onCreate: () -> Unit = {}, onBack: () -> Unit = {}, onRefresh: () -> Unit = {}) {
     Column(Modifier.fillMaxWidth().padding(vertical = 12.dp).testTag("library-header"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).testTag("library-tabs"), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(onClick = onSubscriptions, modifier = Modifier.remoteFocus()) { Text("Subscriptions") }
-            AccountShelf.entries.forEach { shelf ->
-                FilterChip(selected = state.shelf == shelf && state.playlist == null, onClick = { onShelf(shelf) }, label = { Text(shelf.label) }, modifier = Modifier.remoteFocus())
+        Column(Modifier.fillMaxWidth().testTag("library-tabs"), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            AccountShelf.entries.chunked(3).forEach { shelves ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    shelves.forEach { shelf ->
+                        FilterChip(selected = state.shelf == shelf && state.playlist == null, onClick = { onShelf(shelf) },
+                            label = { Text(shelf.label, style = MaterialTheme.typography.labelMedium, maxLines = 2) },
+                            modifier = Modifier.weight(1f).heightIn(min = 48.dp).remoteFocus())
+                    }
+                    if (shelves.size < 3) TextButton(onClick = onSubscriptions, modifier = Modifier.weight(1f).heightIn(min = 48.dp).remoteFocus()) {
+                        Text("Subscriptions", style = MaterialTheme.typography.labelMedium, maxLines = 2)
+                    }
+                }
             }
         }
         if (state.shelf == AccountShelf.PLAYLISTS && state.playlist == null) TextButton(onClick = onCreate, modifier = Modifier.remoteFocus()) { Text("New playlist") }
@@ -125,7 +133,18 @@ internal fun AccountLibraryHeader(state: AccountLibraryState, ready: Boolean,
         TextButton(enabled = ready && ((!state.busy && !state.moreBusy) || state.shelf == AccountShelf.LIKED_MUSIC), onClick = onRefresh, modifier = Modifier.remoteFocus().testTag("library-refresh")) { Text("Refresh") }
         if (!ready) Text("Finish Google sign-in to read account lists.", Modifier.fillMaxWidth())
         if (state.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-        state.error?.let { Text(it, Modifier.fillMaxWidth().testTag("library-error"), color = MaterialTheme.colorScheme.error) }
+        state.error?.let { message ->
+            Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.errorContainer.copy(alpha = .55f),
+                modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(if (state.page?.items.isNullOrEmpty()) "Couldn’t load this collection" else "Refresh interrupted",
+                        style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onErrorContainer)
+                    Text(message, Modifier.fillMaxWidth().testTag("library-error"), style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onErrorContainer)
+                }
+            }
+        }
         state.page?.message?.let { Text(it, Modifier.fillMaxWidth().testTag("library-message")) }
     }
 }

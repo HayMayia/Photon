@@ -1,5 +1,11 @@
 package com.prism.music.photon
 
+import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Brush
+import com.prism.music.ui.theme.GlassSurface
+import com.prism.music.ui.theme.LocalHazeState
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
 import androidx.compose.foundation.border
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -51,8 +57,15 @@ internal fun PhotonTvScreen(model: PhotonViewModel, selected: Int, select: (Int)
     LaunchedEffect(videos.map { it.id }) {
         if (focusedVideo != null && videos.none { it.id == focusedVideo }) focusedVideo = null
     }
+    val backdrop = rememberHazeState()
+    CompositionLocalProvider(LocalHazeState provides backdrop) {
+    Box(Modifier.fillMaxSize()) {
+        Box(Modifier.fillMaxSize().hazeSource(backdrop).background(Brush.linearGradient(listOf(
+            MaterialTheme.colorScheme.primary.copy(alpha = .18f), MaterialTheme.colorScheme.background,
+            MaterialTheme.colorScheme.tertiary.copy(alpha = .10f)))))
     Row(Modifier.fillMaxSize().safeDrawingPadding().padding(24.dp), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-        Column(Modifier.width(164.dp).fillMaxHeight().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        GlassSurface(Modifier.width(184.dp).fillMaxHeight(), shape = RoundedCornerShape(28.dp)) {
+        Column(Modifier.fillMaxSize().padding(10.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(if (library.youtubeLayout) "Home" else "Photon", style = MaterialTheme.typography.headlineMedium)
             listOf(0 to "Home", 1 to "Search", 5 to "Subscriptions", 6 to "Shorts", 2 to "Library", 4 to "Downloads", 3 to "Settings").forEach { (tab, label) ->
                 FilledTonalButton(onClick = { focusedVideo = null; select(tab); if (tab == 0) model.home(); if (tab == 5) model.subscriptionsFeed(); if (tab == 6) model.shorts() },
@@ -63,6 +76,7 @@ internal fun PhotonTvScreen(model: PhotonViewModel, selected: Int, select: (Int)
                 }
             }
             if (resume != null) OutlinedButton(onClick = resume, modifier = Modifier.fillMaxWidth().remoteFocus()) { Text("Now playing") }
+        }
         }
         Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(when (selected) { 0 -> "For you"; 1 -> "Search"; 2 -> "Your library"; 3 -> "Settings"; 4 -> "Downloads"; 5 -> "Subscriptions"; else -> "Shorts" },
@@ -103,6 +117,8 @@ internal fun PhotonTvScreen(model: PhotonViewModel, selected: Int, select: (Int)
                 }
             }
         }
+    }
+    }
     }
 }
 

@@ -925,6 +925,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
         open(video)
     }
     fun accent(value: Int) = app.library.update { it.copy(accent = value) }
+    fun liquidGlass(value: Boolean) = app.library.update { it.copy(liquidGlass = value) }
     fun dark(value: Boolean) = app.library.update { it.copy(dark = value) }
     fun wifi(value: Boolean) = app.library.update { it.copy(wifiOnly = value) }
     fun tvMusicBackground(value: Boolean) = app.library.update { it.copy(tvMusicBackground = value) }

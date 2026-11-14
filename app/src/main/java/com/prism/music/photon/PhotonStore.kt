@@ -27,6 +27,7 @@ data class PhotonLibrary(
     val history: List<Video> = emptyList(),
     val downloads: List<SavedDownload> = emptyList(),
     val dark: Boolean = true,
+    val liquidGlass: Boolean = true,
     val defaultHeight: Int = 1080,
     val wifiOnly: Boolean = true,
     val accent: Int = 0xFF7C5CFF.toInt(),

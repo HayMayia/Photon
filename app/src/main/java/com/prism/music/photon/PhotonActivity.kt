@@ -23,6 +23,10 @@ import com.google.android.gms.common.api.Scope
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.common.ConnectionResult
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
+import com.prism.music.ui.theme.GlassSurface
+import com.prism.music.ui.theme.LocalHazeState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -151,7 +155,7 @@ class PhotonActivity : ComponentActivity() {
                 incoming?.let { model.search(it) }
                 incoming = null
             }
-            PrismTheme(AppSettings(themeMode = if (library.dark) ThemeMode.DARK else ThemeMode.LIGHT, accent = library.accent), null) {
+            PrismTheme(AppSettings(themeMode = if (library.dark) ThemeMode.DARK else ThemeMode.LIGHT, accent = library.accent, liquidGlass = library.liquidGlass && !library.youtubeLayout), null) {
                 InterfaceTheme(library.youtubeLayout, library.dark) {
                     OfflineArtworkProvider(library.downloads) { PhotonRoot(model, controller, pip, ::requestNotifications, ::enterPip) }
                 }
@@ -392,7 +396,8 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
             ensureCaptionTrack(player, library)
         }
     }
-    CompositionLocalProvider(LocalPlayerMenus provides PlayerMenuActions(
+    val glassBackdrop = rememberHazeState()
+    CompositionLocalProvider(LocalHazeState provides glassBackdrop, LocalPlayerMenus provides PlayerMenuActions(
         settings = { playerSettings = true }, captions = { captionSettings = true },
         back = { if (immersive) leaveFullscreen() else expanded = false })) {
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -499,7 +504,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                 bottomBar = {
                     Column {
                         watch.video?.let { video ->
-                            Surface(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh, tonalElevation = 4.dp) {
+                            GlassSurface(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), shape = RoundedCornerShape(24.dp)) {
                                 Row(Modifier.fillMaxWidth().clickable { expanded = true }.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
                                     VideoThumbnail(video, null, Modifier.size(48.dp).clip(RoundedCornerShape(13.dp)), contentScale = ContentScale.Crop)
                                     Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
@@ -511,15 +516,17 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                                 }
                             }
                         }
-                        if (library.youtubeLayout) nativeNavigation(tab) else NavigationBar(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f), tonalElevation = 0.dp) {
+                        if (library.youtubeLayout) nativeNavigation(tab) else GlassSurface(Modifier.padding(horizontal = 12.dp).padding(bottom = 8.dp), shape = RoundedCornerShape(30.dp)) {
+                            NavigationBar(containerColor = Color.Transparent, tonalElevation = 0.dp) {
                             listOf("Home" to PrismIcons.Home, "Search" to PrismIcons.Search, "Library" to PrismIcons.Library, "Settings" to PrismIcons.Settings).forEachIndexed { index, (label, icon) ->
                                 NavigationBarItem(selected = tab == index, onClick = { navigateTo(index); if (index == 0) model.home() }, icon = { Icon(icon, label) }, label = { Text(label) })
                             }
                         }
                     }
+                    }
                 }
             ) { padding ->
-                Box(Modifier.fillMaxSize().padding(padding).then(if (library.youtubeLayout) Modifier else Modifier.background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.055f), Color.Transparent))))) {
+                Box(Modifier.fillMaxSize().hazeSource(glassBackdrop).padding(padding).then(if (library.youtubeLayout) Modifier else Modifier.background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.055f), Color.Transparent))))) {
                     when (tab) {
                         0 -> if (library.youtubeLayout) YouTubeLayoutHome(model, library, ::open,
                             search = { navigateTo(1) }, settings = { navigateTo(3) },
@@ -840,6 +847,11 @@ private fun SettingsPage(library: PhotonLibrary, model: PhotonViewModel, notific
         item { YouTubeAccountCard(model) }
         item {
             SettingsGroup("APPEARANCE") {
+                if (!library.youtubeLayout) ListItem(
+                    headlineContent = { Text("Liquid Glass") },
+                    supportingContent = { Text("Prism’s refractive navigation and floating player") },
+                    trailingContent = { Switch(library.liquidGlass, model::liquidGlass) },
+                    modifier = Modifier.remoteFocus().clickable { model.liquidGlass(!library.liquidGlass) })
                 if (!library.youtubeLayout) Row(Modifier.padding(16.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     com.prism.music.ui.theme.AccentSwatches.take(8).forEach { color ->
                         val argb = color.toArgb()

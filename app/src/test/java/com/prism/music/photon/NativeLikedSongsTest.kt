@@ -11,7 +11,17 @@ import java.io.IOException
 
 class NativeLikedSongsTest {
     private val row = """{"musicResponsiveListItemRenderer":{"playlistItemData":{"videoId":"abcdefghijk"},"flexColumns":[{"musicResponsiveListItemFlexColumnRenderer":{"text":{"runs":[{"text":"Liked song"}]}}}]}}"""
-    private fun shelf(next: Boolean = false) = """{"contents":{"musicPlaylistShelfRenderer":{"playlistId":"LM","contents":[$row]${if(next) ",\"continuations\":[{\"nextContinuationData\":{\"continuation\":\"next-songs\"}}]" else ""}}}"""
+    private fun shelf(next: Boolean = false) = buildJsonObject {
+        put("contents", buildJsonObject {
+            put("musicPlaylistShelfRenderer", buildJsonObject {
+                put("playlistId", "LM")
+                put("contents", JsonArray(listOf(Json.parseToJsonElement(row))))
+                if (next) put("continuations", JsonArray(listOf(buildJsonObject {
+                    put("nextContinuationData", buildJsonObject { put("continuation", "next-songs") })
+                })))
+            })
+        })
+    }.toString()
     @Test fun readsNativeSongsAndContinuationWithoutAnyWatchMetadata() = runBlocking {
         val requests = mutableListOf<Request>()
         val client = OkHttpClient.Builder().addInterceptor { chain ->

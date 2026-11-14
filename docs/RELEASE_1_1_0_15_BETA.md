@@ -5,4 +5,4 @@
 - TV navigation receives a rounded glass rail over a restrained accent gradient; remote focus outlines and selected-section behavior remain intact. No video-surface blur or continuous decorative animation is introduced.
 - Optional YouTube layout retains its native navigation and colors. Disabling Liquid Glass uses Prism's readable solid fallback.
 
-Validation pending. Physical phone/TV GPU appearance, performance, and accessibility have not been device-tested. Rendering support varies with Android/GPU; the existing Prism/Haze renderer controls platform fallback.
+Hosted validation passed: push run 43618129513 and PR run 43618134304, including compilation, unit tests and registered signing certificate verification. Published release source ec47618ee75617049833768f3ac13bec9015d67f, version code 44; asset 748156954 is 25,402,156 bytes with SHA-256 cde621a9a6ee6c506ed4b096733f649bf9298c805b813bb67faf4a748e810c7c. Physical phone/TV GPU appearance, performance, and accessibility have not been device-tested. Rendering support varies with Android/GPU; the existing Prism/Haze renderer controls platform fallback.

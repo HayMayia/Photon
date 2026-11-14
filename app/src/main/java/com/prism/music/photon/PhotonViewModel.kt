@@ -373,6 +373,15 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (error: Exception) {
                 val reason = when {
+                    error is YouTubeHttpFailure -> when (error.status) {
+                        401, 403 -> "YouTube Music refused this account request (HTTP ${error.status})."
+                        429 -> "YouTube Music is limiting requests. Please wait before refreshing (HTTP 429)."
+                        in 500..599 -> "YouTube Music is temporarily unavailable (HTTP ${error.status})."
+                        else -> "YouTube Music returned HTTP ${error.status}."
+                    }
+                    error.message == "YouTube requires account confirmation" -> "YouTube Music requires confirmation in your existing Google sign-in."
+                    error.message == "YouTube Music did not return its Liked Songs shelf" -> "YouTube Music returned a page without the Liked Songs list."
+                    error.message == "YouTube Music did not return more liked songs" -> "YouTube Music returned an unsupported next page."
                     error is java.net.SocketTimeoutException || error is java.io.InterruptedIOException -> "YouTube Music took too long to respond."
                     error.message == "YouTube Music context unavailable" -> "YouTube Music’s account page could not be read."
                     error.message == "YouTube web session is unavailable" || error.message == "YouTube session authorization is unavailable" -> "Your Google session is not available on YouTube Music yet."

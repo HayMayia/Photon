@@ -80,6 +80,46 @@ class NativeLikedSongsTest {
         }) }
         assertTrue(YouTubeLikedSongs.parse(root, continuation = true).items.single().video!!.music)
     }
+    @Test fun inlineNativeListAvoidsAnotherBrowseRequest() = runBlocking {
+        var calls = 0
+        val client = OkHttpClient.Builder().addInterceptor { chain ->
+            calls++
+            val html = """ytcfg.set({"INNERTUBE_CONTEXT":{"client":{"clientName":"WEB_REMIX","clientVersion":"1.test"}}});var ytInitialData = ${shelf()};"""
+            Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(200).message("OK")
+                .body(html.toResponseBody("text/html".toMediaType())).build()
+        }.build()
+        val page = YouTubeAccountLibraryApi(client).likedSongs(YouTubeWebSession(0, 1, "SAPISID=main", "", "SAPISID=music"))
+        assertEquals("abcdefghijk", page.items.single().id)
+        assertEquals(1, calls)
+    }
+    @Test fun sameHostRedirectKeepsSelectedAccountAndMusicCookies() = runBlocking {
+        val requests = mutableListOf<Request>()
+        val client = OkHttpClient.Builder().addInterceptor { chain ->
+            val request = chain.request(); requests += request
+            Response.Builder().request(request).protocol(Protocol.HTTP_1_1)
+                .code(if (requests.size == 1) 302 else 200).message("OK")
+                .apply { if (requests.size == 1) header("Location", "/playlist?list=LM&authuser=0") }
+                .body("page".toResponseBody("text/html".toMediaType())).build()
+        }.build()
+        YouTubeWebTransport(client, music = true).html("/playlist?list=LM", YouTubeWebSession(2, 1, "SAPISID=main", "", "SAPISID=music"))
+        assertEquals(2, requests.size)
+        assertEquals("2", requests.last().url.queryParameter("authuser"))
+        assertTrue(requests.all { it.header("Cookie") == "SAPISID=music" })
+    }
+    @Test fun crossHostRedirectNeverReceivesCookies() = runBlocking {
+        var calls = 0
+        val client = OkHttpClient.Builder().addInterceptor { chain ->
+            calls++
+            Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(302).message("Redirect")
+                .header("Location", "https://accounts.google.com/")
+                .body("".toResponseBody("text/html".toMediaType())).build()
+        }.build()
+        try {
+            YouTubeWebTransport(client, music = true).html("/", YouTubeWebSession(0, 1, "", "", "SAPISID=music"))
+            fail("Cross-host navigation must be rejected")
+        } catch (_: IOException) { }
+        assertEquals(1, calls)
+    }
     @Test fun unrelatedRecommendationsCannotEnterLikedSongs() {
         val source = Json.parseToJsonElement(shelf()).jsonObject
         assertEquals(listOf("abcdefghijk"), YouTubeLikedSongs.parse(source).items.map { it.id })

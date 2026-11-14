@@ -20,11 +20,16 @@ internal class YouTubeAccountLibraryApi(client: OkHttpClient = OkHttpClient()) {
     private val transport = YouTubeWebTransport(client)
     private val musicTransport = YouTubeWebTransport(client, music = true)
     suspend fun likedSongs(session: YouTubeWebSession, previous: AccountLibraryPage? = null): AccountLibraryPage = withContext(Dispatchers.IO) {
+        var bootstrap: JsonObject? = null
         val context = previous?.context ?: run {
             val html = musicTransport.html("/playlist?list=LM", session)
-            // Music bootstrap pages do not consistently expose WEB's LOGGED_IN flag.
-            // The authenticated private VLLM response below is the authority, not that optional flag.
+            bootstrap = runCatching { YouTubeWebBootstrap.assigned(html, "ytInitialData") }.getOrNull()
             YouTubeWebBootstrap.context(html, music = true) ?: throw IOException("YouTube Music context unavailable")
+        }
+        // Some accounts receive the complete private list in HTML; use it rather than
+        // discarding it and depending on another browse request succeeding.
+        bootstrap?.let { initial ->
+            runCatching { YouTubeLikedSongs.parse(initial) }.getOrNull()?.let { return@withContext it.copy(context = context) }
         }
         val body = buildJsonObject {
             if (previous == null) put("browseId", "VLLM")

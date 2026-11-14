@@ -96,35 +96,29 @@ private fun ActualYouTubeHome(model: PhotonViewModel, open: (Video) -> Unit, set
             Row(Modifier.fillMaxWidth().padding(bottom = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("Photon", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                    Text("Watch. Listen. Discover.", style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
+                    Text("Your daily mix of everything", style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
                 }
                 FilledTonalIconButton(onClick = settings) { Icon(PrismIcons.Settings, "Settings") }
             }
-            Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp))
-                .background(Brush.linearGradient(listOf(scheme.primary.copy(alpha = .20f), scheme.surfaceContainerHigh, scheme.primary.copy(alpha = .08f))))
-                .border(1.dp, scheme.primary.copy(alpha = .25f), RoundedCornerShape(28.dp))) {
-                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Text("A little more you.", color = scheme.onSurface,
-                        style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
-                    Surface(onClick = search, shape = RoundedCornerShape(18.dp), color = scheme.surface.copy(alpha = .78f),
-                        contentColor = scheme.onSurface, modifier = Modifier.fillMaxWidth()) {
-                        Row(Modifier.padding(15.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(PrismIcons.Search, null, tint = scheme.primary)
-                            Text("Search videos, songs & creators", style = MaterialTheme.typography.bodyMedium)
-                        }
-                    }
+            Surface(onClick = search, shape = RoundedCornerShape(50),
+                color = scheme.surfaceContainerHigh, contentColor = scheme.onSurface,
+                border = androidx.compose.foundation.BorderStroke(1.dp, scheme.primary.copy(alpha = .22f)),
+                modifier = Modifier.fillMaxWidth()) {
+                Row(Modifier.padding(horizontal = 20.dp, vertical = 18.dp), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(PrismIcons.Search, null, tint = scheme.primary)
+                    Text("What do you want to play?", style = MaterialTheme.typography.bodyMedium)
                 }
             }
-            Spacer(Modifier.height(22.dp))
-            Text("Your collection", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(24.dp))
+            Text("Quick access", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(12.dp))
             val shortcuts = listOf(
-                Triple("Videos", PrismIcons.Play, { discover("popular videos documentaries") }),
-                Triple("Music", PrismIcons.Song, { discover("official music videos songs") }),
-                Triple("History", PrismIcons.History, { model.openAccountShelf(AccountShelf.HISTORY); saved() }),
-                Triple("Playlists", PrismIcons.Library, { model.openAccountShelf(AccountShelf.PLAYLISTS); saved() }),
                 Triple(LikedMusicPlaylist.NAME, PrismIcons.Song, { model.openLikedMusic(); saved() }),
                 Triple("Liked videos", PrismIcons.Heart, { model.openAccountShelf(AccountShelf.LIKED); saved() }),
+                Triple("History", PrismIcons.History, { model.openAccountShelf(AccountShelf.HISTORY); saved() }),
+                Triple("Playlists", PrismIcons.Library, { model.openAccountShelf(AccountShelf.PLAYLISTS); saved() }),
+                Triple("Videos", PrismIcons.Play, { discover("popular videos documentaries") }),
+                Triple("Music", PrismIcons.Song, { discover("official music videos songs") }),
                 Triple("Channels", PrismIcons.Person, subscriptions),
                 Triple("Shorts", PrismIcons.Phone, shorts),
                 Triple("Downloads", PrismIcons.Download, downloads)
@@ -134,9 +128,10 @@ private fun ActualYouTubeHome(model: PhotonViewModel, open: (Video) -> Unit, set
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         entries.forEach { (label, icon, action) ->
                             Surface(onClick = action, shape = RoundedCornerShape(20.dp),
-                                color = scheme.surfaceContainerHigh.copy(alpha = .85f), modifier = Modifier.weight(1f).heightIn(min = 96.dp),
+                                color = if (label == LikedMusicPlaylist.NAME || label == "Liked videos") scheme.primaryContainer.copy(alpha = .65f)
+                                    else scheme.surfaceContainerHigh.copy(alpha = .55f), modifier = Modifier.weight(1f).heightIn(min = 82.dp),
                                 border = androidx.compose.foundation.BorderStroke(1.dp, scheme.outlineVariant.copy(alpha = .6f))) {
-                                Column(Modifier.padding(horizontal = 8.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(9.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                Column(Modifier.padding(horizontal = 8.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(7.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                                     Icon(icon, null, Modifier.size(24.dp), tint = scheme.primary)
                                     Text(label, style = MaterialTheme.typography.labelMedium, maxLines = 2,
                                         textAlign = androidx.compose.ui.text.style.TextAlign.Center)
@@ -148,7 +143,7 @@ private fun ActualYouTubeHome(model: PhotonViewModel, open: (Video) -> Unit, set
                 }
             }
             Row(Modifier.padding(top = 24.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("Made for you", Modifier.weight(1f), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text("Your feed", Modifier.weight(1f), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                 TextButton(enabled = !feed.busy, onClick = { model.refreshYouTubeHome() }) { Text("Refresh") }
             }
             if (feed.busy) LinearProgressIndicator(Modifier.fillMaxWidth())

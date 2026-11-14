@@ -20,6 +20,8 @@ class YouTubeWebSession(val account: Int, val revision: Long, private val youtub
     override fun toString() = "YouTubeWebSession(redacted)"
 }
 
+internal class YouTubeHttpFailure(val status: Int) : IOException("YouTube HTTP $status")
+
 internal class YouTubeWebTransport(client: OkHttpClient = OkHttpClient(), timeoutSeconds: Long = 30, private val music: Boolean = false) {
     private class NoReplay(val permitted: () -> Boolean) { val sent = AtomicBoolean(false) }
     private val http = client.newBuilder().followRedirects(false).followSslRedirects(false).retryOnConnectionFailure(false)
@@ -33,7 +35,22 @@ internal class YouTubeWebTransport(client: OkHttpClient = OkHttpClient(), timeou
     suspend fun html(path: String, session: YouTubeWebSession): String = withContext(Dispatchers.IO) {
         require(path in setOf("/", "/feed/history", "/feed/playlists", "/feed/channels", "/feed/subscriptions") || Regex("/playlist\\?list=[A-Za-z0-9_-]{2,150}").matches(path) || Regex("/channel/UC[A-Za-z0-9_-]{20,30}").matches(path) || Regex("/shorts/[A-Za-z0-9_-]{11}").matches(path) || path.startsWith("/watch?v=") && Regex("/watch\\?v=[A-Za-z0-9_-]{11}").matches(path))
         val url = "https://${if (music) "music.youtube.com" else "www.youtube.com"}$path".toHttpUrl().newBuilder().addQueryParameter("authuser", session.account.toString()).addQueryParameter("hl", "en").build()
-        execute(builder(url, session).get().build())
+        var target = url
+        // Only explicit same-host HTTPS GET redirects; never replay mutations or leak cookies.
+        repeat(4) {
+            val redirect = http.newCall(builder(target, session).get().build()).execute().use { response ->
+                if (response.code in setOf(301, 302, 303, 307, 308)) {
+                    val next = response.header("Location")?.let { target.resolve(it) }
+                        ?: throw IOException("YouTube redirect was missing its destination")
+                    if (next.scheme != "https" || next.host != url.host || next.port != 443 ||
+                        next.username.isNotEmpty() || next.password.isNotEmpty())
+                        throw IOException("YouTube requires account confirmation")
+                    next.newBuilder().setQueryParameter("authuser", session.account.toString()).build()
+                } else return@withContext read(response)
+            }
+            target = redirect
+        }
+        throw IOException("YouTube redirected too many times")
     }
     suspend fun post(endpoint: String, context: JsonObject, body: JsonObject, session: YouTubeWebSession, permitted: () -> Boolean = { true }): JsonObject = withContext(Dispatchers.IO) {
         require(endpoint in setOf("browse", "next", "comment/perform_comment_action", "feedback", "like/like", "like/removelike", "subscription/subscribe", "subscription/unsubscribe", "playlist/create", "browse/edit_playlist", "playlist/delete"))
@@ -74,8 +91,9 @@ internal class YouTubeWebTransport(client: OkHttpClient = OkHttpClient(), timeou
                 }
             }
     }
-    private fun execute(request: Request): String = http.newCall(request).execute().use { response ->
-        if (!response.isSuccessful) throw IOException("YouTube account request failed; reconnect or retry explicitly")
+    private fun execute(request: Request): String = http.newCall(request).execute().use { read(it) }
+    private fun read(response: Response): String {
+        if (!response.isSuccessful) throw YouTubeHttpFailure(response.code)
         val output = ByteArrayOutputStream()
         response.body.byteStream().use { input ->
             val buffer = ByteArray(8192)
@@ -85,7 +103,7 @@ internal class YouTubeWebTransport(client: OkHttpClient = OkHttpClient(), timeou
                 output.write(buffer, 0, count)
             }
         }
-        output.toString(Charsets.UTF_8.name())
+        return output.toString(Charsets.UTF_8.name())
     }
 }
 

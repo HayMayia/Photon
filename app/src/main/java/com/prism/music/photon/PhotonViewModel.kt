@@ -329,7 +329,8 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 val videos = LikedMusicSnapshotUpdates.merge(base, likedMusicMutations.values.toList(), mutationStart)
                     .filter { googleLikes.value[it.id] != false }
                 likedMusicSnapshot = videos; likedMusicSnapshotRevision = revision
-                app.likedMusicCache.save(LikedMusicSnapshot(revision, videos, System.currentTimeMillis(), schemaVersion = 3,
+                app.likedMusicCache.save(LikedMusicSnapshot(revision, videos,
+                    if (full || complete) System.currentTimeMillis() else cached?.updatedAt ?: 0, schemaVersion = 3,
                     scanComplete = complete || (!full && cached?.scanComplete == true)))
                 if (playlistSource.value == PlaylistQueuePolicy.key(revision, "liked-music")) queue.value = videos
                 googleLikes.value += videos.map { it.id }.associateWith { true }

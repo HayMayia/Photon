@@ -6,9 +6,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.background
 import androidx.compose.ui.graphics.Brush
 import com.prism.music.ui.theme.GlassSurface
-import com.prism.music.ui.theme.LocalHazeState
-import dev.chrisbanes.haze.hazeSource
-import dev.chrisbanes.haze.rememberHazeState
+import com.prism.music.ui.theme.LocalLiquidBackdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import androidx.compose.foundation.border
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -60,10 +60,10 @@ internal fun PhotonTvScreen(model: PhotonViewModel, selected: Int, select: (Int)
     LaunchedEffect(videos.map { it.id }) {
         if (focusedVideo != null && videos.none { it.id == focusedVideo }) focusedVideo = null
     }
-    val backdrop = rememberHazeState()
-    CompositionLocalProvider(LocalHazeState provides backdrop) {
+    val backdrop = rememberLayerBackdrop()
+    CompositionLocalProvider(LocalLiquidBackdrop provides backdrop) {
     Box(Modifier.fillMaxSize()) {
-        Box(Modifier.fillMaxSize().then(if (library.performanceMode) Modifier else Modifier.hazeSource(backdrop)).background(Brush.linearGradient(listOf(
+        Box(Modifier.fillMaxSize().then(if (library.performanceMode || !library.liquidGlass || library.youtubeLayout || android.os.Build.VERSION.SDK_INT < 31) Modifier else Modifier.layerBackdrop(backdrop)).background(Brush.linearGradient(listOf(
             MaterialTheme.colorScheme.primary.copy(alpha = .18f), MaterialTheme.colorScheme.background,
             MaterialTheme.colorScheme.tertiary.copy(alpha = .10f)))))
     Row(Modifier.fillMaxSize().safeDrawingPadding().padding(24.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {

@@ -1,5 +1,11 @@
 package com.prism.music.ui.theme
 
+import android.os.Build
+import androidx.compose.ui.platform.LocalView
+import com.kyant.backdrop.Backdrop
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.lens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -27,6 +33,12 @@ import dev.chrisbanes.haze.glass.GlassStyle
 import dev.chrisbanes.haze.glass.hazeGlass
 
 /** The backdrop that glass surfaces in the current subtree refract. */
+val LocalLiquidBackdrop = compositionLocalOf<Backdrop?> { null }
+
+/** RenderEffect requires Android 12; lens refraction is internally gated to Android 13 by Backdrop. */
+internal fun liquidBackdropEnabled(sdk: Int, hardware: Boolean, enabled: Boolean, performance: Boolean): Boolean =
+    sdk >= 31 && hardware && enabled && !performance
+
 val LocalHazeState = compositionLocalOf<HazeState?> { null }
 
 /**
@@ -53,8 +65,24 @@ fun GlassSurface(
     val settings = LocalAppSettings.current
     val haze = LocalHazeState.current.takeUnless { inPage }
     val dark = LocalIsDark.current
+    val liquid = LocalLiquidBackdrop.current.takeUnless { inPage }
+    val useLiquid = liquidBackdropEnabled(Build.VERSION.SDK_INT, LocalView.current.isHardwareAccelerated,
+        settings.liquidGlass, settings.performanceMode)
+    val wash = if (tint.isSpecified) tint else if (onMedia) Color.Black.copy(alpha = .32f)
+        else MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = if (dark) .64f else .72f)
     if (settings.performanceMode) {
         Box(modifier.clip(shape).background(MaterialTheme.colorScheme.surfaceContainerHigh), content = content)
+    } else if (useLiquid && liquid != null) {
+        Box(modifier.drawBackdrop(
+            backdrop = liquid,
+            shape = { shape },
+            effects = {
+                blur(if (onMedia) 6.dp.toPx() else 10.dp.toPx())
+                lens(12.dp.toPx(), 20.dp.toPx())
+            },
+            shadow = null,
+            onDrawSurface = { drawRect(wash) }
+        ).clip(shape), content = content)
     } else if (inPage && com.prism.music.ui.components.LocalFrosted.current) {
         Box(
             modifier

@@ -23,10 +23,10 @@ import com.google.android.gms.common.api.Scope
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.common.ConnectionResult
-import dev.chrisbanes.haze.hazeSource
-import dev.chrisbanes.haze.rememberHazeState
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.prism.music.ui.theme.GlassSurface
-import com.prism.music.ui.theme.LocalHazeState
+import com.prism.music.ui.theme.LocalLiquidBackdrop
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -396,8 +396,8 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
             ensureCaptionTrack(player, library)
         }
     }
-    val glassBackdrop = rememberHazeState()
-    CompositionLocalProvider(LocalHazeState provides glassBackdrop, LocalPlayerMenus provides PlayerMenuActions(
+    val glassBackdrop = rememberLayerBackdrop()
+    CompositionLocalProvider(LocalLiquidBackdrop provides glassBackdrop, LocalPlayerMenus provides PlayerMenuActions(
         settings = { playerSettings = true }, captions = { captionSettings = true },
         back = { if (immersive) leaveFullscreen() else expanded = false })) {
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -533,7 +533,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                     }
                 }
             ) { padding ->
-                Box(Modifier.fillMaxSize().then(if (library.performanceMode) Modifier else Modifier.hazeSource(glassBackdrop)).padding(padding).then(if (library.youtubeLayout) Modifier else Modifier.background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f), MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.09f)))))) {
+                Box(Modifier.fillMaxSize().then(if (library.performanceMode || !library.liquidGlass || library.youtubeLayout || android.os.Build.VERSION.SDK_INT < 31) Modifier else Modifier.layerBackdrop(glassBackdrop)).padding(padding).then(if (library.youtubeLayout) Modifier else Modifier.background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f), MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.09f)))))) {
                     when (tab) {
                         0 -> if (library.youtubeLayout) YouTubeLayoutHome(model, library, ::open,
                             search = { navigateTo(1) }, settings = { navigateTo(3) },

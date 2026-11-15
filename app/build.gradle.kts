@@ -27,8 +27,8 @@ android {
         applicationId = "io.github.haymayia.photon"
         minSdk = 26
         targetSdk = 36
-        versionCode = 50
-        versionName = "1.1.0.21 Beta"
+        versionCode = 51
+        versionName = "1.1.0.22 Beta"
         vectorDrawables { useSupportLibrary = true }
         // The name under the launcher icon; a side-by-side build (below) is called "Photon Dev" so it can't be mistaken for Prism.
         manifestPlaceholders["appLabel"] = "@string/app_name"
@@ -206,6 +206,7 @@ dependencies {
     // On the PC, tests run the same models with ONNX Runtime's desktop build.
     testImplementation("com.microsoft.onnxruntime:onnxruntime:1.31.0")
 
+    implementation("io.github.kyant0:backdrop:2.0.1")
     implementation("dev.chrisbanes.haze:haze:2.0.1")
     implementation("dev.chrisbanes.haze:haze-blur:2.0.1")
     implementation("dev.chrisbanes.haze:haze-glass:2.0.1")

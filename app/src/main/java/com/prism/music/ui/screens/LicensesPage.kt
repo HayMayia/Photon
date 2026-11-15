@@ -38,6 +38,7 @@ private val libraries = listOf(
     Library("Kotlin, kotlinx.coroutines, kotlinx.serialization, Compose runtime", "JetBrains", "Apache 2.0", "apache-2.0", "https://kotlinlang.org"),
     Library("OkHttp, Okio", "Square", "Apache 2.0", "apache-2.0", "https://square.github.io/okhttp"),
     Library("Coil", "Coil Contributors", "Apache 2.0", "apache-2.0", "https://coil-kt.github.io/coil"),
+    Library("Backdrop / Android Liquid Glass and Shapes", "Kyant0", "Apache 2.0", "apache-2.0", "https://github.com/kyant0/AndroidLiquidGlass"),
     Library("Haze", "Chris Banes", "Apache 2.0", "apache-2.0", "https://github.com/chrisbanes/haze"),
     Library("Accompanist", "Google", "Apache 2.0", "apache-2.0", "https://github.com/google/accompanist"),
     Library("Guava, Error Prone annotations, J2ObjC annotations, JSR 305, JSpecify", "Google and others", "Apache 2.0", "apache-2.0", "https://github.com/google/guava"),

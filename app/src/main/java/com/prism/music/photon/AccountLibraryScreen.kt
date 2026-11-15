@@ -13,6 +13,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.CircleShape
@@ -32,6 +33,9 @@ internal fun AccountLibraryScreen(model: PhotonViewModel, revision: Long, ready:
     var name by remember { mutableStateOf("") }
     val likes by model.googleLikes.collectAsStateWithLifecycle()
     val state by model.accountLibrary.collectAsStateWithLifecycle()
+    var musicFilter by rememberSaveable(revision, state.shelf, state.playlist) { mutableStateOf(LikedMusicFilter.ALL) }
+    val likedMusic = state.shelf == AccountShelf.LIKED_MUSIC && state.playlist == null
+    val visibleRows = if (likedMusic) musicFilter.apply(state.page?.items.orEmpty()) else state.page?.items.orEmpty()
     LaunchedEffect(revision, ready) {
         if (ready && state.page == null && !state.busy && state.error == null) model.openAccountShelf(state.shelf, state.playlist, state.title)
     }
@@ -41,16 +45,22 @@ internal fun AccountLibraryScreen(model: PhotonViewModel, revision: Long, ready:
         confirmButton = { TextButton(enabled = name.isNotBlank(), onClick = { model.createGooglePlaylist(name); name = ""; creating = false }) { Text("Continue") } },
         dismissButton = { TextButton(onClick = { creating = false }) { Text("Cancel") } })
     val grid = rememberLazyGridState()
-    LaunchedEffect(state.shelf, state.playlist) { grid.scrollToItem(0) }
+    LaunchedEffect(state.shelf, state.playlist, musicFilter) { grid.scrollToItem(0) }
     AccountLibraryFormatEffect(grid, state.page?.items.orEmpty()) { model.commitAccountLibraryFormats(state.generation) }
     LazyVerticalGrid(state = grid, columns = GridCells.Fixed(2), modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         item(span = { GridItemSpan(2) }) {
-            AccountLibraryHeader(state, ready, onShelf = { model.openAccountShelf(it) },
+            AccountLibraryHeader(state, ready, musicFilter = musicFilter, onMusicFilter = { musicFilter = it }, onShelf = { model.openAccountShelf(it) },
                 onCreate = { creating = true }, onBack = { model.openAccountShelf(AccountShelf.PLAYLISTS) },
                 onSubscriptions = subscriptions, onRefresh = { if (state.shelf != AccountShelf.LIKED_MUSIC) model.loadGoogleLikedIndex(force = true); if (state.shelf == AccountShelf.LIKED_MUSIC) model.openLikedMusic(force = true) else model.openAccountShelf(state.shelf, state.playlist, state.title, force = true) })
         }
-        items(state.page?.items.orEmpty(), key = AccountLibraryRows::key,
+        if (likedMusic && musicFilter != LikedMusicFilter.ALL && visibleRows.isEmpty() && !state.page?.items.isNullOrEmpty()) {
+            item(span = { GridItemSpan(2) }) {
+                Text("No ${musicFilter.title.lowercase()} items in your loaded liked music.", Modifier.padding(vertical = 18.dp),
+                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        items(visibleRows, key = AccountLibraryRows::key,
             span = { entry -> GridItemSpan(AccountGridPolicy.span(entry)) }) { entry ->
             if (entry.video != null) {
                 val video = resolvedVideo(entry.video)
@@ -111,6 +121,7 @@ internal fun ChannelAvatar(entry: AccountEntry, model: PhotonViewModel) {
 /** A grid item must emit one layout root: siblings otherwise stack at the same origin. */
 @Composable
 internal fun AccountLibraryHeader(state: AccountLibraryState, ready: Boolean,
+    musicFilter: LikedMusicFilter = LikedMusicFilter.ALL, onMusicFilter: (LikedMusicFilter) -> Unit = {},
     onShelf: (AccountShelf) -> Unit = {}, onSubscriptions: () -> Unit = {}, onCreate: () -> Unit = {}, onBack: () -> Unit = {}, onRefresh: () -> Unit = {}) {
     Column(Modifier.fillMaxWidth().padding(vertical = 12.dp).testTag("library-header"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Column(Modifier.fillMaxWidth().testTag("library-tabs"), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -130,7 +141,11 @@ internal fun AccountLibraryHeader(state: AccountLibraryState, ready: Boolean,
         if (state.shelf == AccountShelf.PLAYLISTS && state.playlist == null) TextButton(onClick = onCreate, modifier = Modifier.remoteFocus()) { Text("New playlist") }
         if (state.playlist != null) TextButton(onClick = onBack, modifier = Modifier.remoteFocus()) { Text("Back to playlists") }
         Text(state.title, Modifier.fillMaxWidth().testTag("library-title"), style = MaterialTheme.typography.titleLarge)
-        TextButton(enabled = ready && ((!state.busy && !state.moreBusy) || state.shelf == AccountShelf.LIKED_MUSIC), onClick = onRefresh, modifier = Modifier.remoteFocus().testTag("library-refresh")) { Text("Refresh") }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            TextButton(enabled = ready && ((!state.busy && !state.moreBusy) || state.shelf == AccountShelf.LIKED_MUSIC), onClick = onRefresh, modifier = Modifier.remoteFocus().testTag("library-refresh")) { Text("Refresh") }
+            if (state.shelf == AccountShelf.LIKED_MUSIC && state.playlist == null)
+                LikedMusicFilterChips(musicFilter, onMusicFilter, Modifier.weight(1f))
+        }
         if (!ready) Text("Finish Google sign-in to read account lists.", Modifier.fillMaxWidth())
         if (state.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
         state.error?.let { message ->
@@ -146,5 +161,17 @@ internal fun AccountLibraryHeader(state: AccountLibraryState, ready: Boolean,
             }
         }
         state.page?.message?.let { Text(it, Modifier.fillMaxWidth().testTag("library-message")) }
+    }
+}
+
+@Composable
+internal fun LikedMusicFilterChips(selected: LikedMusicFilter, select: (LikedMusicFilter) -> Unit, modifier: Modifier = Modifier) {
+    Row(modifier.horizontalScroll(rememberScrollState()).testTag("liked-music-filters"),
+        horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+        LikedMusicFilter.entries.forEach { filter ->
+            FilterChip(selected = selected == filter, onClick = { select(filter) },
+                label = { Text(filter.title, style = MaterialTheme.typography.labelMedium) },
+                modifier = Modifier.heightIn(min = 48.dp).remoteFocus().testTag("music-filter-${filter.name}"))
+        }
     }
 }

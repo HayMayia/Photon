@@ -162,6 +162,7 @@ internal object YouTubeAccountLibraryParser {
                             val thumb = GoogleAccountControls.objects(musicRow["thumbnail"] ?: musicRow["thumbnailRenderer"] ?: JsonObject(emptyMap()))
                                 .mapNotNull { it["thumbnails"] as? JsonArray }.firstOrNull()
                             val video = Video(id, title, text(musicRow["subtitle"] ?: column(1)), ThumbnailPolicy.select(thumb, false),
+                                short = ShortsPresentation.fromRenderer(musicRow, id),
                                 music = YouTubeMusicEvidence.fromRenderer(musicRow, id) == true)
                             rows.putIfAbsent(id, AccountEntry(id, title, kind, video))
                         } else unsupportedRows++

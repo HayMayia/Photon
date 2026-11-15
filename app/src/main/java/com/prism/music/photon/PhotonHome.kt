@@ -1,5 +1,7 @@
 package com.prism.music.photon
 
+import coil3.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Brush
@@ -82,6 +84,12 @@ private fun HomeCover(source: Video, music: Boolean, open: () -> Unit) {
 private fun ActualYouTubeHome(model: PhotonViewModel, open: (Video) -> Unit, settings: () -> Unit, search: () -> Unit,
                               shorts: () -> Unit, subscriptions: () -> Unit, downloads: () -> Unit, saved: () -> Unit, discover: (String) -> Unit) {
     val feed by model.youtubeHome.collectAsStateWithLifecycle()
+    val library by model.library.collectAsStateWithLifecycle()
+    val playlistState by model.homePlaylists.collectAsStateWithLifecycle()
+    val playlists = playlistState.page?.items.orEmpty().takeIf {
+        library.youtubeHome && library.youtubeSessionReady && playlistState.generation == library.youtubeSessionRevision
+    }.orEmpty()
+    LaunchedEffect(library.youtubeSessionRevision, library.youtubeSessionReady, library.youtubeHome) { model.loadHomePlaylists() }
     val list = rememberLazyListState()
     val rows = rememberHomeFeedRows(feed.page?.videos.orEmpty(), model, list)
     LaunchedEffect(feed.page?.continuation, feed.page?.videos?.size, feed.loadingMore, feed.autoMore, feed.error) {
@@ -95,8 +103,9 @@ private fun ActualYouTubeHome(model: PhotonViewModel, open: (Video) -> Unit, set
             val scheme = MaterialTheme.colorScheme
             Row(Modifier.fillMaxWidth().padding(bottom = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("Photon", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                    Text("Your daily mix of everything", style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
+                    Text(homeGreeting(java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)),
+                        style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                    Text("Make yourself at home", style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
                 }
                 FilledTonalIconButton(onClick = settings) { Icon(PrismIcons.Settings, "Settings") }
             }
@@ -109,9 +118,25 @@ private fun ActualYouTubeHome(model: PhotonViewModel, open: (Video) -> Unit, set
                     Text("What do you want to play?", style = MaterialTheme.typography.bodyMedium)
                 }
             }
-            Spacer(Modifier.height(24.dp))
-            Text("Quick access", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(12.dp))
+            Row(Modifier.padding(top = 22.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("Your playlists", Modifier.weight(1f), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                TextButton(onClick = { model.openAccountShelf(AccountShelf.PLAYLISTS); saved() }) { Text("See all") }
+            }
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                item(key = "native-liked-music") {
+                    HomePlaylistCover(LikedMusicPlaylist.NAME, "", PrismIcons.Heart, { model.openLikedMusic(); saved() })
+                }
+                items(playlists, key = { it.id }) { entry ->
+                    HomePlaylistCover(entry.title, entry.artwork, PrismIcons.Library, {
+                        model.openAccountShelf(AccountShelf.PLAYLISTS, entry.id, entry.title); saved()
+                    })
+                }
+            }
+            if (playlistState.busy) LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 10.dp))
+            playlistState.error?.let {
+                TextButton(onClick = { model.loadHomePlaylists(force = true) }) { Text("Retry playlists") }
+            }
+            Spacer(Modifier.height(18.dp))
             val shortcuts = listOf(
                 Triple(LikedMusicPlaylist.NAME, PrismIcons.Song, { model.openLikedMusic(); saved() }),
                 Triple("Liked videos", PrismIcons.Heart, { model.openAccountShelf(AccountShelf.LIKED); saved() }),
@@ -123,27 +148,13 @@ private fun ActualYouTubeHome(model: PhotonViewModel, open: (Video) -> Unit, set
                 Triple("Shorts", PrismIcons.Phone, shorts),
                 Triple("Downloads", PrismIcons.Download, downloads)
             )
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                shortcuts.chunked(3).forEach { entries ->
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        entries.forEach { (label, icon, action) ->
-                            Surface(onClick = action, shape = RoundedCornerShape(20.dp),
-                                color = if (label == LikedMusicPlaylist.NAME || label == "Liked videos") scheme.primaryContainer.copy(alpha = .65f)
-                                    else scheme.surfaceContainerHigh.copy(alpha = .55f), modifier = Modifier.weight(1f).heightIn(min = 82.dp),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, scheme.outlineVariant.copy(alpha = .6f))) {
-                                Column(Modifier.padding(horizontal = 8.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(7.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Icon(icon, null, Modifier.size(24.dp), tint = scheme.primary)
-                                    Text(label, style = MaterialTheme.typography.labelMedium, maxLines = 2,
-                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                                }
-                            }
-                        }
-                        repeat(3 - entries.size) { Spacer(Modifier.weight(1f)) }
-                    }
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                shortcuts.forEach { (label, icon, action) ->
+                    AssistChip(onClick = action, label = { Text(label) }, leadingIcon = { Icon(icon, null, Modifier.size(18.dp)) })
                 }
             }
             Row(Modifier.padding(top = 24.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("Your feed", Modifier.weight(1f), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text("Recommended today", Modifier.weight(1f), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                 TextButton(enabled = !feed.busy, onClick = { model.refreshYouTubeHome() }) { Text("Refresh") }
             }
             if (feed.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
@@ -161,13 +172,45 @@ private fun ActualYouTubeHome(model: PhotonViewModel, open: (Video) -> Unit, set
             }
             if (feed.error != null || (feed.page == null && !feed.busy)) YouTubeHomeConnection(model)
         }
-        items(rows, key = { it.key }) { row ->
-            HomeRecommendationRow(row, open)
+        items(rows.chunked(4), key = { it.first().key }) { shelf ->
+            LazyRow(Modifier.padding(vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                items(shelf.flatMap { it.videos }, key = { it.id }) { source ->
+                    val video = resolvedVideo(source)
+                    Column(Modifier.width(if (video.short) 118.dp else 192.dp).remoteFocus().clickable { open(video) }) {
+                        VideoThumbnail(video, video.title, Modifier.fillMaxWidth().aspectRatio(VideoArtworkShape.ratio(video.short)).clip(RoundedCornerShape(18.dp)))
+                        Text(video.title, Modifier.padding(top = 9.dp), minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                        Text(video.channel, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        VideoHeart(video)
+                    }
+                }
+            }
         }
         item {
             if (feed.loadingMore) CircularProgressIndicator()
             else if (feed.page?.continuation != null) TextButton(onClick = model::moreYouTubeHome) { Text("Load more recommendations") }
             else if (!feed.page?.videos.isNullOrEmpty()) Text("YouTube returned no further page. Refresh Home for a new response.", style = MaterialTheme.typography.bodySmall)
         }
+    }
+}
+
+internal fun homeGreeting(hour: Int): String = when (hour) {
+    in 5..11 -> "Good morning"
+    in 12..16 -> "Good afternoon"
+    else -> "Good evening"
+}
+
+@Composable
+private fun HomePlaylistCover(title: String, artwork: String, icon: ImageVector, open: () -> Unit) {
+    Column(Modifier.width(132.dp).remoteFocus().clickable(onClick = open)) {
+        Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(20.dp))
+            .background(Brush.linearGradient(listOf(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.surfaceContainerHigh))),
+            contentAlignment = Alignment.Center) {
+            Icon(icon, null, Modifier.size(38.dp), tint = MaterialTheme.colorScheme.primary)
+            if (artwork.isNotBlank()) AsyncImage(artwork, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+        }
+        Text(title, Modifier.padding(top = 9.dp), minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis,
+            style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
     }
 }

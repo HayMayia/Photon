@@ -41,6 +41,33 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     private val app = application as PhotonApplication
     val library = app.library.state
     val account = app.account.state
+    val homePlaylists = MutableStateFlow(AccountLibraryState(shelf = AccountShelf.PLAYLISTS))
+    private var homePlaylistRevision = -1L
+    private var homePlaylistJob: Job? = null
+    fun loadHomePlaylists(force: Boolean = false) {
+        val revision = library.value.youtubeSessionRevision
+        if (!library.value.youtubeHome || !library.value.youtubeSessionReady) {
+            homePlaylistJob?.cancel(); homePlaylistRevision = -1
+            homePlaylists.value = AccountLibraryState(shelf = AccountShelf.PLAYLISTS)
+            return
+        }
+        if (!force && homePlaylistRevision == revision && (homePlaylistJob?.isActive == true || homePlaylists.value.page != null)) return
+        homePlaylistJob?.cancel()
+        if (homePlaylistRevision != revision) homePlaylists.value = AccountLibraryState(shelf = AccountShelf.PLAYLISTS)
+        homePlaylistRevision = revision
+        homePlaylists.value = homePlaylists.value.copy(busy = true, error = null)
+        homePlaylistJob = viewModelScope.launch {
+            try {
+                val page = app.accountLibrary.load(app.youtubeHistory.session(), AccountShelf.PLAYLISTS)
+                if (revision == library.value.youtubeSessionRevision && library.value.youtubeSessionReady && library.value.youtubeHome)
+                    homePlaylists.value = AccountLibraryState(shelf = AccountShelf.PLAYLISTS, page = page, generation = revision)
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) {
+                if (revision == library.value.youtubeSessionRevision)
+                    homePlaylists.value = homePlaylists.value.copy(busy = false, error = "Playlists couldn’t load. Retry.")
+            }
+        }
+    }
     val youtubeHome = MutableStateFlow(YouTubeHomeState())
     private var youtubeHomeJob: Job? = null
     private var youtubeMoreJob: Job? = null
@@ -879,6 +906,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
         open(video)
     }
     fun accent(value: Int) = app.library.update { it.copy(accent = value) }
+    fun performanceMode(value: Boolean) = app.library.update { it.copy(performanceMode = value) }
     fun liquidGlass(value: Boolean) = app.library.update { it.copy(liquidGlass = value) }
     fun dark(value: Boolean) = app.library.update { it.copy(dark = value) }
     fun wifi(value: Boolean) = app.library.update { it.copy(wifiOnly = value) }

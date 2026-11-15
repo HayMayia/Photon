@@ -63,7 +63,7 @@ internal fun PhotonTvScreen(model: PhotonViewModel, selected: Int, select: (Int)
     val backdrop = rememberHazeState()
     CompositionLocalProvider(LocalHazeState provides backdrop) {
     Box(Modifier.fillMaxSize()) {
-        Box(Modifier.fillMaxSize().hazeSource(backdrop).background(Brush.linearGradient(listOf(
+        Box(Modifier.fillMaxSize().then(if (library.performanceMode) Modifier else Modifier.hazeSource(backdrop)).background(Brush.linearGradient(listOf(
             MaterialTheme.colorScheme.primary.copy(alpha = .18f), MaterialTheme.colorScheme.background,
             MaterialTheme.colorScheme.tertiary.copy(alpha = .10f)))))
     Row(Modifier.fillMaxSize().safeDrawingPadding().padding(24.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {

@@ -1,5 +1,6 @@
 package com.prism.music.photon
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.*
@@ -12,14 +13,31 @@ enum class AccountShelf(val label: String, val path: String) {
 }
 enum class AccountEntryKind { VIDEO, PLAYLIST, CHANNEL }
 data class AccountEntry(val id: String, val title: String, val kind: AccountEntryKind, val video: Video? = null, val artwork: String = "", val layoutShort: Boolean? = null)
-data class AccountLibraryPage(val items: List<AccountEntry>, val continuation: String? = null, val context: JsonObject? = null, val message: String? = null, val unsupportedRows: Int = 0)
+data class AccountLibraryPage(val items: List<AccountEntry>, val continuation: String? = null, val context: JsonObject? = null, val message: String? = null, val unsupportedRows: Int = 0, val nativeSongsOnMain: Boolean = false)
 data class AccountLibraryState(val shelf: AccountShelf = AccountShelf.HISTORY, val playlist: String? = null, val title: String = "History",
     val page: AccountLibraryPage? = null, val busy: Boolean = false, val moreBusy: Boolean = false, val error: String? = null, val generation: Long = 0)
 
 internal class YouTubeAccountLibraryApi(client: OkHttpClient = OkHttpClient()) {
     private val transport = YouTubeWebTransport(client)
     private val musicTransport = YouTubeWebTransport(client, music = true)
-    suspend fun likedSongs(session: YouTubeWebSession, previous: AccountLibraryPage? = null): AccountLibraryPage = withContext(Dispatchers.IO) {
+    suspend fun likedSongs(session: YouTubeWebSession, previous: AccountLibraryPage? = null): AccountLibraryPage {
+        if (previous?.nativeSongsOnMain == true)
+            return more(session, previous, AccountEntryKind.VIDEO).asNativeSongsOnMain()
+        try { return likedSongsOnMusic(session, previous) }
+        catch (cancelled: CancellationException) { throw cancelled }
+        catch (musicFailure: Exception) {
+            // The same native LM playlist can be available on the already-authorized
+            // YouTube origin even when Music needs a host-specific account confirmation.
+            // Never replace it with LL/all-video likes or infer membership from categories.
+            if (previous != null) throw musicFailure
+            try { return load(session, AccountShelf.LIKED_MUSIC, "LM").asNativeSongsOnMain() }
+            catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { throw musicFailure }
+        }
+    }
+    private fun AccountLibraryPage.asNativeSongsOnMain() = copy(nativeSongsOnMain = true,
+        items = items.map { it.copy(video = it.video?.copy(music = true)) })
+    private suspend fun likedSongsOnMusic(session: YouTubeWebSession, previous: AccountLibraryPage?): AccountLibraryPage = withContext(Dispatchers.IO) {
         var bootstrap: JsonObject? = null
         val context = previous?.context ?: run {
             val html = musicTransport.html("/playlist?list=LM", session)

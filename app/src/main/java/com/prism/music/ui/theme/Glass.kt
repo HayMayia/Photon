@@ -53,7 +53,9 @@ fun GlassSurface(
     val settings = LocalAppSettings.current
     val haze = LocalHazeState.current.takeUnless { inPage }
     val dark = LocalIsDark.current
-    if (inPage && com.prism.music.ui.components.LocalFrosted.current) {
+    if (settings.performanceMode) {
+        Box(modifier.clip(shape).background(MaterialTheme.colorScheme.surfaceContainerHigh), content = content)
+    } else if (inPage && com.prism.music.ui.components.LocalFrosted.current) {
         Box(
             modifier
                 .shadow(elevation * 0.5f, shape, ambientColor = Color.Black.copy(alpha = 0.22f), spotColor = Color.Black.copy(alpha = 0.22f))

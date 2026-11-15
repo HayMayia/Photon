@@ -155,7 +155,7 @@ class PhotonActivity : ComponentActivity() {
                 incoming?.let { model.search(it) }
                 incoming = null
             }
-            PrismTheme(AppSettings(themeMode = if (library.dark) ThemeMode.DARK else ThemeMode.LIGHT, accent = library.accent, liquidGlass = library.liquidGlass && !library.youtubeLayout), null) {
+            PrismTheme(AppSettings(themeMode = if (library.dark) ThemeMode.DARK else ThemeMode.LIGHT, accent = library.accent, liquidGlass = library.liquidGlass && !library.youtubeLayout, performanceMode = library.performanceMode).effective(), null) {
                 InterfaceTheme(library.youtubeLayout, library.dark) {
                     OfflineArtworkProvider(library.downloads) { PhotonRoot(model, controller, pip, ::requestNotifications, ::enterPip) }
                 }
@@ -516,17 +516,24 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                                 }
                             }
                         }
-                        if (library.youtubeLayout) nativeNavigation(tab) else GlassSurface(Modifier.padding(horizontal = 12.dp).padding(bottom = 8.dp), shape = RoundedCornerShape(30.dp)) {
-                            NavigationBar(containerColor = Color.Transparent, tonalElevation = 0.dp) {
-                            listOf("Home" to PrismIcons.Home, "Search" to PrismIcons.Search, "Library" to PrismIcons.Library, "Settings" to PrismIcons.Settings).forEachIndexed { index, (label, icon) ->
+                        if (library.youtubeLayout) nativeNavigation(tab) else Row(
+                            Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 12.dp).padding(bottom = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        GlassSurface(Modifier.weight(1f), shape = RoundedCornerShape(30.dp)) {
+                            NavigationBar(containerColor = Color.Transparent, tonalElevation = 0.dp, windowInsets = WindowInsets(0, 0, 0, 0)) {
+                            listOf("Home" to PrismIcons.Home, "Search" to PrismIcons.Search, "Library" to PrismIcons.Library).forEachIndexed { index, (label, icon) ->
                                 NavigationBarItem(selected = tab == index, onClick = { navigateTo(index); if (index == 0) model.home() }, icon = { Icon(icon, label) }, label = { Text(label) })
                             }
+                        }
+                    }
+                        FilledTonalIconButton(onClick = { model.shorts(); shortsMode = true }, modifier = Modifier.size(56.dp)) {
+                            Icon(PrismIcons.Phone, "Open Shorts")
                         }
                     }
                     }
                 }
             ) { padding ->
-                Box(Modifier.fillMaxSize().hazeSource(glassBackdrop).padding(padding).then(if (library.youtubeLayout) Modifier else Modifier.background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f), MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.09f)))))) {
+                Box(Modifier.fillMaxSize().then(if (library.performanceMode) Modifier else Modifier.hazeSource(glassBackdrop)).padding(padding).then(if (library.youtubeLayout) Modifier else Modifier.background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f), MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.09f)))))) {
                     when (tab) {
                         0 -> if (library.youtubeLayout) YouTubeLayoutHome(model, library, ::open,
                             search = { navigateTo(1) }, settings = { navigateTo(3) },
@@ -847,6 +854,10 @@ private fun SettingsPage(library: PhotonLibrary, model: PhotonViewModel, notific
         item { YouTubeAccountCard(model) }
         item {
             SettingsGroup("APPEARANCE") {
+                ListItem(headlineContent = { Text("Performance mode") },
+                    supportingContent = { Text("Reduce glass, blur, shadows and decorative motion. Your appearance preferences are kept.") },
+                    trailingContent = { Switch(library.performanceMode, model::performanceMode) },
+                    modifier = Modifier.remoteFocus().clickable { model.performanceMode(!library.performanceMode) })
                 if (!library.youtubeLayout) ListItem(
                     headlineContent = { Text("Liquid Glass") },
                     supportingContent = { Text("Prism’s refractive navigation and floating player") },

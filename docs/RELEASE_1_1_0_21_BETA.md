@@ -1,0 +1,9 @@
+# Photon 1.1.0.21 Beta
+
+- Follow the supplied Home sketch: time-of-day greeting, horizontal Google-account playlist covers, smaller ordered recommendation shelves with title/creator below, three-section floating navigation and a separate Shorts action. Keep correct landscape/portrait formats rather than forcing videos into album artwork. Settings remain in Home's toolbar. Names/artwork are not fabricated.
+- Home's playlist loader is independent of the Library selection and binds results to the selected account revision. It never replaces playlists with local saved lists. Loading/errors are non-blocking; See all and Retry remain available.
+- Add persisted Appearance → Performance mode on phone/TV. Use Prism's effective settings to disable liquid/frosted glass and decorative motion without erasing appearance choices. Skip backdrop capture, render glass surfaces without expensive shadows and disable TV decorative focus zoom; retain focus outlines and all playback/account features.
+- Apple's official Liquid Glass framework is not available on Android. This update uses the existing Android Haze/Prism renderer with a lightweight performance fallback, not an Apple API bridge or Apple-rendering claim.
+- Native Liked Songs can also load the exact LM playlist through the existing authorized YouTube origin if Music-host bootstrap fails. Continuations stay on their source origin and host-specific cookies remain isolated. No new session, LL/all-video scan, inferred music membership, or custom playlist is introduced. Wrong playlist identities remain rejected.
+
+Hosted validation pending. Google may not expose LM through both origins for every account; this fallback is not a guarantee that a private account can access YouTube Music. Live-account linking, physical-device appearance/performance and OS lifecycle have not been verified.

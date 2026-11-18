@@ -101,6 +101,8 @@ private fun ActualYouTubeHome(model: PhotonViewModel, open: (Video) -> Unit, set
         item { PhotonUpdateCard() }
         item {
             val scheme = MaterialTheme.colorScheme
+            Surface(shape = RoundedCornerShape(28.dp), color = scheme.primaryContainer.copy(alpha = .28f)) {
+            Column(Modifier.padding(18.dp)) {
             Row(Modifier.fillMaxWidth().padding(bottom = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("PHOTON", style = MaterialTheme.typography.labelSmall, letterSpacing = 3.sp, color = scheme.primary)
@@ -118,9 +120,7 @@ private fun ActualYouTubeHome(model: PhotonViewModel, open: (Video) -> Unit, set
                     Text("What do you want to play?", style = MaterialTheme.typography.bodyMedium)
                 }
             }
-            Row(Modifier.padding(top = 18.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                HomeCollectionTile("Liked Music", "Your soundtrack", PrismIcons.Song, Modifier.weight(1f), true) { model.openLikedMusic(); saved() }
-                HomeCollectionTile("Downloads", "${library.downloads.size} offline", PrismIcons.Download, Modifier.weight(1f), false, downloads)
+            }
             }
             Row(Modifier.padding(top = 22.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("Your playlists", Modifier.weight(1f), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
@@ -141,21 +141,10 @@ private fun ActualYouTubeHome(model: PhotonViewModel, open: (Video) -> Unit, set
                 TextButton(onClick = { model.loadHomePlaylists(force = true) }) { Text("Retry playlists") }
             }
             Spacer(Modifier.height(18.dp))
-            val shortcuts = listOf(
-                Triple(LikedMusicPlaylist.NAME, PrismIcons.Song, { model.openLikedMusic(); saved() }),
-                Triple("Liked videos", PrismIcons.Heart, { model.openAccountShelf(AccountShelf.LIKED); saved() }),
-                Triple("History", PrismIcons.History, { model.openAccountShelf(AccountShelf.HISTORY); saved() }),
-                Triple("Playlists", PrismIcons.Library, { model.openAccountShelf(AccountShelf.PLAYLISTS); saved() }),
-                Triple("Videos", PrismIcons.Play, { discover("popular videos documentaries") }),
-                Triple("Music", PrismIcons.Song, { discover("official music videos songs") }),
-                Triple("Channels", PrismIcons.Person, subscriptions),
-                Triple("Shorts", PrismIcons.Phone, shorts),
-                Triple("Downloads", PrismIcons.Download, downloads)
-            )
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                shortcuts.forEach { (label, icon, action) ->
-                    AssistChip(onClick = action, label = { Text(label) }, leadingIcon = { Icon(icon, null, Modifier.size(18.dp)) })
-                }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = shorts, modifier = Modifier.weight(1f)) { Icon(PrismIcons.Phone, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("Shorts") }
+                OutlinedButton(onClick = downloads, modifier = Modifier.weight(1f)) { Icon(PrismIcons.Download, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("Offline") }
+                IconButton(onClick = subscriptions) { Icon(PrismIcons.Person, "Subscriptions") }
             }
             Row(Modifier.padding(top = 24.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("Recommended today", Modifier.weight(1f), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
@@ -176,7 +165,12 @@ private fun ActualYouTubeHome(model: PhotonViewModel, open: (Video) -> Unit, set
             }
             if (feed.error != null || (feed.page == null && !feed.busy)) YouTubeHomeConnection(model)
         }
-        items(rows.chunked(4), key = { it.first().key }) { shelf ->
+        val spotlight = rows.firstOrNull()?.takeUnless { it.portrait }?.videos?.firstOrNull()
+        if (spotlight != null) item(key = "spotlight-${spotlight.id}") {
+            val video = resolvedVideo(spotlight)
+            DiscoveryCover(video, featured = true) { open(video) }
+        }
+        items((if (spotlight != null) rows.drop(1) else rows).chunked(4), key = { it.first().key }) { shelf ->
             LazyRow(Modifier.padding(vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 items(shelf.flatMap { it.videos }, key = { it.id }) { source ->
                     val video = resolvedVideo(source)
@@ -213,21 +207,9 @@ private fun HomePlaylistCover(title: String, artwork: String, icon: ImageVector,
 }
 
 @Composable
-private fun HomeCollectionTile(title: String, subtitle: String, icon: ImageVector, modifier: Modifier, accent: Boolean, open: () -> Unit) {
-    Surface(onClick = open, modifier = modifier.remoteFocus(), shape = RoundedCornerShape(24.dp),
-        color = if (accent) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh) {
-        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Icon(icon, null, Modifier.size(28.dp), tint = MaterialTheme.colorScheme.primary)
-            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Text(subtitle, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}
-
-@Composable
-internal fun DiscoveryCover(video: Video, open: () -> Unit) {
+internal fun DiscoveryCover(video: Video, featured: Boolean = false, open: () -> Unit) {
     Surface(onClick = open, shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        modifier = Modifier.width(if (video.short) 142.dp else 240.dp).remoteFocus()) {
+        modifier = (if (featured) Modifier.fillMaxWidth() else Modifier.width(if (video.short) 142.dp else 240.dp)).remoteFocus()) {
         Column(Modifier.padding(10.dp)) {
             Box(Modifier.fillMaxWidth().aspectRatio(VideoArtworkShape.ratio(video.short)).clip(RoundedCornerShape(16.dp))) {
                 VideoThumbnail(video, video.title, Modifier.fillMaxSize())

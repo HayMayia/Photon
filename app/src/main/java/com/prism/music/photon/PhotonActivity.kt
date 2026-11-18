@@ -28,6 +28,10 @@ import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.prism.music.ui.theme.GlassSurface
 import com.prism.music.ui.theme.LocalLiquidBackdrop
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -229,6 +233,18 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
     var search by rememberSaveable { mutableStateOf("") }
     var libraryTab by rememberSaveable { mutableIntStateOf(0) }
     var localLibrary by rememberSaveable { mutableStateOf(false) }
+    var shortcutChooser by rememberSaveable { mutableStateOf(false) }
+    fun openShortcut() {
+        if (!PlaylistShortcutPolicy.selected(library)) { shortcutChooser = true; return }
+        expanded = false; localLibrary = false
+        model.openAccountShelf(AccountShelf.PLAYLISTS, library.playlistShortcutId, library.playlistShortcutTitle)
+        navigateTo(2)
+    }
+    if (shortcutChooser) PlaylistShortcutChooser(model, { shortcutChooser = false }) { entry ->
+        model.pinPlaylist(entry); shortcutChooser = false
+        expanded = false; localLibrary = false
+        model.openAccountShelf(AccountShelf.PLAYLISTS, entry.id, entry.title); navigateTo(2)
+    }
     val tv = LocalContext.current.isPhotonTv()
     val tvState = rememberSaveableStateHolder()
     var playerSettings by remember { mutableStateOf(false) }
@@ -496,7 +512,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                 PhotonTvScreen(model, tab, { navigateTo(it) }, ::open,
                     offline = { expanded = true; fullscreen = true; model.offline(it) }, channel = ::openChannel,
                     remove = { model.remove(it) }, resume = if (watch.video != null) ({ expanded = true; fullscreen = true; controller?.play() }) else null,
-                    settings = { SettingsPage(library, model, notifications) })
+                    settings = { SettingsPage(library, model, notifications, { shortcutChooser = true }) })
             }
         } else {
             Scaffold(
@@ -526,9 +542,10 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                             }
                         }
                     }
-                        FilledTonalIconButton(onClick = { model.shorts(); shortsMode = true }, modifier = Modifier.size(56.dp)) {
-                            Icon(PrismIcons.Phone, "Open Shorts")
-                        }
+                        Box(Modifier.size(56.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer)
+                            .semantics { contentDescription = if (PlaylistShortcutPolicy.selected(library)) "Open ${library.playlistShortcutTitle}" else "Choose playlist shortcut" }
+                            .combinedClickable(role = Role.Button, onClick = ::openShortcut, onLongClick = { shortcutChooser = true }, onLongClickLabel = "Change shortcut playlist"),
+                            contentAlignment = Alignment.Center) { Icon(PrismIcons.Library, null) }
                     }
                     }
                 }
@@ -622,7 +639,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                                 }
                             }
                         }
-                        3 -> SettingsPage(library, model, notifications)
+                        3 -> SettingsPage(library, model, notifications, { shortcutChooser = true })
                         4 -> SubscriptionsScreen(model, browse, ::open, ::openChannel,
                             search = { navigateTo(1) }, settings = { navigateTo(3) },
                             allChannels = { model.openAccountShelf(AccountShelf.CHANNELS); localLibrary = false; navigateTo(2) })
@@ -829,7 +846,7 @@ private fun DownloadJob(info: WorkInfo, cancel: () -> Unit) {
 }
 
 @Composable
-private fun SettingsPage(library: PhotonLibrary, model: PhotonViewModel, notifications: () -> Unit) {
+private fun SettingsPage(library: PhotonLibrary, model: PhotonViewModel, notifications: () -> Unit, chooseShortcut: () -> Unit) {
     val context = LocalContext.current
     var about by remember { mutableStateOf(false) }
     fun link(url: String) { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
@@ -854,6 +871,9 @@ private fun SettingsPage(library: PhotonLibrary, model: PhotonViewModel, notific
         item { YouTubeAccountCard(model) }
         item {
             SettingsGroup("APPEARANCE") {
+                ListItem(headlineContent = { Text("Playlist shortcut") },
+                    supportingContent = { Text(if (PlaylistShortcutPolicy.selected(library)) library.playlistShortcutTitle else "Choose a Google playlist for the separate navigation button") },
+                    modifier = Modifier.remoteFocus().clickable(onClick = chooseShortcut))
                 ListItem(headlineContent = { Text("Performance mode") },
                     supportingContent = { Text("Reduce glass, blur, shadows and decorative motion. Your appearance preferences are kept.") },
                     trailingContent = { Switch(library.performanceMode, model::performanceMode) },

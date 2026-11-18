@@ -70,6 +70,28 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
             }
         }
     }
+    fun pinPlaylist(entry: AccountEntry) {
+        val state = library.value
+        require(entry.kind == AccountEntryKind.PLAYLIST && entry.id.matches(Regex("[A-Za-z0-9_-]{2,150}")))
+        check(state.youtubeHome && state.youtubeSessionReady && homePlaylists.value.generation == state.youtubeSessionRevision)
+        check(homePlaylists.value.page?.items?.any { it.id == entry.id && it.kind == AccountEntryKind.PLAYLIST } == true)
+        app.library.update { it.copy(playlistShortcutId = entry.id, playlistShortcutTitle = entry.title, playlistShortcutRevision = state.youtubeSessionRevision) }
+    }
+    fun clearPlaylistShortcut() = app.library.update { it.copy(playlistShortcutId = "", playlistShortcutTitle = "", playlistShortcutRevision = -1) }
+    fun moreHomePlaylists() {
+        val state = homePlaylists.value
+        val page = state.page ?: return
+        if (page.continuation == null || homePlaylistJob?.isActive == true || state.generation != library.value.youtubeSessionRevision) return
+        homePlaylists.value = state.copy(moreBusy = true, error = null)
+        homePlaylistJob = viewModelScope.launch {
+            try {
+                val next = app.accountLibrary.more(app.youtubeHistory.session(), page, AccountEntryKind.PLAYLIST)
+                if (state.generation == library.value.youtubeSessionRevision && library.value.youtubeSessionReady && library.value.youtubeHome)
+                    homePlaylists.value = state.copy(page = next.copy(items = AccountLibraryRows.append(page.items, next.items)), moreBusy = false)
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { if (state.generation == library.value.youtubeSessionRevision) homePlaylists.value = state.copy(moreBusy = false, error = "More playlists couldn’t load. Retry.") }
+        }
+    }
     val youtubeHome = MutableStateFlow(YouTubeHomeState())
     private var youtubeHomeJob: Job? = null
     private var youtubeMoreJob: Job? = null

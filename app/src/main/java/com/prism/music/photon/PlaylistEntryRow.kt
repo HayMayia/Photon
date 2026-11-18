@@ -1,5 +1,10 @@
 package com.prism.music.photon
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -15,18 +20,19 @@ import com.prism.music.ui.theme.PrismIcons
 @Composable
 internal fun PlaylistEntryRow(video: Video, liked: Boolean, open: () -> Unit, like: () -> Unit, remove: (() -> Unit)? = null) {
     var menu by remember(video.id) { mutableStateOf(false) }
-    Row(Modifier.fillMaxWidth().heightIn(min = 84.dp).testTag("playlist-entry-${video.id}").remoteFocus().clickable(onClick = open).padding(vertical = 8.dp),
+    Row(Modifier.fillMaxWidth().padding(vertical = 3.dp).clip(RoundedCornerShape(18.dp))
+        .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = .55f)).heightIn(min = 84.dp).testTag("playlist-entry-${video.id}").remoteFocus().clickable(onClick = open).padding(horizontal = 10.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        VideoThumbnail(video, video.title, Modifier.width(104.dp).aspectRatio(16f / 9f))
+        VideoThumbnail(video, video.title, Modifier.width(96.dp).aspectRatio(16f / 9f).clip(RoundedCornerShape(12.dp)))
         Column(Modifier.weight(1f)) {
-            Text(video.title, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Text(video.channel, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
+            Text(video.title, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            Text(video.channel, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        IconButton(onClick = like, modifier = Modifier.size(40.dp)) {
-            Icon(if (liked) PrismIcons.HeartFilled else PrismIcons.Heart, if (liked) "Remove like" else "Like")
+        IconButton(onClick = like, modifier = Modifier.size(48.dp)) {
+            Icon(if (liked) PrismIcons.HeartFilled else PrismIcons.Heart, if (liked) "Remove like" else "Like", tint = if (liked) Color(0xFFFF4466) else MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if (remove != null) Box {
-            IconButton(onClick = { menu = true }, modifier = Modifier.size(40.dp)) { Icon(YouTubeLayoutIcons.More, "Playlist entry actions") }
+            IconButton(onClick = { menu = true }, modifier = Modifier.size(48.dp)) { Icon(YouTubeLayoutIcons.More, "Playlist entry actions") }
             DropdownMenu(menu, { menu = false }) { DropdownMenuItem(text = { Text("Remove from playlist") }, onClick = { menu = false; remove() }) }
         }
     }

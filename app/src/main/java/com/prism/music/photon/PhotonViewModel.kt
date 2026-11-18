@@ -39,6 +39,8 @@ data class WatchState(
 
 class PhotonViewModel(application: Application) : AndroidViewModel(application) {
     private val app = application as PhotonApplication
+    internal val sleepTimerDeadline = app.sleepTimer.deadline
+    fun sleepTimer(minutes: Int) = app.sleepTimer.set(minutes)
     val library = app.library.state
     val account = app.account.state
     val homePlaylists = MutableStateFlow(AccountLibraryState(shelf = AccountShelf.PLAYLISTS))

@@ -140,7 +140,18 @@ internal fun AccountLibraryHeader(state: AccountLibraryState, ready: Boolean,
         }
         if (state.shelf == AccountShelf.PLAYLISTS && state.playlist == null) TextButton(onClick = onCreate, modifier = Modifier.remoteFocus()) { Text("New playlist") }
         if (state.playlist != null) TextButton(onClick = onBack, modifier = Modifier.remoteFocus()) { Text("Back to playlists") }
-        Text(state.title, Modifier.fillMaxWidth().testTag("library-title"), style = MaterialTheme.typography.titleLarge)
+        Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = .42f),
+            modifier = Modifier.fillMaxWidth()) {
+            Row(Modifier.padding(18.dp), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                Icon(if (state.shelf == AccountShelf.LIKED_MUSIC) PrismIcons.Song else PrismIcons.Library, null,
+                    Modifier.size(32.dp), tint = MaterialTheme.colorScheme.primary)
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(state.title, Modifier.fillMaxWidth().testTag("library-title"), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                    Text(if (state.busy && state.page == null) "Loading your collection…" else "${state.page?.items?.size ?: 0} loaded",
+                        style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
         Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
             TextButton(enabled = ready && ((!state.busy && !state.moreBusy) || state.shelf == AccountShelf.LIKED_MUSIC), onClick = onRefresh, modifier = Modifier.remoteFocus().testTag("library-refresh")) { Text("Refresh") }
             if (state.shelf == AccountShelf.LIKED_MUSIC && state.playlist == null)

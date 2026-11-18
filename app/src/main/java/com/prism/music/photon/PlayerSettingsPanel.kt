@@ -28,6 +28,7 @@ internal val LocalPlayerMenus = staticCompositionLocalOf { PlayerMenuActions() }
 internal fun PlayerSettingsPanel(model: PhotonViewModel, controller: MediaController?, captionsOnly: Boolean, dismiss: () -> Unit) {
     val initialFocus = remember { androidx.compose.ui.focus.FocusRequester() }
     LaunchedEffect(Unit) { initialFocus.requestFocus() }
+    val sleepDeadline by model.sleepTimerDeadline.collectAsStateWithLifecycle()
     val library by model.library.collectAsStateWithLifecycle()
     var speedDraft by remember(library.playbackSpeed) { mutableFloatStateOf(PlayerOptions.speed(library.playbackSpeed)) }
     var sizeDraft by remember(library.captionSizePercent) { mutableIntStateOf(PlayerOptions.subtitleSize(library.captionSizePercent)) }
@@ -50,6 +51,15 @@ internal fun PlayerSettingsPanel(model: PhotonViewModel, controller: MediaContro
                 LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     if (!captionsOnly) {
                         item { TextButton(onClick = { model.vrViewing.value = true; dismiss() }) { Text(if ((model.watch.value.quality?.projection ?: model.watch.value.video?.projection ?: VideoProjection.FLAT) == VideoProjection.FLAT) "VR viewer · 2D" else "VR viewer · 360°") } }
+                        item { Text(if (sleepDeadline == null) "Sleep timer · Off" else "Sleep timer · On", style = MaterialTheme.typography.titleMedium) }
+                        item { Text("Pause automatically, including background playback. Timer clears when the playback service stops.", style = MaterialTheme.typography.bodySmall) }
+                        item { LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(listOf(0, 15, 30, 60)) { minutes ->
+                                OutlinedButton(onClick = { model.sleepTimer(minutes) }, enabled = minutes == 0 || controller != null, modifier = Modifier.remoteFocus()) {
+                                    Text(if (minutes == 0) "Off" else "$minutes min")
+                                }
+                            }
+                        } }
                         item { Text("Quality", style = MaterialTheme.typography.titleMedium) }
                         item { LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(watch.details?.qualities.orEmpty()) { quality ->

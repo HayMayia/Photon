@@ -103,9 +103,9 @@ private fun ActualYouTubeHome(model: PhotonViewModel, open: (Video) -> Unit, set
             val scheme = MaterialTheme.colorScheme
             Row(Modifier.fillMaxWidth().padding(bottom = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
+                    Text("PHOTON", style = MaterialTheme.typography.labelSmall, letterSpacing = 3.sp, color = scheme.primary)
                     Text(homeGreeting(java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)),
                         style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                    Text("Make yourself at home", style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
                 }
                 FilledTonalIconButton(onClick = settings) { Icon(PrismIcons.Settings, "Settings") }
             }
@@ -117,6 +117,10 @@ private fun ActualYouTubeHome(model: PhotonViewModel, open: (Video) -> Unit, set
                     Icon(PrismIcons.Search, null, tint = scheme.primary)
                     Text("What do you want to play?", style = MaterialTheme.typography.bodyMedium)
                 }
+            }
+            Row(Modifier.padding(top = 18.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                HomeCollectionTile("Liked Music", "Your soundtrack", PrismIcons.Song, Modifier.weight(1f), true) { model.openLikedMusic(); saved() }
+                HomeCollectionTile("Downloads", "${library.downloads.size} offline", PrismIcons.Download, Modifier.weight(1f), false, downloads)
             }
             Row(Modifier.padding(top = 22.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("Your playlists", Modifier.weight(1f), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
@@ -176,14 +180,7 @@ private fun ActualYouTubeHome(model: PhotonViewModel, open: (Video) -> Unit, set
             LazyRow(Modifier.padding(vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 items(shelf.flatMap { it.videos }, key = { it.id }) { source ->
                     val video = resolvedVideo(source)
-                    Column(Modifier.width(if (video.short) 118.dp else 192.dp).remoteFocus().clickable { open(video) }) {
-                        VideoThumbnail(video, video.title, Modifier.fillMaxWidth().aspectRatio(VideoArtworkShape.ratio(video.short)).clip(RoundedCornerShape(18.dp)))
-                        Text(video.title, Modifier.padding(top = 9.dp), minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis,
-                            style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                        Text(video.channel, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        VideoHeart(video)
-                    }
+                    DiscoveryCover(video) { open(video) }
                 }
             }
         }
@@ -203,8 +200,8 @@ internal fun homeGreeting(hour: Int): String = when (hour) {
 
 @Composable
 private fun HomePlaylistCover(title: String, artwork: String, icon: ImageVector, open: () -> Unit) {
-    Column(Modifier.width(132.dp).remoteFocus().clickable(onClick = open)) {
-        Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(20.dp))
+    Column(Modifier.width(142.dp).remoteFocus().clickable(onClick = open)) {
+        Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(24.dp))
             .background(Brush.linearGradient(listOf(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.surfaceContainerHigh))),
             contentAlignment = Alignment.Center) {
             Icon(icon, null, Modifier.size(38.dp), tint = MaterialTheme.colorScheme.primary)
@@ -212,5 +209,37 @@ private fun HomePlaylistCover(title: String, artwork: String, icon: ImageVector,
         }
         Text(title, Modifier.padding(top = 9.dp), minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis,
             style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+@Composable
+private fun HomeCollectionTile(title: String, subtitle: String, icon: ImageVector, modifier: Modifier, accent: Boolean, open: () -> Unit) {
+    Surface(onClick = open, modifier = modifier.remoteFocus(), shape = RoundedCornerShape(24.dp),
+        color = if (accent) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh) {
+        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(icon, null, Modifier.size(28.dp), tint = MaterialTheme.colorScheme.primary)
+            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(subtitle, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+internal fun DiscoveryCover(video: Video, open: () -> Unit) {
+    Surface(onClick = open, shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = Modifier.width(if (video.short) 142.dp else 240.dp).remoteFocus()) {
+        Column(Modifier.padding(10.dp)) {
+            Box(Modifier.fillMaxWidth().aspectRatio(VideoArtworkShape.ratio(video.short)).clip(RoundedCornerShape(16.dp))) {
+                VideoThumbnail(video, video.title, Modifier.fillMaxSize())
+                if (video.duration > 0 || video.short) Surface(Modifier.align(Alignment.BottomEnd).padding(7.dp), shape = RoundedCornerShape(7.dp), color = Color.Black.copy(alpha = .75f)) {
+                    Text(if (video.short) "Shorts" else durationLabel(video.duration), Modifier.padding(horizontal = 6.dp, vertical = 3.dp), color = Color.White, style = MaterialTheme.typography.labelSmall)
+                }
+            }
+            Text(video.title, Modifier.padding(top = 10.dp, start = 4.dp, end = 4.dp), minLines = 2, maxLines = 2,
+                overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
+            Text(video.channel, Modifier.padding(start = 4.dp, top = 4.dp), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
+            VideoHeart(video)
+        }
     }
 }

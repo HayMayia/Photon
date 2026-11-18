@@ -4,6 +4,7 @@ import android.app.PendingIntent
 import android.content.Intent
 import android.net.Uri
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.collect
 import kotlinx.serialization.encodeToString
@@ -155,6 +156,17 @@ class PhotonPlaybackService : MediaSessionService() {
                 .collect { if (!playbackAllowed()) player.pause() }
         }
         scope.launch {
+            (application as PhotonApplication).sleepTimer.deadline.collectLatest { deadline ->
+                if (deadline != null) {
+                    delay((deadline - android.os.SystemClock.elapsedRealtime()).coerceAtLeast(0))
+                    if ((application as PhotonApplication).sleepTimer.expire(deadline)) {
+                        player.pause()
+                        snapshot(true)
+                    }
+                }
+            }
+        }
+        scope.launch {
             while (isActive) { delay(5_000); snapshot() }
         }
     }
@@ -170,6 +182,7 @@ class PhotonPlaybackService : MediaSessionService() {
     override fun onDestroy() {
         snapshot(true)
         scope.cancel()
+        (application as PhotonApplication).sleepTimer.set(0)
         session?.let { it.player.release(); it.release() }
         session = null
         super.onDestroy()

@@ -1,0 +1,8 @@
+# Photon 1.1.0.24 Beta
+
+- Refine the Compose Home into clear visual sections: compact Photon/time greeting, prominent theme-matched Liked Music and offline Downloads cards, larger playlist art, and rounded artwork-led recommendation cards with duration/Shorts badges. Preserve source recommendation order and correct video/Shorts aspect ratios. No invented recommendations or replacement account data.
+- Library has a theme-tinted collection header and honest loaded-item count. Shared song/playlist rows have rounded artwork, quieter surface grouping, stronger title/creator hierarchy, coloured liked hearts and 48dp action targets. Working native Liked Songs, All/Shorts/Full-length filters and Google mutation semantics remain unchanged.
+- Bonus feature: Player settings → Sleep timer → Off / 15 / 30 / 60 minutes, on phone and TV. The media service pauses playback at a monotonic deadline, including allowed background music. Replacing/cancelling a timer invalidates the previous deadline. The timer is off by default, survives activity rotation while the service lives, and clears when the service stops or the process ends. No exact-alarm permission, new network work or persistent account setting is added.
+- Keep Kyant0 Liquid Glass and Performance mode; do not introduce decorative continuous animation. Optional YouTube layout keeps its existing Home navigation; shared collection row improvements and the optional timer are available there too.
+
+Hosted validation pending. Physical-device visual/performance checks and sleep-timer behavior under OS process termination have not been performed. Android may suspend process execution; this is not a wakeup-alarm guarantee.

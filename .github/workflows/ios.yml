@@ -1,0 +1,48 @@
+name: Build native Photon iOS foundation
+on:
+  push:
+    branches: ["arena/c217a41b-photon"]
+    paths: ["native/ios/**", ".github/workflows/ios.yml"]
+  pull_request:
+    paths: ["native/ios/**", ".github/workflows/ios.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+  checks: write
+jobs:
+  ios:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - name: Native URL/media policy tests
+        run: |
+          set -o pipefail
+          swift test --package-path native/ios/PhotonPolicy 2>&1 | tee ios-policy.log
+      - name: Generate Xcode project
+        run: |
+          brew install xcodegen
+          cd native/ios
+          xcodegen generate
+      - name: Compile unsigned archive (not installable on an iPhone)
+        run: |
+          set -o pipefail
+          xcodebuild -project native/ios/Photon.xcodeproj -scheme Photon -configuration Release -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/Photon-UNSIGNED.xcarchive" archive CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO 2>&1 | tee ios-build.log
+      - name: Pack unsigned developer archive
+        run: ditto -c -k --keepParent "$RUNNER_TEMP/Photon-UNSIGNED.xcarchive" "$RUNNER_TEMP/Photon-iOS-UNSIGNED-NOT-INSTALLABLE.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Photon-iOS-UNSIGNED-DEVELOPER-ARCHIVE
+          path: ${{ runner.temp }}/Photon-iOS-UNSIGNED-NOT-INSTALLABLE.zip
+      - name: Publish readable diagnostics
+        if: failure() && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import json,pathlib,os
+          text='\n'.join(p.read_text(errors='replace')[-18000:] for p in [pathlib.Path('ios-policy.log'),pathlib.Path('ios-build.log')] if p.exists())
+          payload={'name':'iOS build diagnostics','head_sha':os.environ['GITHUB_SHA'],'status':'completed','conclusion':'failure','output':{'title':'iOS foundation build failure','summary':'```text\n'+text+'\n```'}}
+          pathlib.Path('ios-check.json').write_text(json.dumps(payload))
+          PY
+          gh api "repos/$GITHUB_REPOSITORY/check-runs" --method POST --input ios-check.json

@@ -1,0 +1,28 @@
+name: Photon device test
+description: Report playback, download, resume, Shorts or casting results
+title: "[Device test] "
+body:
+  - type: textarea
+    id: device
+    attributes:
+      label: Device report
+      description: In Photon, Settings → Share device test report. Review it before pasting. Never include cookies, tokens or private stream URLs.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps and test-case ID
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Expected and actual result
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Optional screenshots or screen recording
+      description: Hide personal account details and notifications.

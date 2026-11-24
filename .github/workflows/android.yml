@@ -80,7 +80,7 @@ jobs:
               raise SystemExit('APK certificate differs from the registered permanent signing identity')
           print('APK certificate matches permanent OAuth identity.')
           PYVERIFY
-            cp signing/ANDROID_OAUTH.txt "$RUNNER_TEMP/photon-artifact/"
+            cp signing/SUPPLIED_APP_FIREBASE.txt "$RUNNER_TEMP/photon-artifact/"
           fi
       - uses: actions/upload-artifact@v4
         if: success()

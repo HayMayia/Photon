@@ -34,6 +34,14 @@ been account/device-tested. A successful build is not proof of those services.
 
 ## Validation
 
-Pending hosted Android compilation and imported/new model tests. No release
-publication requested until validation and Firebase setup are resolved.
+Hosted Actions run **45344792329** at source commit
+`26bc2a02314a26676496a0efaf5f193b95387d63` passed Android debug assembly,
+all imported/new `com.example.*` unit tests (including the Robolectric resource
+test), and permanent signing certificate verification. Build artifact:
+`Photon-Android-APK` on that run. Six local signing-safety tests also passed.
+
+An exact-byte comparison confirmed all **49 supplied main-source, resource and
+manifest files** match the ZIP. Additional model tests and the Inter license are
+separate additions. No physical-device, Firebase account or playback validation
+has been performed. No release publication until Firebase setup is resolved.
 4582bc3cccf1bc4ce3febd4f3f2fd3306c5142d1b80ba697ba360143e7a47ef0  artifacts/Photon-v1.1.1.0-original.zip

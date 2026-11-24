@@ -1,0 +1,16 @@
+Supplied Photon app — signing identity and Firebase registration
+
+Application ID: com.aistudio.photon.qrxmzk
+Namespace: com.example
+SHA-1 certificate fingerprint: 23:FE:D9:B2:C2:37:F4:C3:B7:CB:67:A7:71:D0:32:56:E3:4A:EB:36
+
+This is the repository's permanent APK signing identity. It is NOT evidence that
+this application ID and certificate are registered in Firebase/Google OAuth.
+The supplied configuration has a different Android OAuth certificate registered.
+The Firebase project owner must add this fingerprint for the exact application ID
+above, confirm Google Auth and the named Firestore database/rules, and supply an
+updated google-services.json if necessary. Never share private service-account
+keys or passwords in chat.
+
+This application installs separately from io.github.haymayia.photon.
+No previous Photon sessions or libraries are migrated. Keep the old app installed.

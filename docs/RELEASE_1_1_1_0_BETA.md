@@ -36,7 +36,8 @@ Sample album covers and fabricated playlists are not shown as account content.
 
 ## Validation
 
-Version code 55. No APK publication requested for this change.
+Version code 55. Beta publication requested after the user reported the update was missing.
+Publication remains gated on Android build, tests and permanent signing identity verification.
 
 - Android compilation/assembly passed, most recently in Actions run 45342698042
   at commit e2227b5.

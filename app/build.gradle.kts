@@ -566,8 +566,8 @@ androidComponents {
 }
 
 tasks.withType<Test>().configureEach {
-    // Match Gradle Maven Central instead of Robolectric's legacy repo1 host.
-    systemProperty("robolectric.dependency.repo.url", "https://repo.maven.apache.org/maven2")
+    // Public Maven Central mirror avoids shared-runner rate limits on instrumented SDKs.
+    systemProperty("robolectric.dependency.repo.url", "https://maven-central.storage-download.googleapis.com/maven2")
     testLogging {
         showStandardStreams = true
         events("passed", "failed")

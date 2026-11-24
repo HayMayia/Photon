@@ -36,17 +36,16 @@ Sample album covers and fabricated playlists are not shown as account content.
 
 ## Validation
 
-Version code 55. Beta publication requested after the user reported the update was missing.
-Publication remains gated on Android build, tests and permanent signing identity verification.
+Version code 55. Published as `v1.1.1.0-beta` from commit
+`b905c6b9d9ddac23c62607c4c883324895a9cb35`.
 
-- Android compilation/assembly passed, most recently in Actions run 45342698042
-  at commit e2227b5.
-- Six local signing-safety tests passed; cumulative diff whitespace checks passed.
-- The full unit/rendered suite is **not verified**: Maven repeatedly returned HTTP
-  429 downloading Robolectric native and instrumented Android SDK runtimes. This
-  persisted after a dependency retry and switching from the legacy repo1 host to
-  canonical Maven Central. The latest diagnostic names Android 9 runtime
-  `9-robolectric-4913185-2-i7`; earlier attempts also named Android 14.
+- Actions run 45343197794 passed: Android debug build, Photon unit/rendered tests,
+  release build, permanent signing certificate verification and publication.
+- Six local signing-safety tests and cumulative diff whitespace checks passed.
+- Earlier Robolectric downloads were blocked by Maven HTTP 429. Using the public
+  Google-hosted Maven Central mirror resolved the test-runtime download blocker;
+  the complete configured Photon test suite then passed.
+- Published `Photon.apk`: 25,534,159 bytes, GitHub asset 786064635.
 - No physical phone/TV or private-account validation performed.
 
 This is a design integration, not a claim of pixel parity for every prototype

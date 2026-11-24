@@ -37,7 +37,10 @@ Sample album covers and fabricated playlists are not shown as account content.
 ## Validation
 
 Version code 55. No APK publication requested for this change. Android compilation
-and unit/rendered tests run in GitHub Actions; results must be checked on this
-branch before calling the build verified. No physical phone/TV or private-account
+passed in Actions run 45341656164 at commit 4473bc2. Its unit/rendered-test
+stage was blocked before execution by Maven HTTP 429 downloading Robolectric
+nativeruntime-dist-compat 1.0.16. A narrowly scoped dependency-rate-limit retry
+has been added; test validation remains pending until the new run completes.
+The six local signing-safety tests passed. No physical phone/TV or private-account
 validation performed. This is a design integration, not a claim of pixel parity
 for every prototype screen or completion of the separate Windows/iOS ports.

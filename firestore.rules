@@ -1,0 +1,188 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Hardened global helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidStringList(listVal, maxLen) {
+      return listVal is list &&
+        listVal.size() <= maxLen &&
+        (listVal.size() == 0 || (listVal[0] is string && listVal[0].size() <= 120));
+    }
+
+    // 3. Entity validation blueprints
+    function isValidUserProfile(data, userId) {
+      return data.userId is string &&
+        data.userId == userId &&
+        data.userId == request.auth.uid &&
+        data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 100 &&
+        (!('email' in data) || data.email == null || (data.email is string && data.email.size() <= 200)) &&
+        (!('photoUrl' in data) || data.photoUrl == null || (data.photoUrl is string && data.photoUrl.size() <= 1000)) &&
+        (!('youtubeHandle' in data) || data.youtubeHandle == null || (data.youtubeHandle is string && data.youtubeHandle.size() <= 80)) &&
+        data.youtubeConnected is bool &&
+        isValidStringList(data.subscribedChannels, 40) &&
+        isValidStringList(data.favoriteArtists, 40) &&
+        data.preferredMode is string && (data.preferredMode == 'YOUTUBE' || data.preferredMode == 'MUSIC') &&
+        data.autoplayEnabled is bool &&
+        data.onboardingComplete is bool &&
+        data.createdAt is timestamp && data.createdAt <= request.time &&
+        data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidSavedMedia(data, userId) {
+      return data.userId is string &&
+        data.userId == userId &&
+        data.userId == request.auth.uid &&
+        data.bucket is string && (data.bucket == 'LIKED' || data.bucket == 'WATCH_LATER' || data.bucket == 'HISTORY') &&
+        data.videoId is string && data.videoId.size() >= 6 && data.videoId.size() <= 32 && data.videoId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.title is string && data.title.size() >= 1 && data.title.size() <= 240 &&
+        data.channelName is string && data.channelName.size() >= 1 && data.channelName.size() <= 120 &&
+        data.durationText is string && data.durationText.size() <= 32 &&
+        data.durationSec is int && data.durationSec >= 0 && data.durationSec <= 864000 &&
+        data.viewCountText is string && data.viewCountText.size() <= 64 &&
+        data.publishedTimeText is string && data.publishedTimeText.size() <= 64 &&
+        data.thumbnailUrl is string && data.thumbnailUrl.size() <= 1000 &&
+        data.channelAvatarUrl is string && data.channelAvatarUrl.size() <= 1000 &&
+        data.liveStream is bool &&
+        data.musicTrack is bool &&
+        data.importedFromYouTube is bool &&
+        data.createdAt is timestamp && data.createdAt <= request.time &&
+        data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidCloudPlaylist(data, userId) {
+      return data.userId is string &&
+        data.userId == userId &&
+        data.userId == request.auth.uid &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 120 &&
+        data.source is string && (data.source == 'PHOTON' || data.source == 'YOUTUBE' || data.source == 'YT_MUSIC') &&
+        data.items is list && data.items.size() <= 50 &&
+        (data.items.size() == 0 || data.items[0] is map) &&
+        data.createdAt is timestamp && data.createdAt <= request.time &&
+        data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    // 4. Collection rules (PII strictly owner-isolated)
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if false;
+
+      allow create: if isOwner(userId) &&
+        isValidId(userId) &&
+        incoming().keys().hasAll([
+          'userId', 'displayName', 'youtubeConnected', 'subscribedChannels',
+          'favoriteArtists', 'preferredMode', 'autoplayEnabled', 'onboardingComplete',
+          'createdAt', 'updatedAt'
+        ]) &&
+        incoming().keys().hasOnly([
+          'userId', 'displayName', 'email', 'photoUrl', 'youtubeConnected',
+          'youtubeHandle', 'subscribedChannels', 'favoriteArtists',
+          'preferredMode', 'autoplayEnabled', 'onboardingComplete',
+          'createdAt', 'updatedAt'
+        ]) &&
+        isValidUserProfile(incoming(), userId);
+
+      allow update: if isOwner(userId) &&
+        isValidId(userId) &&
+        isValidUserProfile(incoming(), userId) &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'displayName', 'email', 'photoUrl', 'youtubeConnected', 'youtubeHandle',
+          'subscribedChannels', 'favoriteArtists', 'preferredMode',
+          'autoplayEnabled', 'onboardingComplete', 'updatedAt'
+        ]);
+
+      allow delete: if isOwner(userId) && isValidId(userId);
+
+      // User's synced Liked / Watch Later / History items
+      match /saved_items/{itemId} {
+        allow get: if isOwner(userId) && isValidId(itemId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+          isValidId(itemId) &&
+          incoming().keys().hasAll([
+            'userId', 'bucket', 'videoId', 'title', 'channelName',
+            'durationText', 'durationSec', 'viewCountText', 'publishedTimeText',
+            'thumbnailUrl', 'channelAvatarUrl', 'liveStream', 'musicTrack',
+            'importedFromYouTube', 'createdAt', 'updatedAt'
+          ]) &&
+          incoming().keys().hasOnly([
+            'userId', 'bucket', 'videoId', 'title', 'channelName',
+            'durationText', 'durationSec', 'viewCountText', 'publishedTimeText',
+            'thumbnailUrl', 'channelAvatarUrl', 'liveStream', 'musicTrack',
+            'importedFromYouTube', 'createdAt', 'updatedAt'
+          ]) &&
+          isValidSavedMedia(incoming(), userId);
+
+        allow update: if isOwner(userId) &&
+          isValidId(itemId) &&
+          isValidSavedMedia(incoming(), userId) &&
+          incoming().userId == existing().userId &&
+          incoming().videoId == existing().videoId &&
+          incoming().bucket == existing().bucket &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'title', 'channelName', 'durationText', 'durationSec',
+            'viewCountText', 'publishedTimeText', 'thumbnailUrl',
+            'channelAvatarUrl', 'liveStream', 'musicTrack',
+            'importedFromYouTube', 'updatedAt'
+          ]);
+
+        allow delete: if isOwner(userId) && isValidId(itemId);
+      }
+
+      // User's synced playlists (custom + imported from YouTube / YT Music)
+      match /playlists/{playlistId} {
+        allow get: if isOwner(userId) && isValidId(playlistId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+          isValidId(playlistId) &&
+          incoming().keys().hasAll([
+            'userId', 'name', 'source', 'items', 'createdAt', 'updatedAt'
+          ]) &&
+          incoming().keys().hasOnly([
+            'userId', 'name', 'source', 'items', 'createdAt', 'updatedAt'
+          ]) &&
+          isValidCloudPlaylist(incoming(), userId);
+
+        allow update: if isOwner(userId) &&
+          isValidId(playlistId) &&
+          isValidCloudPlaylist(incoming(), userId) &&
+          incoming().userId == existing().userId &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'name', 'source', 'items', 'updatedAt'
+          ]);
+
+        allow delete: if isOwner(userId) && isValidId(playlistId);
+      }
+    }
+  }
+}

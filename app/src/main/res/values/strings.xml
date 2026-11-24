@@ -1,43 +1,127 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Photon</string>
-    <string name="tile_recognize">Recognize song</string>
-    <string name="downloads">Downloads</string>
-    <string name="playback">Playback</string>
-    <!-- In other apps' share sheets, for YouTube and YouTube Music links. -->
-    <string name="open_in_prism">Play in Prism</string>
-<!-- Home screen widgets -->
-    <string name="widget_prism_name">Prism</string>
-    <string name="widget_prism_desc">Now playing on frosted glass made from the cover</string>
-    <string name="widget_spotify_name">Prism · Spotify style</string>
-    <string name="widget_spotify_desc">A slim dark bar with a green play button</string>
-    <string name="widget_apple_name">Prism · Apple Music style</string>
-    <string name="widget_apple_desc">A big cover on a card in the cover\'s color</string>
-    <string name="widget_ytmusic_name">Prism · YouTube Music style</string>
-    <string name="widget_ytmusic_desc">Dark, with thumbs up and a red progress line</string>
-    <string name="widget_cover_name">Prism · Cover</string>
-    <string name="widget_cover_desc">The cover filling a small square, with the title and play</string>
-    <string name="widget_disc_name">Prism · Disc</string>
-    <string name="widget_disc_desc">The cover as a round disc, in a ring that fills as the song plays</string>
-    <string name="widget_strip_name">Prism · Strip</string>
-    <string name="widget_strip_desc">A slim bar in the cover\'s color, with previous, play and next</string>
-    <string name="widget_recognize_name">Prism · Recognize</string>
-    <string name="widget_recognize_desc">Find out what\'s playing around you. Make it wider to see the last song found</string>
-    <string name="widget_recognize_label">RECOGNIZED</string>
-    <string name="widget_recognize_empty">Recognize a song</string>
-    <string name="widget_recognize_empty_hint">Tap the button to find out what\'s playing</string>
-    <string name="widget_recognize_waiting">Saved, will check when you\'re online</string>
-    <string name="widget_recognize_listen">Recognize a song</string>
-    <string name="widget_recognize_open">Recognized songs</string>
-    <string name="widget_recognize_play">Play the song recognized</string>
-    <string name="widget_prism_label">PRISM</string>
-    <string name="widget_now_playing">Now playing</string>
-    <string name="widget_nothing">Nothing playing</string>
-    <string name="widget_tap_to_play">Tap play to pick up where you left off</string>
-    <string name="widget_open">Open Prism</string>
-    <string name="widget_play">Play</string>
-    <string name="widget_pause">Pause</string>
-    <string name="widget_next">Next</string>
-    <string name="widget_previous">Previous</string>
-    <string name="widget_like">Like</string>
+
+    <!-- Google Auth & Account Sync -->
+    <string name="auth_welcome_title">Sign in to Photon</string>
+    <string name="auth_welcome_subtitle">Connect your Google account to sync your YouTube &amp; YouTube Music feeds on pure AMOLED black.</string>
+    <string name="auth_feature_youtube_title">Personalized YouTube Feed</string>
+    <string name="auth_feature_youtube_desc">Import your YouTube subscriptions, liked videos, and For You feed.</string>
+    <string name="auth_feature_music_title">YT Music Picks &amp; Mixes</string>
+    <string name="auth_feature_music_desc">Tune Music mode with your YouTube Music artists, songs, and custom mixes.</string>
+    <string name="auth_feature_cloud_title">Cloud-Synced Library</string>
+    <string name="auth_feature_cloud_desc">Keep your playlists, Watch Later, and listening history synced across devices.</string>
+    <string name="auth_sign_in_google">Sign in with Google</string>
+    <string name="auth_signing_in">Signing in…</string>
+    <string name="auth_privacy_note">Secured with Google Sign-In via Android Credential Manager.</string>
+    <string name="sync_live_yt_title">Import from YouTube &amp; YT Music</string>
+    <string name="sync_live_yt_desc">Link your YouTube session to pull your real For You feed, subscriptions, liked videos, and YT Music picks.</string>
+    <string name="sync_import_youtube">Import Live Feeds</string>
+    <string name="sync_relink_youtube">Re-link YouTube</string>
+    <string name="sync_importing">Importing…</string>
+    <string name="sync_channels_header">YouTube Channels</string>
+    <string name="sync_channels_subtitle">Pick or add creators &amp; @handles to tune your YouTube For You &amp; Subscriptions feeds.</string>
+    <string name="sync_add_channel_placeholder">Add channel or @handle…</string>
+    <string name="sync_artists_header">YT Music Artists</string>
+    <string name="sync_artists_subtitle">Pick or add artists to shape your YT Music For You &amp; Your Mix feeds.</string>
+    <string name="sync_add_artist_placeholder">Add artist name…</string>
+    <string name="sync_save_adjust_feed">Save &amp; Adjust Feeds</string>
+    <string name="sync_web_title">Connect YouTube &amp; YT Music</string>
+    <string name="sync_web_subtitle">Sign in once to import your live feeds automatically</string>
+    <string name="action_sign_out">Sign out</string>
+    <string name="cd_account_sync">Google account and YouTube sync</string>
+
+    <!-- Modes -->
+    <string name="mode_youtube">YouTube</string>
+    <string name="mode_music">Music</string>
+    <string name="player_mode_video">Video</string>
+    <string name="player_mode_audio">Audio</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_search">Search</string>
+    <string name="nav_library">Library</string>
+
+    <!-- Home -->
+    <string name="section_quick_picks">Quick Picks</string>
+    <string name="section_featured_music">Featured Tracks</string>
+    <string name="section_for_you">Recommended</string>
+    <string name="section_up_next">Up Next</string>
+    <string name="action_retry">Retry</string>
+    <string name="action_refresh">Refresh</string>
+    <string name="error_network_title">Unable to load from YouTube</string>
+    <string name="error_network_subtitle">Check your connection and try again.</string>
+
+    <!-- Search -->
+    <string name="search_title">Search</string>
+    <string name="search_placeholder_youtube">Search YouTube videos &amp; channels</string>
+    <string name="search_placeholder_music">Search songs, artists &amp; albums</string>
+    <string name="search_recent">Recent Searches</string>
+    <string name="search_clear_all">Clear</string>
+    <string name="search_explore">Explore Topics</string>
+    <string name="search_empty_title">No results found</string>
+    <string name="search_empty_subtitle">Try another query or switch between YouTube and Music mode.</string>
+
+    <!-- Library -->
+    <string name="library_title">Library</string>
+    <string name="library_create_playlist">New Playlist</string>
+    <string name="library_liked">Liked</string>
+    <string name="library_watch_later">Watch Later</string>
+    <string name="library_history">History</string>
+    <string name="library_playlists">Playlists</string>
+    <string name="library_sort_recent">Recent</string>
+    <string name="library_sort_alpha">A–Z</string>
+    <string name="library_empty_title">Nothing saved yet</string>
+    <string name="library_empty_subtitle">Play videos, like tracks, save to Watch Later, or create a playlist.</string>
+
+    <!-- Create Playlist -->
+    <string name="create_playlist_title">Create Playlist</string>
+    <string name="create_playlist_name_placeholder">Playlist name</string>
+    <string name="create_playlist_select_tracks">Add from your saved &amp; recent items</string>
+    <string name="create_playlist_action">Create</string>
+    <string name="cancel">Cancel</string>
+
+    <!-- Player & Queue -->
+    <string name="now_playing_from_youtube">YouTube</string>
+    <string name="now_playing_from_music">Photon Music</string>
+    <string name="queue_title">Up Next</string>
+    <string name="queue_now_playing">Now Playing</string>
+    <string name="queue_next_in_queue">Next in Queue</string>
+    <string name="queue_empty">Your queue is clear</string>
+    <string name="queue_clear">Clear</string>
+    <string name="settings_title">Playback Settings</string>
+    <string name="sleep_timer_label">Sleep Timer</string>
+    <string name="default_mode_label">Default Experience</string>
+    <string name="autoplay_label">Autoplay Up Next</string>
+    <string name="autoplay_desc">Automatically play related videos or tracks when finished</string>
+    <string name="player_loading">Loading stream…</string>
+    <string name="player_embed_restricted">This video restricts embedded playback. Skipping or try another result.</string>
+
+    <!-- Item Options -->
+    <string name="action_play_next">Play next</string>
+    <string name="action_add_to_queue">Add to queue</string>
+    <string name="action_like">Add to Liked</string>
+    <string name="action_unlike">Remove from Liked</string>
+    <string name="action_watch_later">Save to Watch Later</string>
+    <string name="action_remove_watch_later">Remove from Watch Later</string>
+    <string name="action_add_to_playlist">Add to playlist</string>
+    <string name="action_shuffle_play">Shuffle</string>
+    <string name="action_play_all">Play all</string>
+
+    <!-- Accessibility / Content Descriptions -->
+    <string name="cd_play">Play</string>
+    <string name="cd_pause">Pause</string>
+    <string name="cd_previous">Previous</string>
+    <string name="cd_next">Next</string>
+    <string name="cd_shuffle">Toggle shuffle</string>
+    <string name="cd_repeat">Toggle repeat</string>
+    <string name="cd_like">Toggle favorite</string>
+    <string name="cd_watch_later">Toggle Watch Later</string>
+    <string name="cd_back">Navigate back</string>
+    <string name="cd_collapse">Minimize player</string>
+    <string name="cd_queue">Open queue</string>
+    <string name="cd_settings">Playback settings</string>
+    <string name="cd_more_options">More options</string>
+    <string name="cd_clear_search">Clear search</string>
+    <string name="cd_remove_item">Remove item</string>
+    <string name="cd_create_playlist">Create new playlist</string>
 </resources>

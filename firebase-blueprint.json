@@ -1,0 +1,226 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated Google user profile with synced YouTube and YouTube Music feed preferences",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID matching document ID"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Google account display name"
+        },
+        "email": {
+          "type": "string",
+          "description": "Google account email (private to owner)"
+        },
+        "photoUrl": {
+          "type": "string",
+          "description": "Google account avatar URL"
+        },
+        "youtubeConnected": {
+          "type": "boolean",
+          "description": "Whether live YouTube and YT Music session import is linked"
+        },
+        "youtubeHandle": {
+          "type": "string",
+          "description": "Imported YouTube channel handle (e.g. @channel)"
+        },
+        "subscribedChannels": {
+          "type": "array",
+          "description": "Imported or selected YouTube channel names for feed adjustment (max 40)"
+        },
+        "favoriteArtists": {
+          "type": "array",
+          "description": "Imported or selected YT Music artist names for Music feed adjustment (max 40)"
+        },
+        "preferredMode": {
+          "type": "string",
+          "enum": ["YOUTUBE", "MUSIC"],
+          "description": "Default streaming mode"
+        },
+        "autoplayEnabled": {
+          "type": "boolean",
+          "description": "Whether up-next autoplay is enabled"
+        },
+        "onboardingComplete": {
+          "type": "boolean",
+          "description": "Whether initial YouTube/YT Music import prompt has been completed or dismissed"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp written with FieldValue.serverTimestamp()"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp written with FieldValue.serverTimestamp()"
+        }
+      },
+      "required": [
+        "userId",
+        "displayName",
+        "youtubeConnected",
+        "subscribedChannels",
+        "favoriteArtists",
+        "preferredMode",
+        "autoplayEnabled",
+        "onboardingComplete",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "SavedMediaRecord": {
+      "title": "SavedMediaRecord",
+      "description": "User-saved YouTube video or YT Music track in LIKED, WATCH_LATER, or HISTORY bucket",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID"
+        },
+        "bucket": {
+          "type": "string",
+          "enum": ["LIKED", "WATCH_LATER", "HISTORY"],
+          "description": "Library bucket for this saved media item"
+        },
+        "videoId": {
+          "type": "string",
+          "description": "YouTube video identifier"
+        },
+        "title": {
+          "type": "string",
+          "description": "Video or song title"
+        },
+        "channelName": {
+          "type": "string",
+          "description": "YouTube channel or music artist name"
+        },
+        "durationText": {
+          "type": "string",
+          "description": "Formatted duration label"
+        },
+        "durationSec": {
+          "type": "integer",
+          "description": "Duration in seconds"
+        },
+        "viewCountText": {
+          "type": "string",
+          "description": "View count display text"
+        },
+        "publishedTimeText": {
+          "type": "string",
+          "description": "Published time display text"
+        },
+        "thumbnailUrl": {
+          "type": "string",
+          "description": "Thumbnail HTTPS URL"
+        },
+        "channelAvatarUrl": {
+          "type": "string",
+          "description": "Channel avatar HTTPS URL"
+        },
+        "liveStream": {
+          "type": "boolean",
+          "description": "Whether item is a live broadcast"
+        },
+        "musicTrack": {
+          "type": "boolean",
+          "description": "Whether item belongs to Music context"
+        },
+        "importedFromYouTube": {
+          "type": "boolean",
+          "description": "Whether item was imported from user's YouTube or YT Music account"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp written with FieldValue.serverTimestamp()"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp written with FieldValue.serverTimestamp()"
+        }
+      },
+      "required": [
+        "userId",
+        "bucket",
+        "videoId",
+        "title",
+        "channelName",
+        "durationText",
+        "durationSec",
+        "viewCountText",
+        "publishedTimeText",
+        "thumbnailUrl",
+        "channelAvatarUrl",
+        "liveStream",
+        "musicTrack",
+        "importedFromYouTube",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "CloudPlaylistRecord": {
+      "title": "CloudPlaylistRecord",
+      "description": "User playlist created in Photon or imported from YouTube / YT Music",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID"
+        },
+        "name": {
+          "type": "string",
+          "description": "Playlist name"
+        },
+        "source": {
+          "type": "string",
+          "enum": ["PHOTON", "YOUTUBE", "YT_MUSIC"],
+          "description": "Origin of the playlist"
+        },
+        "items": {
+          "type": "array",
+          "description": "Bounded list of up to 50 media item maps"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp written with FieldValue.serverTimestamp()"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp written with FieldValue.serverTimestamp()"
+        }
+      },
+      "required": [
+        "userId",
+        "name",
+        "source",
+        "items",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Private Google user profile, YouTube/YT Music imported channels & artists, and app preferences"
+    },
+    "/users/{userId}/saved_items/{itemId}": {
+      "schema": { "$ref": "#/entities/SavedMediaRecord" },
+      "description": "User's synced Liked, Watch Later, and Watch History items"
+    },
+    "/users/{userId}/playlists/{playlistId}": {
+      "schema": { "$ref": "#/entities/CloudPlaylistRecord" },
+      "description": "User's synced custom and YouTube/YT Music imported playlists"
+    }
+  }
+}

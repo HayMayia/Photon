@@ -17,4 +17,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Photon"
 include(":app")
-include(":baselineprofile")
+// Legacy baseline-profile journeys target the previous app and are not part of this replacement.

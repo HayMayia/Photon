@@ -56,13 +56,13 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          if ./gradlew :app:testDebugUnitTest --tests 'com.prism.music.photon.*' --stacktrace 2>&1 | tee tests.log; then
+          if ./gradlew :app:testDebugUnitTest --tests 'com.example.*' --stacktrace 2>&1 | tee tests.log; then
             exit 0
           fi
           # Retry only a dependency rate-limit, never a failing assertion.
           if grep -q 'Received status code 429' tests.log && ! grep -q 'There were failing tests' tests.log; then
             sleep 20
-            ./gradlew :app:testDebugUnitTest --tests 'com.prism.music.photon.*' --stacktrace 2>&1 | tee -a tests.log
+            ./gradlew :app:testDebugUnitTest --tests 'com.example.*' --stacktrace 2>&1 | tee -a tests.log
           else
             exit 1
           fi
@@ -89,8 +89,8 @@ jobs:
           path: ${{ runner.temp }}/photon-artifact/*
           if-no-files-found: error
           retention-days: 90
-      - name: Build and publish v1.1.1.0 Beta
-        if: github.event_name == 'push' && contains(github.event.head_commit.message, '[publish-beta]')
+      - name: Publish supplied-app preview (explicit opt-in)
+        if: github.event_name == 'push' && contains(github.event.head_commit.message, '[publish-friend-preview]')
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -105,8 +105,8 @@ jobs:
           actual = re.search(r'Signer #1 certificate SHA-1 digest: ([A-Fa-f0-9]+)', (pathlib.Path(os.environ['RUNNER_TEMP']) / 'photon-release-certificate.txt').read_text()).group(1).lower()
           assert actual == expected, 'Release signing identity mismatch'
           PYRELEASE
-          cp "$APK" "$RUNNER_TEMP/Photon.apk"
-          gh release create v1.1.1.0-beta "$RUNNER_TEMP/Photon.apk" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --title "v1.1.1.0 Beta" --notes-file docs/RELEASE_1_1_1_0_BETA.md
+          cp "$APK" "$RUNNER_TEMP/Photon-Friend-Preview.apk"
+          gh release create v1.1.1.1-friend-preview "$RUNNER_TEMP/Photon-Friend-Preview.apk" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --title "Photon supplied-app preview 1.1.1.1" --notes-file docs/RELEASE_1_1_1_1_BETA.md
       - name: Publish build diagnostics
         if: failure() && github.event_name != 'pull_request'
         env:

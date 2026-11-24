@@ -520,7 +520,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                 bottomBar = {
                     Column {
                         watch.video?.let { video ->
-                            GlassSurface(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), shape = RoundedCornerShape(24.dp)) {
+                            GlassSurface(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), shape = RoundedCornerShape(12.dp)) {
                                 Row(Modifier.fillMaxWidth().clickable { expanded = true }.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
                                     VideoThumbnail(video, null, Modifier.size(48.dp).clip(RoundedCornerShape(13.dp)), contentScale = ContentScale.Crop)
                                     Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
@@ -535,10 +535,10 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                         if (library.youtubeLayout) nativeNavigation(tab) else Row(
                             Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 12.dp).padding(bottom = 8.dp),
                             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        GlassSurface(Modifier.weight(1f), shape = RoundedCornerShape(30.dp)) {
+                        GlassSurface(Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) {
                             NavigationBar(containerColor = Color.Transparent, tonalElevation = 0.dp, windowInsets = WindowInsets(0, 0, 0, 0)) {
                             listOf("Home" to PrismIcons.Home, "Search" to PrismIcons.Search, "Library" to PrismIcons.Library).forEachIndexed { index, (label, icon) ->
-                                NavigationBarItem(selected = tab == index, onClick = { navigateTo(index); if (index == 0) model.home() }, icon = { Icon(icon, label) }, label = { Text(label) })
+                                NavigationBarItem(selected = tab == index, onClick = { navigateTo(index); if (index == 0) model.home() }, icon = { Icon(icon, label) }, label = { Text(label) }, colors = NavigationBarItemDefaults.colors(selectedIconColor = MaterialTheme.colorScheme.primary, selectedTextColor = MaterialTheme.colorScheme.primary, indicatorColor = Color.Transparent))
                             }
                         }
                     }
@@ -550,7 +550,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                     }
                 }
             ) { padding ->
-                Box(Modifier.fillMaxSize().then(if (library.performanceMode || !library.liquidGlass || library.youtubeLayout || android.os.Build.VERSION.SDK_INT < 31) Modifier else Modifier.layerBackdrop(glassBackdrop)).padding(padding).then(if (library.youtubeLayout) Modifier else Modifier.background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f), MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.09f)))))) {
+                Box(Modifier.fillMaxSize().then(if (library.performanceMode || !library.liquidGlass || library.youtubeLayout || android.os.Build.VERSION.SDK_INT < 31) Modifier else Modifier.layerBackdrop(glassBackdrop)).padding(padding).background(MaterialTheme.colorScheme.background)) {
                     when (tab) {
                         0 -> if (library.youtubeLayout) YouTubeLayoutHome(model, library, ::open,
                             search = { navigateTo(1) }, settings = { navigateTo(3) },
@@ -566,7 +566,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                             subscriptions = { if (library.youtubeHome) { localLibrary = false; model.openAccountShelf(AccountShelf.CHANNELS); navigateTo(2) } else { model.subscriptionsFeed(); navigateTo(1) } },
                             downloads = { localLibrary = true; navigateTo(2); libraryTab = 2 },
                             saved = { localLibrary = false; navigateTo(2); libraryTab = 0 },
-                            settings = { navigateTo(3) }, search = { navigateTo(1) })
+                            settings = { navigateTo(3) }, search = { navigateTo(1) }, channel = ::openChannel)
                         1 -> if (library.youtubeLayout) YouTubeLayoutSearch(model, browse, search, { search = it }, { model.search(search) }, ::backTab, ::open, ::openChannel)
                         else LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 20.dp)) {
                             item {

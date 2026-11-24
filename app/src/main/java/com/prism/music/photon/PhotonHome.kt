@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,8 +48,8 @@ object HomeCatalog {
 internal fun PhotonHome(model: PhotonViewModel, library: PhotonLibrary, open: (Video) -> Unit,
                         offline: (SavedDownload) -> Unit, discover: (String) -> Unit, forYou: () -> Unit,
                         shorts: () -> Unit, subscriptions: () -> Unit, downloads: () -> Unit, saved: () -> Unit,
-                        settings: () -> Unit, search: () -> Unit) {
-    ActualYouTubeHome(model, open, settings, search, shorts, subscriptions, downloads, saved, discover)
+                        settings: () -> Unit, search: () -> Unit, channel: (String) -> Unit) {
+    ActualYouTubeHome(model, open, settings, search, shorts, subscriptions, downloads, saved, discover, channel)
 }
 
 @Composable
@@ -82,7 +83,7 @@ private fun HomeCover(source: Video, music: Boolean, open: () -> Unit) {
 /** Account Home never falls back to local ranking, quick picks or search shelves. */
 @Composable
 private fun ActualYouTubeHome(model: PhotonViewModel, open: (Video) -> Unit, settings: () -> Unit, search: () -> Unit,
-                              shorts: () -> Unit, subscriptions: () -> Unit, downloads: () -> Unit, saved: () -> Unit, discover: (String) -> Unit) {
+                              shorts: () -> Unit, subscriptions: () -> Unit, downloads: () -> Unit, saved: () -> Unit, discover: (String) -> Unit, channel: (String) -> Unit) {
     val feed by model.youtubeHome.collectAsStateWithLifecycle()
     val library by model.library.collectAsStateWithLifecycle()
     val playlistState by model.homePlaylists.collectAsStateWithLifecycle()
@@ -97,91 +98,83 @@ private fun ActualYouTubeHome(model: PhotonViewModel, open: (Video) -> Unit, set
         snapshotFlow { (list.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1) >= list.layoutInfo.totalItemsCount - 5 }
             .distinctUntilChanged().collect { nearEnd -> if (nearEnd) model.moreYouTubeHome() }
     }
-    LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(22.dp)) {
-        item { PhotonUpdateCard() }
-        item {
-            val scheme = MaterialTheme.colorScheme
-            Surface(shape = RoundedCornerShape(28.dp), color = scheme.primaryContainer.copy(alpha = .28f)) {
-            Column(Modifier.padding(18.dp)) {
-            Row(Modifier.fillMaxWidth().padding(bottom = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("PHOTON", style = MaterialTheme.typography.labelSmall, letterSpacing = 3.sp, color = scheme.primary)
-                    Text(homeGreeting(java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)),
-                        style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                }
-                FilledTonalIconButton(onClick = settings) { Icon(PrismIcons.Settings, "Settings") }
-            }
-            Surface(onClick = search, shape = RoundedCornerShape(50),
-                color = scheme.surfaceContainerHigh, contentColor = scheme.onSurface,
-                border = androidx.compose.foundation.BorderStroke(1.dp, scheme.primary.copy(alpha = .22f)),
-                modifier = Modifier.fillMaxWidth()) {
-                Row(Modifier.padding(horizontal = 20.dp, vertical = 18.dp), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(PrismIcons.Search, null, tint = scheme.primary)
-                    Text("What do you want to play?", style = MaterialTheme.typography.bodyMedium)
-                }
-            }
-            }
-            }
-            Row(Modifier.padding(top = 22.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("Your playlists", Modifier.weight(1f), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                TextButton(onClick = { model.openAccountShelf(AccountShelf.PLAYLISTS); saved() }) { Text("See all") }
-            }
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                item(key = "native-liked-music") {
-                    HomePlaylistCover(LikedMusicPlaylist.NAME, "", PrismIcons.Heart, { model.openLikedMusic(); saved() })
-                }
-                items(playlists, key = { it.id }) { entry ->
-                    HomePlaylistCover(entry.title, entry.artwork, PrismIcons.Library, {
-                        model.openAccountShelf(AccountShelf.PLAYLISTS, entry.id, entry.title); saved()
-                    })
-                }
-            }
-            if (playlistState.busy) LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 10.dp))
-            playlistState.error?.let {
-                TextButton(onClick = { model.loadHomePlaylists(force = true) }) { Text("Retry playlists") }
-            }
-            Spacer(Modifier.height(18.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = shorts, modifier = Modifier.weight(1f)) { Icon(PrismIcons.Phone, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("Shorts") }
-                OutlinedButton(onClick = downloads, modifier = Modifier.weight(1f)) { Icon(PrismIcons.Download, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("Offline") }
-                IconButton(onClick = subscriptions) { Icon(PrismIcons.Person, "Subscriptions") }
-            }
-            Row(Modifier.padding(top = 24.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("Recommended today", Modifier.weight(1f), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                TextButton(enabled = !feed.busy, onClick = { model.refreshYouTubeHome() }) { Text("Refresh") }
-            }
-            if (feed.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-            feed.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            feed.page?.message?.let { message ->
-                Surface(shape = RoundedCornerShape(22.dp), color = scheme.surfaceContainerHigh,
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
-                    Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Icon(PrismIcons.Play, null, tint = scheme.primary)
-                        Text(if (message.contains("watch history is off", ignoreCase = true)) "Your history is paused" else "From YouTube",
-                            style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                        Text(message, color = scheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+    var music by rememberSaveable { mutableStateOf(false) }
+    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        // The supplied 1.1.1.0 design: fixed title/actions, mode tabs, then the feed.
+        Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 8.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            Text("Photon", Modifier.weight(1f), style = PhotonTitleStyle)
+            IconButton(onClick = search) { Icon(PrismIcons.Search, "Search") }
+            IconButton(onClick = {
+                if (music) model.openLikedMusic(force = true) else model.refreshYouTubeHome()
+            }) { Icon(PrismIcons.Refresh, "Refresh") }
+            IconButton(onClick = settings) { Icon(PrismIcons.Settings, "Settings") }
+        }
+        Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp).clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainer).padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            listOf(false to "Videos", true to "Music").forEach { (isMusic, title) ->
+                Surface(selected = music == isMusic, onClick = {
+                    music = isMusic
+                    if (isMusic) model.openLikedMusic()
+                }, shape = RoundedCornerShape(8.dp),
+                    color = if (music == isMusic) MaterialTheme.colorScheme.surfaceContainerHighest else Color.Transparent,
+                    modifier = Modifier.heightIn(min = 48.dp).remoteFocus()) {
+                    Row(Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(if (isMusic) PrismIcons.Heart else PrismIcons.Play, null, Modifier.size(18.dp))
+                        Text(title, style = PhotonBodyMediumStyle)
                     }
                 }
             }
-            if (feed.error != null || (feed.page == null && !feed.busy)) YouTubeHomeConnection(model)
         }
-        val spotlight = rows.firstOrNull()?.takeUnless { it.portrait }?.videos?.firstOrNull()
-        if (spotlight != null) item(key = "spotlight-${spotlight.id}") {
-            val video = resolvedVideo(spotlight)
-            DiscoveryCover(video, featured = true) { open(video) }
-        }
-        items((if (spotlight != null) rows.drop(1) else rows).chunked(4), key = { it.first().key }) { shelf ->
-            LazyRow(Modifier.padding(vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                items(shelf.flatMap { it.videos }, key = { it.id }) { source ->
-                    val video = resolvedVideo(source)
-                    DiscoveryCover(video) { open(video) }
+        if (music) {
+            // Reuse the verified native Music shelf, cache, filters, mutations and playlist queue.
+            // No Firebase account, fabricated "Your Mix", or search-based recommendations.
+            AccountLibraryScreen(model, library.youtubeSessionRevision, library.youtubeSessionReady, open,
+                channel = channel, subscriptions = subscriptions)
+        } else LazyColumn(Modifier.weight(1f), state = list,
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp)) {
+            item { PhotonUpdateCard() }
+            item {
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    AssistChip(onClick = shorts, label = { Text("Shorts") })
+                    AssistChip(onClick = subscriptions, label = { Text("Subscriptions") })
+                    AssistChip(onClick = downloads, label = { Text("Downloads") })
+                    AssistChip(onClick = { model.openAccountShelf(AccountShelf.HISTORY); saved() }, label = { Text("History") })
                 }
+                Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Your playlists", Modifier.weight(1f), style = PhotonTitleStyle)
+                    TextButton(onClick = { model.openAccountShelf(AccountShelf.PLAYLISTS); saved() }) { Text("See all") }
+                }
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    item(key = "native-liked-music") {
+                        HomePlaylistCover(LikedMusicPlaylist.NAME, "", PrismIcons.Heart, { music = true; model.openLikedMusic() })
+                    }
+                    items(playlists, key = { it.id }) { entry ->
+                        HomePlaylistCover(entry.title, entry.artwork, PrismIcons.Library, {
+                            model.openAccountShelf(AccountShelf.PLAYLISTS, entry.id, entry.title); saved()
+                        })
+                    }
+                }
+                if (playlistState.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+                playlistState.error?.let {
+                    TextButton(onClick = { model.loadHomePlaylists(force = true) }) { Text("Retry playlists") }
+                }
+                Text("For you", Modifier.padding(top = 24.dp, bottom = 12.dp), style = PhotonTitleStyle)
+                if (feed.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+                feed.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                feed.page?.message?.let { Text(it, Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                if (feed.error != null || (feed.page == null && !feed.busy)) YouTubeHomeConnection(model)
             }
-        }
-        item {
-            if (feed.loadingMore) CircularProgressIndicator()
-            else if (feed.page?.continuation != null) TextButton(onClick = model::moreYouTubeHome) { Text("Load more recommendations") }
-            else if (!feed.page?.videos.isNullOrEmpty()) Text("YouTube returned no further page. Refresh Home for a new response.", style = MaterialTheme.typography.bodySmall)
+            // Full-width landscape videos and at most two portrait Shorts per row; never hide
+            // account results in nested horizontal carousels or discard the first row's sibling.
+            items(rows, key = { it.key }) { row -> HomeRecommendationRow(row, open) }
+            item {
+                if (feed.loadingMore) CircularProgressIndicator()
+                else if (feed.page?.continuation != null) TextButton(onClick = model::moreYouTubeHome) { Text("Load more") }
+            }
         }
     }
 }
@@ -195,8 +188,8 @@ internal fun homeGreeting(hour: Int): String = when (hour) {
 @Composable
 private fun HomePlaylistCover(title: String, artwork: String, icon: ImageVector, open: () -> Unit) {
     Column(Modifier.width(142.dp).remoteFocus().clickable(onClick = open)) {
-        Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(24.dp))
-            .background(Brush.linearGradient(listOf(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.surfaceContainerHigh))),
+        Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest),
             contentAlignment = Alignment.Center) {
             Icon(icon, null, Modifier.size(38.dp), tint = MaterialTheme.colorScheme.primary)
             if (artwork.isNotBlank()) AsyncImage(artwork, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
@@ -208,7 +201,7 @@ private fun HomePlaylistCover(title: String, artwork: String, icon: ImageVector,
 
 @Composable
 internal fun DiscoveryCover(video: Video, featured: Boolean = false, open: () -> Unit) {
-    Surface(onClick = open, shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    Surface(onClick = open, shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh,
         modifier = (if (featured) Modifier.fillMaxWidth() else Modifier.width(if (video.short) 142.dp else 240.dp)).remoteFocus()) {
         Column(Modifier.padding(10.dp)) {
             Box(Modifier.fillMaxWidth().aspectRatio(VideoArtworkShape.ratio(video.short)).clip(RoundedCornerShape(16.dp))) {

@@ -19,10 +19,9 @@ import androidx.compose.ui.unit.dp
 internal fun HomeRecommendationRow(row: HomeFeedRows.Row, open: (Video) -> Unit) {
     HomeRecommendationColumns(row) { source, column ->
             val video = resolvedVideo(source)
-            Column(column.clip(RoundedCornerShape(24.dp))
-                .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = .85f))
-                .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = .15f), RoundedCornerShape(24.dp))
-                .remoteFocus().clickable { open(video) }.padding(10.dp)) {
+            Column(column.clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainer)
+                .remoteFocus().clickable { open(video) }.padding(0.dp)) {
                 // Both thumbnail AND text use the same column, never a narrow image in a full-width card.
                 VideoThumbnail(video, video.title, Modifier.fillMaxWidth()
                     .aspectRatio(VideoArtworkShape.ratio(row.portrait)).clip(MaterialTheme.shapes.medium))

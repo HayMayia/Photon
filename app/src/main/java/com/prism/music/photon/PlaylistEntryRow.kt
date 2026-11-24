@@ -20,8 +20,8 @@ import com.prism.music.ui.theme.PrismIcons
 @Composable
 internal fun PlaylistEntryRow(video: Video, liked: Boolean, open: () -> Unit, like: () -> Unit, remove: (() -> Unit)? = null) {
     var menu by remember(video.id) { mutableStateOf(false) }
-    Row(Modifier.fillMaxWidth().padding(vertical = 3.dp).clip(RoundedCornerShape(18.dp))
-        .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = .55f)).heightIn(min = 84.dp).testTag("playlist-entry-${video.id}").remoteFocus().clickable(onClick = open).padding(horizontal = 10.dp, vertical = 10.dp),
+    Row(Modifier.fillMaxWidth().padding(vertical = 3.dp).clip(RoundedCornerShape(12.dp))
+        .background(MaterialTheme.colorScheme.surfaceContainer).heightIn(min = 76.dp).testTag("playlist-entry-${video.id}").remoteFocus().clickable(onClick = open).padding(horizontal = 10.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         VideoThumbnail(video, video.title, Modifier.width(96.dp).aspectRatio(16f / 9f).clip(RoundedCornerShape(12.dp)))
         Column(Modifier.weight(1f)) {

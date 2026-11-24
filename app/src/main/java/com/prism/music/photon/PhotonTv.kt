@@ -63,11 +63,9 @@ internal fun PhotonTvScreen(model: PhotonViewModel, selected: Int, select: (Int)
     val backdrop = rememberLayerBackdrop()
     CompositionLocalProvider(LocalLiquidBackdrop provides backdrop) {
     Box(Modifier.fillMaxSize()) {
-        Box(Modifier.fillMaxSize().then(if (library.performanceMode || !library.liquidGlass || library.youtubeLayout || android.os.Build.VERSION.SDK_INT < 31) Modifier else Modifier.layerBackdrop(backdrop)).background(Brush.linearGradient(listOf(
-            MaterialTheme.colorScheme.primary.copy(alpha = .18f), MaterialTheme.colorScheme.background,
-            MaterialTheme.colorScheme.tertiary.copy(alpha = .10f)))))
+        Box(Modifier.fillMaxSize().then(if (library.performanceMode || !library.liquidGlass || library.youtubeLayout || android.os.Build.VERSION.SDK_INT < 31) Modifier else Modifier.layerBackdrop(backdrop)).background(MaterialTheme.colorScheme.background))
     Row(Modifier.fillMaxSize().safeDrawingPadding().padding(24.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-        GlassSurface(Modifier.width(180.dp).fillMaxHeight(), shape = RoundedCornerShape(28.dp)) {
+        GlassSurface(Modifier.width(180.dp).fillMaxHeight(), shape = RoundedCornerShape(12.dp)) {
         Column(Modifier.fillMaxSize().padding(10.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
                 Text(if (library.youtubeLayout) "YouTube" else "Photon", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)

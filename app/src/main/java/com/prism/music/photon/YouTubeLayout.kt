@@ -32,7 +32,7 @@ internal val LocalYouTubeLayout = staticCompositionLocalOf { false }
 /** Native presentation only. Never creates a second player, account, transport, or library. */
 @Composable
 internal fun InterfaceTheme(youtube: Boolean, dark: Boolean, content: @Composable () -> Unit) {
-    val colors = if (!youtube) MaterialTheme.colorScheme else if (dark) darkColorScheme(
+    val colors = if (!youtube && dark) PhotonAmoledColorScheme else if (!youtube) MaterialTheme.colorScheme else if (dark) darkColorScheme(
         primary = Color.White, onPrimary = Color.Black, secondary = Color.White,
         background = Color(0xFF0F0F0F), surface = Color(0xFF0F0F0F), surfaceContainer = Color(0xFF212121),
         surfaceContainerHigh = Color(0xFF272727), primaryContainer = Color(0xFF303030), onPrimaryContainer = Color.White,
@@ -40,8 +40,8 @@ internal fun InterfaceTheme(youtube: Boolean, dark: Boolean, content: @Composabl
         background = Color.White, surface = Color.White, surfaceContainer = Color(0xFFF2F2F2),
         surfaceContainerHigh = Color(0xFFEEEEEE), primaryContainer = Color(0xFFE5E5E5), onPrimaryContainer = Color.Black)
     // Keep this call site stable when switching: retained player effects must not be recreated.
-    MaterialTheme(colorScheme = colors, typography = if (youtube) Typography() else MaterialTheme.typography,
-        shapes = if (youtube) Shapes() else MaterialTheme.shapes) {
+    MaterialTheme(colorScheme = colors, typography = if (youtube) Typography() else PhotonTypography,
+        shapes = if (youtube) Shapes() else PhotonShapes) {
         CompositionLocalProvider(LocalYouTubeLayout provides youtube, content = content)
     }
 }

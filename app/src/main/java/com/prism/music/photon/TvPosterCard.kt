@@ -23,9 +23,9 @@ internal fun TvPosterCard(video: Video, open: () -> Unit, modifier: Modifier = M
     focused: () -> Unit = {}, remove: (() -> Unit)? = null) {
     var hasFocus by remember(video.id) { mutableStateOf(false) }
     val scale by animateFloatAsState(if (hasFocus && !com.prism.music.ui.theme.LocalAppSettings.current.reduceMotion) 1.025f else 1f, label = "tv-card-focus")
-    OutlinedCard(onClick = open, shape = RoundedCornerShape(20.dp),
+    OutlinedCard(onClick = open, shape = RoundedCornerShape(12.dp),
         border = BorderStroke(if (hasFocus) 3.dp else 1.dp, if (hasFocus) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
-        colors = CardDefaults.outlinedCardColors(containerColor = if (hasFocus) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer),
+        colors = CardDefaults.outlinedCardColors(containerColor = if (hasFocus) MaterialTheme.colorScheme.surfaceContainerHighest else MaterialTheme.colorScheme.surfaceContainer),
         modifier = modifier.fillMaxWidth().testTag("tv-video-${video.id}").graphicsLayer { scaleX = scale; scaleY = scale }
             .focusProperties { canFocus = true }
             .onFocusChanged { hasFocus = it.hasFocus; if (it.hasFocus) focused() }) {
@@ -38,7 +38,7 @@ internal fun TvPosterCard(video: Video, open: () -> Unit, modifier: Modifier = M
             }
             Text(video.title, minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Text(video.channel, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium,
-                color = if (hasFocus) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant)
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (remove != null) TextButton(onClick = remove, modifier = Modifier.remoteFocus()) { Text("Delete download") }
         }
     }

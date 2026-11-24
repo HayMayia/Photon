@@ -566,6 +566,8 @@ androidComponents {
 }
 
 tasks.withType<Test>().configureEach {
+    // Match Gradle Maven Central instead of Robolectric's legacy repo1 host.
+    systemProperty("robolectric.dependency.repo.url", "https://repo.maven.apache.org/maven2")
     testLogging {
         showStandardStreams = true
         events("passed", "failed")

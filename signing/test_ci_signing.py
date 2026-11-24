@@ -14,7 +14,7 @@ spec.loader.exec_module(signing)
 class SigningSafetyTest(unittest.TestCase):
     def invoke(self, mode="bootstrap", **changes):
         env = {"GITHUB_ACTIONS": "true", "GITHUB_EVENT_NAME": "push",
-               "GITHUB_REF": "refs/heads/arena/c217a41b-photon",
+               "GITHUB_REF": "refs/heads/arena/f7d21a23-photon",
                "PHOTON_SIGNING_PASSWORD": "unit_test_only_not_a_real_password_" * 2}
         env.update(changes)
         with patch.dict(os.environ, env, clear=True), patch.object(signing.sys, "argv", ["ci-signing.py", mode]):

@@ -26,7 +26,7 @@ def main():
         raise SystemExit("Use bootstrap or restore")
     if os.environ.get("GITHUB_ACTIONS") != "true" or os.environ.get("GITHUB_EVENT_NAME") not in ("push", "workflow_dispatch"):
         raise SystemExit("Signing is restricted to trusted push/manual Actions jobs")
-    if os.environ.get("GITHUB_REF") != "refs/heads/arena/c217a41b-photon":
+    if os.environ.get("GITHUB_REF") != "refs/heads/arena/f7d21a23-photon":
         raise SystemExit("Signing is restricted to the Photon session branch")
     password = os.environ.get("PHOTON_SIGNING_PASSWORD", "")
     if not re.fullmatch(r"[A-Za-z0-9_-]{40,128}", password):

@@ -140,9 +140,9 @@ internal fun AccountLibraryHeader(state: AccountLibraryState, ready: Boolean,
         }
         if (state.shelf == AccountShelf.PLAYLISTS && state.playlist == null) TextButton(onClick = onCreate, modifier = Modifier.remoteFocus()) { Text("New playlist") }
         if (state.playlist != null) TextButton(onClick = onBack, modifier = Modifier.remoteFocus()) { Text("Back to playlists") }
-        Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = .42f),
+        Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surfaceContainer,
             modifier = Modifier.fillMaxWidth()) {
-            Row(Modifier.padding(18.dp), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 Icon(if (state.shelf == AccountShelf.LIKED_MUSIC) PrismIcons.Song else PrismIcons.Library, null,
                     Modifier.size(32.dp), tint = MaterialTheme.colorScheme.primary)
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {

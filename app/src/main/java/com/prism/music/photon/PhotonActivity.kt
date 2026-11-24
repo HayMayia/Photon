@@ -438,7 +438,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                 .then(if (immersive) Modifier.safeDrawingPadding() else Modifier.statusBarsPadding())) {
                 if (!immersive) Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = { expanded = false }) { Icon(PrismIcons.ChevronDown, "Minimize player") }
-                    Text("NOW WATCHING", Modifier.weight(1f), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = 2.sp)
+                    Text("Now playing", Modifier.weight(1f), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = 2.sp)
                     IconButton(onClick = { controller?.stop(); controller?.clearMediaItems(); model.close(); expanded = false }) { Icon(PrismIcons.Close, "Close video") }
                 }
                 Box(if (immersive) Modifier.weight(1f).fillMaxWidth()
@@ -456,7 +456,6 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                 if (!immersive) LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(bottom = 24.dp)) {
                     item {
                         Column(Modifier.padding(horizontal = 22.dp, vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Box(Modifier.fillMaxWidth().height(2.dp).background(PrismTokens.spectrum))
                             Text(video.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                             Text(listOf(video.channel, viewLabel(video.views), video.published).filter { it.isNotBlank() }.joinToString(" · "), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
                             (watch.error ?: playerError)?.let { message ->
@@ -486,7 +485,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                             if (watch.localPath != null) Text("Offline", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
                             if (watch.details?.description?.isNotBlank() == true) {
                                 var description by remember(video.id) { mutableStateOf(false) }
-                                Surface(shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
+                                Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
                                     Column(Modifier.clickable { description = !description }.padding(16.dp)) {
                                         Text(if (description) "Less" else "Description", fontWeight = FontWeight.SemiBold)
                                         Text(android.text.Html.fromHtml(watch.details!!.description, android.text.Html.FROM_HTML_MODE_COMPACT).toString(), maxLines = if (description) Int.MAX_VALUE else 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
@@ -570,37 +569,21 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                         1 -> if (library.youtubeLayout) YouTubeLayoutSearch(model, browse, search, { search = it }, { model.search(search) }, ::backTab, ::open, ::openChannel)
                         else LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 20.dp)) {
                             item {
-                                Column(Modifier.padding(start = 24.dp, end = 24.dp, top = 22.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Column(Modifier.weight(1f)) {
-                                            Text(if (tab == 0) "YOUR WORLD, REFRACTED" else "FIND YOUR NEXT WATCH", style = MaterialTheme.typography.labelSmall, letterSpacing = 2.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                            Text(if (tab == 0) "Photon" else "Search", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
-                                        }
-                                        Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer, onClick = { navigateTo(3) }) {
-                                            Icon(PrismIcons.Play, "Settings", Modifier.padding(15.dp).size(22.dp), tint = MaterialTheme.colorScheme.primary)
-                                        }
+                                        Text("Search", Modifier.weight(1f), style = PhotonTitleStyle)
+                                        IconButton(onClick = { navigateTo(3) }) { Icon(PrismIcons.Settings, "Settings") }
                                     }
-                                    Box(Modifier.width(64.dp).height(3.dp).clip(CircleShape).background(PrismTokens.spectrum))
                                     OutlinedTextField(
                                         value = search, onValueChange = { search = it }, modifier = Modifier.fillMaxWidth(),
-                                        placeholder = { Text("Search or paste video/channel/playlist link") }, singleLine = true, shape = RoundedCornerShape(22.dp),
+                                        placeholder = { Text("Videos, music, or a YouTube link") }, singleLine = true, shape = RoundedCornerShape(12.dp),
                                         leadingIcon = { Icon(PrismIcons.Search, null) },
-                                        trailingIcon = { IconButton(onClick = { model.search(search); navigateTo(1) }) { Icon(PrismIcons.ArrowForward, "Search") } },
+                                        trailingIcon = { IconButton(onClick = { model.search(search) }) { Icon(PrismIcons.ArrowForward, "Search") } },
                                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Search),
-                                        keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSearch = { model.search(search); navigateTo(1) })
+                                        keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSearch = { model.search(search) })
                                     )
-                                    if (tab == 0) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        AssistChip(onClick = model::home, label = { Text("For you") })
-                                        AssistChip(onClick = model::subscriptionsFeed, label = { Text("Subscriptions") })
-                                        AssistChip(onClick = { model.shorts(); shortsMode = true }, label = { Text("Shorts") })
-                                    }
-                                    if (tab == 0) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        listOf("Explore" to "science and technology", "Technology" to "technology", "Gaming" to "gaming", "Learning" to "educational documentaries", "Travel" to "travel films", "Cooking" to "cooking recipes").forEach { (label, query) ->
-                                            FilterChip(selected = browse.query == query, onClick = { model.search(query) }, label = { Text(label) })
-                                        }
-                                    }
-                                    Text(if (tab == 0) "A little curiosity goes a long way." else "Videos, creators, and new rabbit holes.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
-                                    Text(if (tab == 0) (if (browse.personalized) "For you · based on your watching" else browse.query.replaceFirstChar { it.uppercase() }) else "Results for “${browse.query}”", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                                    Text("Results for “${browse.query}”", style = PhotonBodyMediumStyle,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
                             if (browse.busy) item { Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() } }
@@ -618,6 +601,10 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                         }
                         2 -> Column(Modifier.fillMaxSize()) {
                             if (library.youtubeLayout) YouTubeLayoutHeader("You", search = { navigateTo(1) }, settings = { navigateTo(3) })
+                            else Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Text("Your library", Modifier.weight(1f), style = PhotonTitleStyle)
+                                IconButton(onClick = { navigateTo(3) }) { Icon(PrismIcons.Settings, "Settings") }
+                            }
                             Row(Modifier.padding(horizontal = 22.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 FilterChip(selected = !localLibrary, onClick = { localLibrary = false }, label = { Text("YouTube account") })
                                 FilterChip(selected = localLibrary, onClick = { localLibrary = true }, label = { Text("Downloads") })

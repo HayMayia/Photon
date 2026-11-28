@@ -41,6 +41,8 @@ internal class PlaybackQueue(context: Context) {
         prefs.edit().putString("queue", json.encodeToString(value)).apply()
     }
     fun select(video: Video, related: List<Video>, playlist: List<Video>, source: String?, revision: Long, page: AccountLibraryPage?) {
+        // A later foreground selection must not replay stale service metadata into a new ViewModel.
+        selection.value = null
         val old = state.value
         val items = if (source != null) playlist.distinctBy { it.id }.let { if (it.any { v -> v.id == video.id }) it else it + video }
             else if (old.source == null) old.items.take((old.index + 1).coerceAtLeast(0)).filter { it.id != video.id } + video

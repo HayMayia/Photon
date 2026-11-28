@@ -24,5 +24,8 @@ class PlaybackQueuePersistenceTest {
         assertEquals(b, restored.next())
         assertEquals(listOf(b), restored.upcoming())
         assertTrue(restored.related.isEmpty())
+        queue.selection.value = TransportSelection(b, null)
+        queue.select(a, emptyList(), listOf(a,b), "account:3:liked-music", 3, null)
+        assertNull(queue.selection.value)
     }
 }

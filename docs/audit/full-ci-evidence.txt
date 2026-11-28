@@ -1,0 +1,525 @@
+```text
+app: tests=6 failures=0 errors=0 skipped=0
+
+old-photon: tests=800 failures=11 errors=0 skipped=10
+
+com.prism.music.LiveApiTest.streamResolutionAndRangeRequests
+org.schabi.newpipe.extractor.exceptions.SignInConfirmNotBotException: YouTube probably temporarily blocked anonymous watch access with this IP , got error LOGIN_REQUIRED: "Sign in to confirm that you're not a bot"
+	at org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeStreamExtractor.checkPlayabilityStatus(YoutubeStreamExtractor.java:894)
+	at org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeStreamExtractor.fetchAndroidClient(YoutubeStreamExtractor.java:944)
+	at org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeStreamExtractor.onFetchPage(YoutubeStreamExtractor.java:849)
+	at org.schabi.newpipe.extractor.Extractor.fetchPage(Extractor.java:65)
+	at org.schabi.newpipe.extractor.stream.StreamInfo.getInfo(StreamInfo.java:95)
+	at org.schabi.newpipe.extractor.stream.StreamInfo.getInfo(StreamInfo.java:89)
+	at com.prism.music.LiveApiTest.streamResolutionAndRangeRequests(LiveApiTest.kt:169)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunner.java:100)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:366)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:103)
+	at org.junit.runners.BlockJUnit4Cla
+
+com.prism.music.LiveApiTest.downloadThroughput
+org.schabi.newpipe.extractor.exceptions.SignInConfirmNotBotException: YouTube probably temporarily blocked anonymous watch access with this IP , got error LOGIN_REQUIRED: "Sign in to confirm that you're not a bot"
+	at org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeStreamExtractor.checkPlayabilityStatus(YoutubeStreamExtractor.java:894)
+	at org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeStreamExtractor.fetchAndroidClient(YoutubeStreamExtractor.java:944)
+	at org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeStreamExtractor.onFetchPage(YoutubeStreamExtractor.java:849)
+	at org.schabi.newpipe.extractor.Extractor.fetchPage(Extractor.java:65)
+	at org.schabi.newpipe.extractor.stream.StreamInfo.getInfo(StreamInfo.java:95)
+	at org.schabi.newpipe.extractor.stream.StreamInfo.getInfo(StreamInfo.java:89)
+	at com.prism.music.LiveApiTest.downloadThroughput(LiveApiTest.kt:196)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunner.java:100)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:366)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:103)
+	at org.junit.runners.BlockJUnit4ClassRunner.runCh
+
+com.prism.music.StreamChoiceLiveTest.directVideoLinkLater
+java.util.NoSuchElementException: Collection contains no element matching the predicate.
+	at com.prism.music.StreamChoiceLiveTest.directVideoLinkLater(StreamChoiceLiveTest.kt:246)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunner.java:100)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:366)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:103)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:63)
+	at org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)
+	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)
+	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)
+	at org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)
+	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.junit.runners.ParentRunner.run(ParentRunner.java:413)
+	at org.junit.runner.JUnitCore.run(JUnitCore.java:137)
+	at org.junit.runner.JUnitCore.run(JUnitCore.java:115)
+	at org.gradle.api.internal.tasks.testing.junit.JUnitTestExecutor.runRequest(JUnitTestExecutor.java:174)
+	at org.gradle.api.
+
+com.prism.music.StreamChoiceLiveTest.opusIsPickedWheneverOffered
+java.lang.AssertionError: checked some songs
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at com.prism.music.StreamChoiceLiveTest$opusIsPickedWheneverOffered$1.invokeSuspend(StreamChoiceLiveTest.kt:61)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)
+	at kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:256)
+	at kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:54)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlockingImpl(Builders.kt:30)
+	at kotlinx.coroutines.BuildersKt.runBlockingImpl(Unknown Source)
+	at kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK(Builders.concurrent.kt:172)
+	at kotlinx.coroutines.BuildersKt.runBlockingK(Unknown Source)
+	at kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK$default(Builders.concurrent.kt:157)
+	at kotlinx.coroutines.BuildersKt.runBlockingK$default(Unknown Source)
+	at com.prism.music.StreamChoiceLiveTest.opusIsPickedWheneverOffered(StreamChoiceLiveTest.kt:31)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunn
+
+com.prism.music.StreamChoiceLiveTest.videoRangesAreConsistent
+java.util.NoSuchElementException: Collection contains no element matching the predicate.
+	at com.prism.music.StreamChoiceLiveTest.videoRangesAreConsistent(StreamChoiceLiveTest.kt:230)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunner.java:100)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:366)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:103)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:63)
+	at org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)
+	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)
+	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)
+	at org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)
+	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.junit.runners.ParentRunner.run(ParentRunner.java:413)
+	at org.junit.runner.JUnitCore.run(JUnitCore.java:137)
+	at org.junit.runner.JUnitCore.run(JUnitCore.java:115)
+	at org.gradle.api.internal.tasks.testing.junit.JUnitTestExecutor.runRequest(JUnitTestExecutor.java:174)
+	at org.gradle.
+
+com.prism.music.ThemeGalleryTest.badEntriesAreSkipped
+java.io.FileNotFoundException: ../themes/index.json (No such file or directory)
+	at java.base/java.io.FileInputStream.open0(Native Method)
+	at java.base/java.io.FileInputStream.open(FileInputStream.java:213)
+	at java.base/java.io.FileInputStream.<init>(FileInputStream.java:152)
+	at kotlin.io.FilesKt__FileReadWriteKt.readText(FileReadWrite.kt:135)
+	at kotlin.io.FilesKt__FileReadWriteKt.readText$default(FileReadWrite.kt:135)
+	at com.prism.music.ThemeGalleryTest.badEntriesAreSkipped(ThemeGalleryTest.kt:52)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.robolectric.RobolectricTestRunner$HelperTestRunner$1.evaluate(RobolectricTestRunner.java:502)
+	at org.robolectric.internal.SandboxTestRunner$2.lambda$evaluate$2(SandboxTestRunner.java:285)
+	at org.robolectric.internal.bytecode.Sandbox.lambda$runOnMainThread$0(Sandbox.java:104)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+
+
+com.prism.music.ThemeGalleryTest.everyLookInTheGalleryIsUsable
+java.io.FileNotFoundException: ../themes/index.json (No such file or directory)
+	at java.base/java.io.FileInputStream.open0(Native Method)
+	at java.base/java.io.FileInputStream.open(FileInputStream.java:213)
+	at java.base/java.io.FileInputStream.<init>(FileInputStream.java:152)
+	at kotlin.io.FilesKt__FileReadWriteKt.readText(FileReadWrite.kt:135)
+	at kotlin.io.FilesKt__FileReadWriteKt.readText$default(FileReadWrite.kt:135)
+	at com.prism.music.ThemeGalleryTest.everyLookInTheGalleryIsUsable(ThemeGalleryTest.kt:30)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.robolectric.RobolectricTestRunner$HelperTestRunner$1.evaluate(RobolectricTestRunner.java:502)
+	at org.robolectric.internal.SandboxTestRunner$2.lambda$evaluate$2(SandboxTestRunner.java:285)
+	at org.robolectric.internal.bytecode.Sandbox.lambda$runOnMainThread$0(Sandbox.java:104)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+
+
+com.prism.music.LyricSearchLiveTest.linesFindTheirSongs
+java.lang.AssertionError: i got my driver's license last week → drivers license
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at com.prism.music.LyricSearchLiveTest$linesFindTheirSongs$1.invokeSuspend(LyricSearchLiveTest.kt:30)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+	at kotlinx.coroutines.internal.ScopeCoroutine.afterResume(Scopes.kt:35)
+	at kotlinx.coroutines.AbstractCoroutine.resumeWith(AbstractCoroutine.kt:101)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:47)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)
+	at kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:256)
+	at kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:54)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlockingImpl(Builders.kt:30)
+	at kotlinx.coroutines.BuildersKt.runBlockingImpl(Unknown Source)
+	at kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK(Builders.concurrent.kt:172)
+	at kotlinx.coroutines.BuildersKt.runBlockingK(Unknown Source)
+	at kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK$default(Builders.concurrent.kt:157)
+	at kotlinx.coroutines.BuildersKt.runBlockingK$default(Unknown Source)
+	at com.prism.music.LyricSearchLiveTest.linesFindTheirSongs(LyricSearchLiveTest.kt:21)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively
+
+com.prism.music.QuickPicksLiveTest.quickPicksAreFoundInSpanish
+java.lang.AssertionError
+	at org.junit.Assert.fail(Assert.java:87)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertNotNull(Assert.java:713)
+	at org.junit.Assert.assertNotNull(Assert.java:723)
+	at com.prism.music.QuickPicksLiveTest$quickPicksAreFoundInSpanish$1.invokeSuspend(QuickPicksLiveTest.kt:34)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)
+	at kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:256)
+	at kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:54)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlockingImpl(Builders.kt:30)
+	at kotlinx.coroutines.BuildersKt.runBlockingImpl(Unknown Source)
+	at kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK(Builders.concurrent.kt:172)
+	at kotlinx.coroutines.BuildersKt.runBlockingK(Unknown Source)
+	at kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK$default(Builders.concurrent.kt:157)
+	at kotlinx.coroutines.BuildersKt.runBlockingK$default(Unknown Source)
+	at com.prism.music.QuickPicksLiveTest.quickPicksAreFoundInSpanish(QuickPicksLiveTest.kt:26)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.internal.runners.statements.RunAfters.evaluate(RunAfter
+
+com.prism.music.DirectStreamLiveTest.songsResolveInOneRequestAndStreamWhole
+org.junit.ComparisonFailure: Sign in to confirm you’re not a bot expected:<[OK]> but was:<[LOGIN_REQUIRED]>
+	at org.junit.Assert.assertEquals(Assert.java:117)
+	at com.prism.music.DirectStreamLiveTest.songsResolveInOneRequestAndStreamWhole(DirectStreamLiveTest.kt:35)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunner.java:100)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:366)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:103)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:63)
+	at org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)
+	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)
+	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)
+	at org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)
+	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.junit.runners.ParentRunner.run(ParentRunner.java:413)
+	at org.junit.runner.JUnitCore.run(JUnitCore.java:137)
+	at org.junit.runner.JUnitCore.run(JUnitCore.java:115)
+	at org.gradle.api.internal.tasks.tes
+
+com.prism.music.LiveStreamLiveTest.liveStreamPlaysFromHls
+org.schabi.newpipe.extractor.exceptions.SignInConfirmNotBotException: YouTube probably temporarily blocked anonymous watch access with this IP , got error LOGIN_REQUIRED: "Sign in to confirm that you're not a bot"
+	at org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeStreamExtractor.checkPlayabilityStatus(YoutubeStreamExtractor.java:894)
+	at org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeStreamExtractor.fetchAndroidClient(YoutubeStreamExtractor.java:944)
+	at org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeStreamExtractor.onFetchPage(YoutubeStreamExtractor.java:849)
+	at org.schabi.newpipe.extractor.Extractor.fetchPage(Extractor.java:65)
+	at org.schabi.newpipe.extractor.stream.StreamInfo.getInfo(StreamInfo.java:95)
+	at org.schabi.newpipe.extractor.stream.StreamInfo.getInfo(StreamInfo.java:89)
+	at com.prism.music.LiveStreamLiveTest.liveStreamPlaysFromHls(LiveStreamLiveTest.kt:35)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunner.java:100)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:366)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:103)
+	at org.junit.runners.BlockJUnit4
+
+old-photon: lint issues=507
+
+ResourceType Expected resource of type raw {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/connect/WebRemote.kt', 'line': '81', 'column': '69'}
+
+NonObservableLocale Reading locale in a non-observable way in a composable function {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/player/PlayerOptions.kt', 'line': '119', 'column': '65'}
+
+NonObservableLocale Reading locale in a non-observable way in a composable function {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/screens/SettingsScreen.kt', 'line': '432', 'column': '17'}
+
+NonObservableLocale Reading locale in a non-observable way in a composable function {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/screens/SettingsScreen.kt', 'line': '1922', 'column': '52'}
+
+RestrictedApi NavController.getCurrentBackStack can only be called from within the same library group (referenced groupId=`androidx.navigation` from groupId=`Photon`) {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/MainActivity.kt', 'line': '498', 'column': '39'}
+
+RestrictedApi ComponentActivity.dispatchKeyEvent can only be called from within the same library group prefix (referenced groupId=`androidx.core` with prefix androidx from groupId=`Photon`) {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/photon/PhotonActivity.kt', 'line': '89', 'column': '18'}
+
+RestrictedApi ComponentActivity.dispatchKeyEvent can only be called from within the same library group prefix (referenced groupId=`androidx.core` with prefix androidx from groupId=`Photon`) {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/photon/PhotonActivity.kt', 'line': '91', 'column': '22'}
+
+RestrictedApi ComponentActivity.dispatchKeyEvent can only be called from within the same library group prefix (referenced groupId=`androidx.core` with prefix androidx from groupId=`Photon`) {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/photon/PhotonActivity.kt', 'line': '91', 'column': '39'}
+
+RestrictedApi ComponentActivity.dispatchKeyEvent can only be called from within the same library group prefix (referenced groupId=`androidx.core` with prefix androidx from groupId=`Photon`) {'file': '/home/runner/work/Photon/Photon/old-photon/src/debug/java/com/prism/music/photon/TvRenderTestActivity.kt', 'line': '30', 'column': '18'}
+
+RestrictedApi ComponentActivity.dispatchKeyEvent can only be called from within the same library group prefix (referenced groupId=`androidx.core` with prefix androidx from groupId=`Photon`) {'file': '/home/runner/work/Photon/Photon/old-photon/src/debug/java/com/prism/music/photon/TvRenderTestActivity.kt', 'line': '30', 'column': '93'}
+
+RestrictedApi ComponentActivity.dispatchKeyEvent can only be called from within the same library group prefix (referenced groupId=`androidx.core` with prefix androidx from groupId=`Photon`) {'file': '/home/runner/work/Photon/Photon/old-photon/src/debug/java/com/prism/music/photon/TvRenderTestActivity.kt', 'line': '30', 'column': '110'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/photon/AccountPanels.kt', 'line': '56', 'column': '87'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/photon/AccountPanels.kt', 'line': '56', 'column': '104'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/screens/CollectionScreen.kt', 'line': '361', 'column': '82'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/screens/CollectionScreen.kt', 'line': '362', 'column': '96'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/screens/CollectionScreen.kt', 'line': '362', 'column': '135'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/screens/CollectionScreen.kt', 'line': '1116', 'column': '72'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/screens/CollectionScreen.kt', 'line': '1449', 'column': '74'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/screens/CollectionScreen.kt', 'line': '1449', 'column': '120'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/screens/CollectionScreen.kt', 'line': '1450', 'column': '74'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/screens/CollectionScreen.kt', 'line': '1458', 'column': '90'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/screens/CollectionScreen.kt', 'line': '1459', 'column': '91'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/screens/CollectionScreen.kt', 'line': '1459', 'column': '128'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/screens/CollectionScreen.kt', 'line': '1483', 'column': '83'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/screens/CollectionScreen.kt', 'line': '1490', 'column': '14'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/screens/CollectionScreen.kt', 'line': '1491', 'column': '14'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/screens/CollectionScreen.kt', 'line': '1492', 'column': '14'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/screens/CollectionScreen.kt', 'line': '1493', 'column': '14'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/screens/CollectionScreen.kt', 'line': '1506', 'column': '58'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/screens/CollectionScreen.kt', 'line': '1507', 'column': '58'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/screens/CollectionScreen.kt', 'line': '1534', 'column': '74'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/screens/CollectionScreen.kt', 'line': '1586', 'column': '57'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/photon/CommunityScreens.kt', 'line': '132', 'column': '87'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/photon/CommunityScreens.kt', 'line': '132', 'column': '104'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/components/Components.kt', 'line': '169', 'column': '59'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/components/Components.kt', 'line': '537', 'column': '75'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/components/Components.kt', 'line': '538', 'column': '77'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/components/Components.kt', 'line': '569', 'column': '78'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/screens/LibraryScreen.kt', 'line': '180', 'column': '93'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/screens/LibraryScreen.kt', 'line': '215', 'column': '95'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/screens/LibraryScreen.kt', 'line': '353', 'column': '226'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/screens/LibraryScreen.kt', 'line': '764', 'column': '91'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/screens/LibraryScreen.kt', 'line': '765', 'column': '93'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/screens/LibraryScreen.kt', 'line': '770', 'column': '56'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/screens/LibraryScreen.kt', 'line': '770', 'column': '118'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/screens/LibraryScreen.kt', 'line': '771', 'column': '56'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/playback/MediaItems.kt', 'line': '33', 'column': '10'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/playback/MediaTree.kt', 'line': '92', 'column': '55'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/playback/MediaTree.kt', 'line': '93', 'column': '71'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/playback/MediaTree.kt', 'line': '93', 'column': '152'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/playback/MediaTree.kt', 'line': '94', 'column': '55'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/playback/MediaTree.kt', 'line': '95', 'column': '70'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/playback/MediaTree.kt', 'line': '95', 'column': '151'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/playback/MediaTree.kt', 'line': '100', 'column': '58'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/photon/PhotonApplication.kt', 'line': '29', 'column': '94'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/photon/PhotonApplication.kt', 'line': '30', 'column': '93'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/photon/PhotonApplication.kt', 'line': '32', 'column': '94'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/photon/PhotonApplication.kt', 'line': '34', 'column': '33'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/playback/PlayerConnection.kt', 'line': '215', 'column': '17'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/playback/PlayerConnection.kt', 'line': '454', 'column': '29'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/playback/PlayerConnection.kt', 'line': '519', 'column': '38'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/playback/PlayerConnection.kt', 'line': '519', 'column': '85'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/playback/PlayerConnection.kt', 'line': '558', 'column': '23'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/playback/PlayerConnection.kt', 'line': '559', 'column': '11'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/playback/PlayerConnection.kt', 'line': '591', 'column': '11'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/playback/PlayerConnection.kt', 'line': '634', 'column': '25'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/player/PlayerControls.kt', 'line': '874', 'column': '79'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/player/PlayerOptions.kt', 'line': '76', 'column': '78'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/playback/sing/Sing.kt', 'line': '36', 'column': '18'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/playback/sing/Sing.kt', 'line': '56', 'column': '28'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/playback/sing/Sing.kt', 'line': '58', 'column': '28'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/download/SmartDownloads.kt', 'line': '124', 'column': '88'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/download/SmartDownloads.kt', 'line': '144', 'column': '78'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/download/SmartDownloads.kt', 'line': '144', 'column': '112'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/download/SmartDownloads.kt', 'line': '163', 'column': '32'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/download/SmartDownloads.kt', 'line': '164', 'column': '32'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/download/SmartDownloads.kt', 'line': '165', 'column': '32'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/playback/Visualizer.kt', 'line': '41', 'column': '18'}
+
+UnsafeOptInUsageError This declaration is opt-in and its usage should be marked with `@androidx.media3.common.util.UnstableApi` or `@OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/playback/Visualizer.kt', 'line': '47', 'column': '18'}
+
+StateFlowValueCalledInComposition StateFlow.value should not be called within composition {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/components/Components.kt', 'line': '599', 'column': '60'}
+
+StateFlowValueCalledInComposition StateFlow.value should not be called within composition {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/screens/HomeScreen.kt', 'line': '156', 'column': '49'}
+
+StateFlowValueCalledInComposition StateFlow.value should not be called within composition {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/screens/HomeScreen.kt', 'line': '181', 'column': '46'}
+
+StateFlowValueCalledInComposition StateFlow.value should not be called within composition {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/screens/HomeScreen.kt', 'line': '190', 'column': '48'}
+
+StateFlowValueCalledInComposition StateFlow.value should not be called within composition {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/screens/HomeScreen.kt', 'line': '205', 'column': '46'}
+
+StateFlowValueCalledInComposition StateFlow.value should not be called within composition {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/screens/HomeScreen.kt', 'line': '224', 'column': '41'}
+
+StateFlowValueCalledInComposition StateFlow.value should not be called within composition {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/screens/HomeScreen.kt', 'line': '902', 'column': '40'}
+
+StateFlowValueCalledInComposition StateFlow.value should not be called within composition {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/screens/LyricsYourWay.kt', 'line': '112', 'column': '76'}
+
+StateFlowValueCalledInComposition StateFlow.value should not be called within composition {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/screens/LyricsYourWay.kt', 'line': '159', 'column': '59'}
+
+StateFlowValueCalledInComposition StateFlow.value should not be called within composition {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/screens/LyricsYourWay.kt', 'line': '247', 'column': '59'}
+
+StateFlowValueCalledInComposition StateFlow.value should not be called within composition {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/screens/LyricsYourWay.kt', 'line': '430', 'column': '59'}
+
+StateFlowValueCalledInComposition StateFlow.value should not be called within composition {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/components/PlayActions.kt', 'line': '167', 'column': '96'}
+
+StateFlowValueCalledInComposition StateFlow.value should not be called within composition {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/java/com/prism/music/ui/player/PlayerOptions.kt', 'line': '138', 'column': '51'}
+
+UseAppTint Must use `app:tint` instead of `android:tint` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/res/layout/widget_cover.xml', 'line': '75', 'column': '17'}
+
+UseAppTint Must use `app:tint` instead of `android:tint` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/res/layout/widget_disc.xml', 'line': '59', 'column': '13'}
+
+UseAppTint Must use `app:tint` instead of `android:tint` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/res/layout/widget_prism.xml', 'line': '144', 'column': '21'}
+
+UseAppTint Must use `app:tint` instead of `android:tint` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/res/layout/widget_recognize.xml', 'line': '103', 'column': '9'}
+
+UseAppTint Must use `app:tint` instead of `android:tint` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/res/layout/widget_recognize_row.xml', 'line': '72', 'column': '9'}
+
+UseAppTint Must use `app:tint` instead of `android:tint` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/res/layout/widget_recognize_small.xml', 'line': '15', 'column': '9'}
+
+UseAppTint Must use `app:tint` instead of `android:tint` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/res/layout/widget_spotify.xml', 'line': '97', 'column': '17'}
+
+UseAppTint Must use `app:tint` instead of `android:tint` {'file': '/home/runner/work/Photon/Photon/old-photon/src/main/res/layout/widget_strip.xml', 'line': '94', 'column': '13'}
+
+app: lint issues=75
+
+audit-lint.log
+	at org.gradle.internal.execution.steps.IdentifyStep.execute(IdentifyStep.java:56)
+	at org.gradle.internal.execution.steps.IdentifyStep.execute(IdentifyStep.java:38)
+	at org.gradle.internal.execution.impl.DefaultExecutionEngine$1.execute(DefaultExecutionEngine.java:68)
+	at org.gradle.api.internal.tasks.execution.DefaultTaskNodeExecutor.doExecute(DefaultTaskNodeExecutor.java:364)
+	... 55 more
+
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.8.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 5m 36s
+61 actionable tasks: 18 executed, 43 up-to-date
+
+audit-original.log
+	at org.gradle.internal.execution.steps.IdentifyStep.execute(IdentifyStep.java:56)
+	at org.gradle.internal.execution.steps.IdentifyStep.execute(IdentifyStep.java:38)
+	at org.gradle.internal.execution.impl.DefaultExecutionEngine$1.execute(DefaultExecutionEngine.java:68)
+	at org.gradle.api.internal.tasks.execution.DefaultTaskNodeExecutor.doExecute(DefaultTaskNodeExecutor.java:364)
+	... 25 more
+
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.8.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 10m 45s
+34 actionable tasks: 14 executed, 20 from cache
+
+audit-supplied.log
+
+PhotonModelsTest > thumbnailFallbackUsesTheActualVideoId PASSED
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/supplied-1795893296086.json
+
+[Incubating] Problems report is available at: file:///home/runner/work/Photon/Photon/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.8.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 46s
+32 actionable tasks: 29 executed, 3 from cache
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.8.0/userguide/configuration_cache_enabling.html
+```

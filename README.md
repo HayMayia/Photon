@@ -1,7 +1,30 @@
-# Photon — supplied-project replacement
+# Photon
 
-The active Android app is now the **complete user-supplied “Photon v1.1.1.0”
-Compose project**, rather than its design being layered over the previous engine.
+## Original Photon — current maintenance target
+
+The phone/tablet and Android TV app currently being maintained is **`old-photon/`**,
+package **`io.github.haymayia.photon`**. The latest published original release is
+**1.1.1.7 Beta**; subsequent audit changes on this branch are not a new release.
+Open the entire repository in Android Studio, using JDK 21 and the SDK requested
+by Gradle, then build:
+
+```sh
+./gradlew :old-photon:assembleDebug
+./gradlew :old-photon:testDebugUnitTest
+```
+
+For an independently installed development copy, add `-PsideBySide`. Locally
+debug-signed builds cannot necessarily update the officially signed installation.
+Do not uninstall or clear a populated installation to work around that error.
+
+See [the architecture audit](docs/ARCHITECTURE_AUDIT.md) for confirmed defects,
+repairs, actual verification and explicitly unfinished UI/power-tool requirements.
+Internal `com.prism.music` packages are retained upstream APIs, not the app ID.
+
+## Separate supplied Firebase/WebView app
+
+The **user-supplied “Photon v1.1.1.0” Compose project** is retained independently
+in **`app/`**; it does not replace the original Photon installation.
 All supplied screens, components, artwork, Firebase account/cloud repositories,
 YouTube repository, preferences and WebView player are used.
 
@@ -44,9 +67,9 @@ Do not send private credentials or service-account keys in chat.
 Until the project owner completes that setup, Google login and cloud data access
 are **not verified**. Compilation alone does not prove these services work.
 
-## What changed / recovery
+## Historical replacement import / recovery
 
-This explicitly replaces the previous Android implementation, including its
+The original replacement import replaced the previous Android implementation, including its
 native player, updater, downloads, Google account/session integration and TV UI.
 Those previous features are not silently retained or claimed as supported by the
 supplied app. Its library uses Firebase/Firestore; that is not equivalent to all

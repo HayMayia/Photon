@@ -30,8 +30,12 @@ Pre-release CI [46168242134](https://github.com/HayMayia/Photon/actions/runs/461
 passed the build, original Photon tests, device-test compilation and permanent
 signing verification. Includes remote speed navigation/application regression,
 chapter parsing, existing card focus and preview tests, and playback tests.
-Final versioned release verification pending.
+Final versioned CI [46168670481](https://github.com/HayMayia/Photon/actions/runs/46168670481)
+passed all checks, including the release build and publication.
+Published source: `2c35561d643925cc67081387c8837a142e877867`.
+[Download Photon.apk](https://github.com/HayMayia/Photon/releases/download/v1.1.1.5-beta/Photon.apk)
+(24,616,731 bytes; non-draft release and uploaded asset verified).
 
 No physical TV, remote, screenshot pixel-match or Bluetooth hardware test claimed.
 The photos guide layout; the copyrighted reference artwork/branding is not bundled.
-Design rationale and research: [TV_DESIGN_REFERENCE.md](TV_DESIGN_REFERENCE.md).
+Design rationale and research: [TV design reference](https://github.com/HayMayia/Photon/blob/arena/f7d21a23-photon/docs/TV_DESIGN_REFERENCE.md).

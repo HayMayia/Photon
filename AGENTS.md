@@ -30,3 +30,7 @@ an email using the connected Gmail app:
 - 1.1.1.4 Beta (original Photon): sent after successful CI and uploaded APK
   verification; Gmail message ID `1a2211d6e48f2c6b`.
   Subject: `Updated Photon to 1.1.1.4 Beta`.
+
+- 1.1.1.5 Beta (original Photon TV update): sent after successful CI and
+  non-draft uploaded APK verification; Gmail message ID `1a223270373ce279`.
+  Subject: `Updated Photon to 1.1.1.5 Beta`.

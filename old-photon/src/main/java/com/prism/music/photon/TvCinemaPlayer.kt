@@ -77,14 +77,14 @@ internal fun TvCinemaPlayer(model: PhotonViewModel, controller: MediaController?
         if (watch.busy || controller == null) CircularProgressIndicator(Modifier.align(Alignment.Center))
         if (visible) {
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Black.copy(.65f), Color.Transparent, Color.Black.copy(.8f)))))
-            Row(Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(horizontal = 48.dp, vertical = 32.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+            if (shelf == null) Row(Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(horizontal = 48.dp, vertical = 32.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                 Column(Modifier.weight(1f).padding(end = 32.dp)) {
                     Text(video.title, color = Color.White, style = MaterialTheme.typography.titleLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     Text(video.channel, color = Color.White.copy(.8f), style = MaterialTheme.typography.bodyMedium)
                 }
                 OutlinedButton(onClick = menus.settings, modifier = Modifier.remoteFocus()) { Text("Settings", color = Color.White) }
             }
-            Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 48.dp, vertical = 28.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Column(Modifier.align(if (shelf == null) Alignment.BottomCenter else Alignment.TopCenter).fillMaxWidth().padding(horizontal = 48.dp, vertical = 28.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 if (shelf == null) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         TextButton(onClick = { if (playing) controller?.pause() else controller?.play() }, modifier = Modifier.remoteFocus()) { Text(if (playing) "Pause" else "Play", color = Color.White) }

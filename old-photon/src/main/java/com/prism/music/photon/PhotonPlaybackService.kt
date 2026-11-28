@@ -196,8 +196,12 @@ class PhotonPlaybackService : MediaSessionService() {
                     val app = application as PhotonApplication
                     val library = app.library.state.value
                     val stored = getSharedPreferences("photon_media_resume", MODE_PRIVATE)
-                    val video = stored.getString("video", null)?.let { runCatching { json.decodeFromString<Video>(it) }.getOrNull() }
+                    val savedVideo = stored.getString("video", null)?.let { runCatching { json.decodeFromString<Video>(it) }.getOrNull() }
+                    val queue = app.transport.state.value
+                    val video = queue.items.firstOrNull { it.id == queue.currentId } ?: savedVideo
                         ?: throw UnsupportedOperationException("No previous music to resume")
+                    if (queue.source?.startsWith("account:") == true)
+                        check(queue.revision == library.youtubeSessionRevision && library.youtubeSessionReady)
                     check(MusicRecoveryPolicy.allowed(video, library, isPhotonTv())) {
                         "Music recovery is disabled"
                     }
@@ -213,7 +217,7 @@ class PhotonPlaybackService : MediaSessionService() {
                     }
                     if (app.transport.state.value.currentId != video.id)
                         app.transport.select(video, emptyList(), emptyList(), null, library.youtubeSessionRevision, null)
-                    MediaSession.MediaItemsWithStartPosition(listOf(item), 0, MusicRecoveryPolicy.position(stored.getLong("position", 0), stored.getLong("duration", 0)))
+                    MediaSession.MediaItemsWithStartPosition(listOf(item), 0, if (savedVideo?.id == video.id) MusicRecoveryPolicy.position(stored.getLong("position", 0), stored.getLong("duration", 0)) else 0)
                 }
             }).build()
         player.addListener(object : androidx.media3.common.Player.Listener {

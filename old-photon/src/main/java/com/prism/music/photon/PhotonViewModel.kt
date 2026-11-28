@@ -901,7 +901,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 val details = app.videos.details(video.id)
                 // Metadata may finish while stream extraction is suspended; use the latest proof, not the opening snapshot.
                 val presentation = videoPresentation.value[video.id] ?: video
-                val proved = ShortsPresentation.merge(ShortsPresentation.merge(details.video, video), videoPresentation.value[video.id])
+                val proved = MusicPlaybackPolicy.retainProof(ShortsPresentation.merge(ShortsPresentation.merge(details.video, video), videoPresentation.value[video.id]), video)
                 videoPresentation.value = (videoPresentation.value + (video.id to proved)).entries.toList().takeLast(512).associate { it.toPair() }
                 presentationRevisions[video.id] = revision
                 val max = library.value.defaultHeight

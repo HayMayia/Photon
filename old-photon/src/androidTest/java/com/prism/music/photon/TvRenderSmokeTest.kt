@@ -38,6 +38,7 @@ class TvRenderSmokeTest {
         app.library.update { it.copy(youtubeHome = false, accountHistorySync = false, videoBackground = true) }
         val intent = Intent(instrumentation.targetContext, TvRenderTestActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         val scenario = ActivityScenario.launch<TvRenderTestActivity>(intent)
+        instrumentation.waitForIdleSync()
         var controller: MediaController? = null
         val frame = CountDownLatch(1)
         val failed = AtomicReference<String?>(null)
@@ -58,20 +59,30 @@ class TvRenderSmokeTest {
             assertTrue("No first-frame callback within 20 seconds", frame.await(20, TimeUnit.SECONDS))
             assertNull("Decoder failure", failed.get())
             val pixels = CountDownLatch(1)
+            val path = File(instrumentation.targetContext.getExternalFilesDir(null), "tv-render-smoke.png")
             var colorful = false
+            val handler = Handler(Looper.getMainLooper())
+            val deadline = android.os.SystemClock.elapsedRealtime() + 5_000
             scenario.onActivity { activity ->
-                val texture = activity.output.videoSurfaceView as TextureView
-                val bitmap = texture.bitmap
-                assertNotNull("Texture has no frame bitmap", bitmap)
-                if (bitmap != null) {
-                    val samples = IntArray(bitmap.width * bitmap.height)
-                    bitmap.getPixels(samples, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
-                    colorful = samples.any { android.graphics.Color.red(it) > 35 || android.graphics.Color.green(it) > 35 || android.graphics.Color.blue(it) > 35 }
-                    bitmap.recycle()
+                val sample = object : Runnable {
+                    override fun run() {
+                        val bitmap = (activity.output.videoSurfaceView as TextureView).bitmap
+                        if (bitmap != null) {
+                            val small = Bitmap.createScaledBitmap(bitmap, 320, 180, false)
+                            val samples = IntArray(small.width * small.height)
+                            small.getPixels(samples, 0, small.width, 0, 0, small.width, small.height)
+                            colorful = samples.any { android.graphics.Color.red(it) > 35 || android.graphics.Color.green(it) > 35 || android.graphics.Color.blue(it) > 35 }
+                            if (colorful) path.outputStream().use { small.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                            if (small !== bitmap) small.recycle()
+                            bitmap.recycle()
+                        }
+                        if (colorful || android.os.SystemClock.elapsedRealtime() >= deadline) pixels.countDown()
+                        else handler.postDelayed(this, 100)
+                    }
                 }
-                pixels.countDown()
+                handler.post(sample)
             }
-            assertTrue(pixels.await(5, TimeUnit.SECONDS))
+            assertTrue(pixels.await(8, TimeUnit.SECONDS))
             assertTrue("Decoder callback fired but actual texture remains black", colorful)
             var exits = 0
             scenario.onActivity { activity ->
@@ -80,15 +91,6 @@ class TvRenderSmokeTest {
                 activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BACK))
                 activity.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BACK))
                 assertEquals("Back must exit once before native hierarchy", 1, exits)
-            }
-            val path = File(instrumentation.targetContext.getExternalFilesDir(null), "tv-render-smoke.png")
-            scenario.onActivity { activity ->
-                val bitmap = Bitmap.createBitmap(activity.output.width, activity.output.height, Bitmap.Config.ARGB_8888)
-                val done = CountDownLatch(1)
-                PixelCopy.request(activity.window, bitmap, { result ->
-                    if (result == PixelCopy.SUCCESS) path.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
-                    bitmap.recycle(); done.countDown()
-                }, Handler(Looper.getMainLooper()))
             }
         } finally {
             scenario.onActivity { it.output.player = null; controller?.release() }

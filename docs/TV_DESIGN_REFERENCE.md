@@ -36,3 +36,14 @@ horizontal shelves with readable titles and generous spacing. No auto-play on fo
 Hosted build and regression checks are required. A passing hosted test does not
 mean the photos were pixel-matched or a physical TV remote was tested. Validate on
 real 720p/1080p/4K TVs for safe area, focus visibility and every D-pad/Back path.
+
+## Regression correction after 1.1.1.5 device report
+The published build was reported to trap Shorts, advance outside Subscriptions,
+and display controls without a picture. Hosted tests did not establish device
+playback correctness. Corrections route selected TV Shorts to one player, freeze
+Subscriptions queue membership, stop automatic advance for Shorts/subscription
+feeds, and gate related transport by the recommendation preference. The same
+stateless Shorts frame is exercised by a remote Back/action-navigation test.
+TV flat video now explicitly uses TextureView rather than the default SurfaceView
+under Compose overlays; inflation is tested, but first-frame rendering on the
+reporting TV remains unverified. No pixel-perfect or physical-device claim.

@@ -176,3 +176,13 @@ internal class PhotonPlayerView @JvmOverloads constructor(context: Context, attr
         super.onDetachedFromWindow()
     }
 }
+
+/** PlayerView's constructor overrides XML descendantFocusability; apply after inflation. */
+@UnstableApi
+internal fun PhotonPlayerView.configureTvOverlayFocus(tv: Boolean, controls: Boolean) {
+    if (tv && !controls) {
+        isFocusable = false
+        isFocusableInTouchMode = false
+        descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
+    } else descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
+}

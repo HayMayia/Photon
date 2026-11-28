@@ -18,6 +18,7 @@ class TvVideoSurfaceTest {
     @Test fun tvVideoUsesAnActualTextureOutputWithoutNativeFocusInterception() {
         val app = ApplicationProvider.getApplicationContext<Application>()
         val view = LayoutInflater.from(app).inflate(com.prism.music.R.layout.photon_tv_video, null) as PhotonPlayerView
+        view.configureTvOverlayFocus(tv = true, controls = false)
         assertTrue(view.videoSurfaceView is TextureView)
         assertFalse(view.useController)
         assertFalse(view.isFocusable)

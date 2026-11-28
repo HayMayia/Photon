@@ -4,7 +4,13 @@ import androidx.media3.common.Player
 import org.junit.Assert.*
 import org.junit.Test
 import java.lang.reflect.Proxy
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import android.app.Application
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34], application = Application::class)
 class NextVideoPlayerTest {
     private fun emptyPlayer(): Player = Proxy.newProxyInstance(Player::class.java.classLoader, arrayOf(Player::class.java)) { _, method, _ ->
         when (method.name) {

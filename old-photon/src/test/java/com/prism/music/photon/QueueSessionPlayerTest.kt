@@ -25,6 +25,7 @@ class QueueSessionPlayerTest {
         assertTrue(player.isCommandAvailable(Player.COMMAND_SEEK_TO_NEXT))
         assertFalse(player.isCommandAvailable(Player.COMMAND_SEEK_TO_PREVIOUS))
         player.seekToNextMediaItem()
+        player.refreshCommands() // Service's queue-state collector invalidates the state adapter.
         assertEquals(b.id, state.currentId)
         assertFalse(player.isCommandAvailable(Player.COMMAND_SEEK_TO_NEXT))
         assertTrue(player.isCommandAvailable(Player.COMMAND_SEEK_TO_PREVIOUS))
@@ -45,6 +46,7 @@ class QueueSessionPlayerTest {
             }
         }
         player.addListener(listener)
+        assertFalse(player.isCommandAvailable(Player.COMMAND_SEEK_TO_NEXT)) // establish initial state
         queue = queue.copy(items = listOf(a,b))
         player.refreshCommands()
         org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
@@ -65,6 +67,7 @@ class QueueSessionPlayerTest {
             override fun onTimelineChanged(timeline: androidx.media3.common.Timeline, reason: Int) { timelines++ }
             override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) { playIntents++ }
         })
+        assertTrue(player.currentTimeline.isEmpty) // establish state before mutations
         raw.setMediaItem(androidx.media3.common.MediaItem.fromUri("file:///test.mp4"))
         raw.playWhenReady = true
         org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()

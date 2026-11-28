@@ -60,3 +60,11 @@ replacement's build; separate native-port folders are historical, not parity
 claims for this supplied app.
 
 See `docs/RELEASE_1_1_1_1_BETA.md` for import provenance and validation status.
+
+## Original Photon maintenance
+
+The original non-Firebase Photon is maintained separately in `old-photon/`.
+Build with `./gradlew :old-photon:assembleDebug`. Its package remains
+`io.github.haymayia.photon`, so signed releases update the existing original app
+without deleting its data. See `docs/RELEASE_1_1_1_2_BETA.md` for the Next-button
+and speaker/headset music-recovery update. The supplied app in `app/` is unchanged.

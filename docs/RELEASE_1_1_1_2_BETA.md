@@ -21,5 +21,9 @@ setup is required for this original-app update. Version code 57.
   vendor battery restrictions cannot be bypassed. Physical speaker/device
   recovery remains untested; there is no universal auto-launch guarantee.
 
-Validation: pending hosted Android build and unit tests. Added command-adapter and
-music-recovery policy tests. Existing playlist/history/background tests retained.
+Validation: Actions run 46113245324 passed debug/release assembly, configured
+Photon unit/rendered tests and registered signing-certificate verification.
+Command-adapter and music-recovery regression tests passed alongside existing
+playlist/history/background tests. Published source ecc675f9e55d92930e0e60e261a3d18f997ef6fa.
+GitHub asset 803420436 (`Photon.apk`, 24,551,133 bytes). The separate supplied-app
+workflow also passed. No physical-device/speaker claims are made.

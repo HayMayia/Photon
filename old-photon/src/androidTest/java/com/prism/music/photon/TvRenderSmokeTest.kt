@@ -43,8 +43,8 @@ class TvRenderSmokeTest {
         val failed = AtomicReference<String?>(null)
         try {
             val future = MediaController.Builder(app, SessionToken(app, ComponentName(app, PhotonPlaybackService::class.java))).buildAsync()
-            controller = future.get(20, TimeUnit.SECONDS)
-            val player = controller
+            val player = future.get(20, TimeUnit.SECONDS)
+            controller = player
             scenario.onActivity { activity ->
                 activity.output.player = player
                 player.addListener(object : Player.Listener {

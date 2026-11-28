@@ -5,8 +5,8 @@ import androidx.activity.ComponentActivity
 import androidx.media3.common.util.UnstableApi
 @androidx.annotation.OptIn(UnstableApi::class)
 class TvRenderTestActivity : ComponentActivity() {
-    lateinit var output: PhotonPlayerView
-    val back = TvBackDispatcher()
+    internal lateinit var output: PhotonPlayerView
+    internal val back = TvBackDispatcher()
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
         output = layoutInflater.inflate(com.prism.music.R.layout.photon_tv_video, null) as PhotonPlayerView

@@ -710,6 +710,14 @@ internal fun VideoSurface(controller: MediaController?, modifier: Modifier, cont
     val projection = watched.quality?.projection ?: watched.video?.projection ?: VideoProjection.FLAT
     var panorama by remember(controller, projection) { mutableStateOf<PanoramaVideoView?>(null) }
     fun configure(view: PhotonPlayerView) {
+        if (view.context.isPhotonTv() && !controls) {
+            // Compose owns remote focus in the cinema/portrait overlays.
+            view.isFocusable = false
+            view.isFocusableInTouchMode = false
+            view.descendantFocusability = android.view.ViewGroup.FOCUS_BLOCK_DESCENDANTS
+        } else {
+            view.descendantFocusability = android.view.ViewGroup.FOCUS_AFTER_DESCENDANTS
+        }
         view.setControllerVisibilityListener(if (visibilityChanged == null) null as PlayerView.ControllerVisibilityListener? else
             PlayerView.ControllerVisibilityListener { visible -> onVisibility?.invoke(visible == android.view.View.VISIBLE) })
         view.controllerAutoShow = visibilityChanged == null

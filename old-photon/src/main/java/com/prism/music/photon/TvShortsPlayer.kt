@@ -32,7 +32,7 @@ internal fun TvShortsPlayer(browse: BrowseState, watch: WatchState, controller: 
     LaunchedEffect(video?.id) { if (watch.video == null && video != null) model.open(video); focus.requestFocus() }
     BackHandler { if (comments) comments = false else close() }
     Box(Modifier.fillMaxSize().background(Color(0xFF141A24)).onPreviewKeyEvent {
-        if (it.type == KeyEventType.KeyDown) when (it.key) {
+        if (!comments && it.type == KeyEventType.KeyDown) when (it.key) {
             Key.DirectionUp -> { move(-1); true }
             Key.DirectionDown -> { move(1); true }
             else -> false

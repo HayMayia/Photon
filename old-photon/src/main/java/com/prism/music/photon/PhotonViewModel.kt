@@ -105,7 +105,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
             try {
                 val image = app.videos.channelArtwork(id)
                 if (image.isNotBlank()) channelArtwork.value = (channelArtwork.value + (id to image)).entries.toList().takeLast(256).associate { it.toPair() }
-            } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { /* A visible initial remains when artwork cannot load. */ }
+            } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { PhotonDiagnostics.event("Optional operation failed: A visible initial remains when artwork cannot load.") }
             finally { avatarPending.remove(id) }
         }
     }
@@ -152,7 +152,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                     if (it.id == resolved.id) ShortsPresentation.merge(it, resolved) else it
                 })
                 videoPresentation.value = (videoPresentation.value + (video.id to resolved)).entries.toList().takeLast(512).associate { it.toPair() }
-            } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { /* Unknown stays unknown; no duration guesses. */ }
+            } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { PhotonDiagnostics.event("Optional operation failed: Unknown stays unknown; no duration guesses.") }
             finally { presentationPending.remove(presentationKey) }
         }
         if (!includeLike) return
@@ -167,7 +167,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 }
                 if (value != null && googleLikes.value[video.id] == previousLike && revision == library.value.youtubeSessionRevision && library.value.youtubeHome && library.value.youtubeSessionReady)
                     googleLikes.value = googleLikes.value + (video.id to value)
-            } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { /* No fabricated unliked state on failure. */ }
+            } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { PhotonDiagnostics.event("Optional operation failed: No fabricated unliked state on failure.") }
             finally { likesPending.remove(key) }
         }
     }
@@ -797,7 +797,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
             try {
                 val state = app.accountActions.subscriptionState(id, app.youtubeHistory.session())
                 if (state != null && epoch == subscriptionStateGeneration && revision == library.value.youtubeSessionRevision && library.value.youtubeSessionReady) googleSubscriptions.value = googleSubscriptions.value + (id to state)
-            } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { /* Keep known directory proof; unknown is not false. */ }
+            } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { PhotonDiagnostics.event("Optional operation failed: Keep known directory proof; unknown is not false.") }
             finally { subscriptionReads.remove(id) }
         }
     }
@@ -831,7 +831,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 for (url in sources) {
                     try { videos += app.videos.channel(url, shorts = true).videos.map { it.copy(short = true) } }
                     catch (cancelled: CancellationException) { throw cancelled }
-                    catch (_: Exception) { /* A creator may have no Shorts tab. */ }
+                    catch (_: Exception) { PhotonDiagnostics.event("Optional operation failed: A creator may have no Shorts tab.") }
                 }
                 mutableBrowse.value = BrowseState(videos.distinctBy { it.id }, query = "Shorts", hasMore = result.next != null)
             } catch (cancelled: CancellationException) { throw cancelled }
@@ -960,7 +960,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                     if (mutableWatch.value.video?.id == video.id && mutableWatch.value.request == 0L)
                         mutableWatch.value = mutableWatch.value.copy(details = details)
                 } catch (cancelled: CancellationException) { throw cancelled }
-                catch (_: Exception) { /* Keep recovered audio playing if metadata is unavailable. */ }
+                catch (_: Exception) { PhotonDiagnostics.event("Optional operation failed: Keep recovered audio playing if metadata is unavailable.") }
             }
         }
     }

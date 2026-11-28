@@ -263,6 +263,7 @@ private class PieceReader(private val dec: PcmDecoder, first: FloatArray, privat
             }
             if (!stopped) put(toModel.finish())
         } catch (_: InterruptedException) {
+            Thread.currentThread().interrupt()
         } catch (t: Throwable) {
             error = t
         } finally {

@@ -233,7 +233,7 @@ class VideoRepository {
         val candidates = mutableListOf<Video>()
         for (seed in seeds) {
             kotlinx.coroutines.currentCoroutineContext().ensureActive()
-            try { candidates += details(seed.id).related } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { /* Another seed can still provide recommendations. */ }
+            try { candidates += details(seed.id).related } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { PhotonDiagnostics.event("Optional operation failed: Another seed can still provide recommendations.") }
         }
         RecommendationRank.rank(candidates, library)
     }

@@ -77,7 +77,7 @@ class PhotonPlaybackService : MediaSessionService() {
         val eligible = opened > 0 && library.accountHistorySync && library.youtubeHome && library.youtubeSessionReady &&
             itemRevision == library.youtubeSessionRevision && !history.locallyPaused()
         accountHistoryGate.tick(viewKey, now, player.isPlaying, eligible, AccountHistoryPolicy.reportThreshold(library))?.let { watched ->
-            if (id != null) scope.launch { try { history.report(id, watched, itemRevision) } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { /* No automatic retry or UI credential logging. */ } }
+            if (id != null) scope.launch { try { history.report(id, watched, itemRevision) } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { PhotonDiagnostics.event("Optional operation failed: No automatic retry or UI credential logging.") } }
         }
         // Recovery is device-local transport state, independent of paused Google history.
         player.currentMediaItem?.mediaMetadata?.extras?.getString("photon_video")?.let { raw ->

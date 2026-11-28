@@ -149,6 +149,7 @@ fun signOutGoogleAccount(
                 cm.removeAllCookies(null)
                 cm.flush()
             } catch (_: Exception) {
+                Log.w(AUTH_TAG, "Could not clear WebView cookies during sign-out")
             }
             try {
                 credentialManager.clearCredentialState(ClearCredentialStateRequest())

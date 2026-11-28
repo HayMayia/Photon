@@ -192,6 +192,7 @@ class HttpServer(
             }
             runCatching { out.flush() }
         } catch (_: Exception) {
+            android.util.Log.d("PhotonLan", "LAN connection ended before request completion")
         } finally {
             runCatching { s.close() }
         }

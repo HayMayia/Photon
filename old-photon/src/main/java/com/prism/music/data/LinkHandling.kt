@@ -38,6 +38,7 @@ object LinkHandling {
                 context.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                 return
             } catch (_: ActivityNotFoundException) {
+                android.util.Log.w("PhotonLinks", "System settings action unavailable; trying fallback")
             }
         }
     }

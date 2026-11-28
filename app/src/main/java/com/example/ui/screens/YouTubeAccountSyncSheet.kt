@@ -685,7 +685,8 @@ fun YouTubeWebSyncDialog(
             try {
                 webViewRef?.stopLoading()
                 webViewRef?.destroy()
-            } catch (_: Throwable) {
+            } catch (_: RuntimeException) {
+                android.util.Log.w("PhotonAccount", "Account WebView cleanup failed")
             }
         }
     }

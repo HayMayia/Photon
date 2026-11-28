@@ -186,7 +186,8 @@ class YouTubePlayerController(
                 webView.removeJavascriptInterface("PhotonBridge")
                 (webView.parent as? ViewGroup)?.removeView(webView)
                 webView.destroy()
-            } catch (_: Throwable) {
+            } catch (_: RuntimeException) {
+                android.util.Log.w("PhotonPlayer", "WebView operation failed; no script or account data logged")
             }
         }
     }
@@ -204,7 +205,8 @@ class YouTubePlayerController(
         mainHandler.post {
             try {
                 webView.evaluateJavascript(script, null)
-            } catch (_: Throwable) {
+            } catch (_: RuntimeException) {
+                android.util.Log.w("PhotonPlayer", "WebView operation failed; no script or account data logged")
             }
         }
     }

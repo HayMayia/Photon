@@ -7,6 +7,8 @@ import com.prism.music.ui.theme.IconStyle
 /** Photon deliberately does not start Prism's music jobs, account sync, or update installer. */
 class PhotonApplication : Application(), coil3.SingletonImageLoader.Factory {
     override fun newImageLoader(context: coil3.PlatformContext): coil3.ImageLoader = PhotonImageLoader.create(context)
+    internal var transportNavigate: ((Boolean) -> Unit)? = null
+    internal val transport by lazy { PlaybackQueue(this) }
     internal val sleepTimer = PhotonSleepTimer()
     internal val updates by lazy { PhotonUpdates(this) }
     internal val playbackForeground = kotlinx.coroutines.flow.MutableStateFlow(false)

@@ -384,7 +384,12 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 app.likedMusicCache.save(LikedMusicSnapshot(revision, videos,
                     if (full || complete) System.currentTimeMillis() else cached?.updatedAt ?: 0, schemaVersion = 3,
                     scanComplete = complete || (!full && cached?.scanComplete == true), unresolved = unavailable))
-                if (playlistSource.value == PlaylistQueuePolicy.key(revision, "liked-music")) queue.value = videos
+                if (playlistSource.value == PlaylistQueuePolicy.key(revision, "liked-music")) {
+                    queue.value = PlaylistQueuePolicy.append(queue.value, videos)
+                    val transportState = app.transport.state.value
+                    if (transportState.source == playlistSource.value)
+                        app.transport.update(transportState.copy(items = PlaylistQueuePolicy.append(transportState.items, videos)))
+                }
                 googleLikes.value += videos.map { it.id }.associateWith { true }
                 if (accountLibrary.value.shelf == AccountShelf.LIKED_MUSIC && accountLibrary.value.playlist == null)
                     accountLibrary.value = accountLibrary.value.copy(busy = false, moreBusy = false, error = error,
@@ -600,11 +605,25 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     val comments = MutableStateFlow<CommentPage?>(null)
     val commentsBusy = MutableStateFlow(false)
     val commentsError = MutableStateFlow<String?>(null)
-    val queue = MutableStateFlow<List<Video>>(emptyList())
-    val playlistSource = MutableStateFlow<String?>(null)
+    val queue = MutableStateFlow(app.transport.state.value.items)
+    val playlistSource = MutableStateFlow(app.transport.state.value.source)
     val playlistMore = MutableStateFlow(false)
     val playlistQueueBusy = MutableStateFlow(false)
     val playlistQueueError = MutableStateFlow<String?>(null)
+    internal val transport = app.transport
+    init {
+        viewModelScope.launch {
+            transport.selection.collect { selection ->
+                if (selection != null) {
+                    watchJob?.cancel()
+                    val state = transport.state.value
+                    queue.value = state.items; playlistSource.value = state.source
+                    playlistMore.value = state.continuation != null
+                    mutableWatch.value = WatchState(video = selection.video, details = selection.details, localPath = selection.localPath)
+                }
+            }
+        }
+    }
     private var queuedSelection: String? = null
     private var queuedAccountPage: AccountLibraryPage? = null
     private var queuedPublicPage: org.schabi.newpipe.extractor.Page? = null
@@ -879,6 +898,9 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 presentationRevisions[video.id] = revision
                 val max = library.value.defaultHeight
                 val quality = details.qualities.firstOrNull { it.height <= max } ?: details.qualities.last()
+                app.transport.publicPage = queuedPublicPage; app.transport.publicUrl = queuedPublicUrl
+                app.transport.select(proved, details.related, queue.value, playlistSource.value, revision, queuedAccountPage)
+                if (queuedPublicPage != null) app.transport.update(app.transport.state.value.copy(continuation = "@public"))
                 mutableWatch.value = WatchState(details.video.copy(short = video.short || presentation.short || details.video.short, thumbnail = if (presentation.short && presentation.thumbnail.isNotBlank()) presentation.thumbnail else details.video.thumbnail), details, quality, request = System.nanoTime(), startPositionMs = library.value.progress[video.id]?.resumeMs() ?: 0, openedAtMs = opened, webRevision = revision)
                 // Playback is published first; account-only reads must not contend with startup.
                 viewModelScope.launch { kotlinx.coroutines.delay(1_000); if (mutableWatch.value.video?.id == video.id) { resolveVideoPresentation(proved); details.channel?.let(::resolveSubscription) } }
@@ -896,6 +918,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
             mutableWatch.value = WatchState(video = download.video, error = "The downloaded file is missing. Remove this entry and download it again.")
             return
         }
+        app.transport.select(download.video, emptyList(), emptyList(), null, library.value.youtubeSessionRevision, null)
         mutableWatch.value = WatchState(video = videoPresentation.value[download.video.id]?.let { download.video.copy(short = download.video.short || it.short, thumbnail = it.thumbnail.ifBlank { download.video.thumbnail }) } ?: download.video, localPath = download.path, request = System.nanoTime(), startPositionMs = library.value.progress[download.video.id]?.resumeMs() ?: 0,
             openedAtMs = android.os.SystemClock.elapsedRealtime(), webRevision = library.value.youtubeSessionRevision)
     }
@@ -965,15 +988,8 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
         playlistToDelete.value = null
         requestGoogleChange(GoogleChange(GoogleChangeKind.DELETE_PLAYLIST, target.first, target.second))
     }
-    fun next() {
-        val index = queue.value.indexOfFirst { it.id == watch.value.video?.id }
-        if (index >= 0) {
-            val next = queue.value.getOrNull(index + 1)
-            if (next != null) open(next, true) else if (playlistMore.value) morePlaylistQueue(playAfter = true)
-        } else if (playlistSource.value == null) {
-            watch.value.details?.related?.firstOrNull { it.id != watch.value.video?.id }?.let { open(it) }
-        }
-    }
+    fun next() { app.transportNavigate?.invoke(true) }
+    fun previous() { app.transportNavigate?.invoke(false) }
     fun closeCollection() { collectionJob?.cancel(); collection.value = null; collectionBusy.value = false; collectionError.value = null }
     fun openCollection(url: String, channel: Boolean, shorts: Boolean = false, more: Boolean = false) {
         if (more && collectionBusy.value) return

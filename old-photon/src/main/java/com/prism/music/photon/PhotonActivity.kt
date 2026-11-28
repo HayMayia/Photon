@@ -261,7 +261,10 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
     val playlistMore by model.playlistMore.collectAsStateWithLifecycle()
     val playlistQueueBusy by model.playlistQueueBusy.collectAsStateWithLifecycle()
     val playlistQueueError by model.playlistQueueError.collectAsStateWithLifecycle()
-    val upcoming = PlaylistQueuePolicy.upcoming(playlistQueue, watch.video?.id, playlistSource != null, watch.details?.related.orEmpty())
+    val transportState by model.transport.state.collectAsStateWithLifecycle()
+    val transportBusy by model.transport.busy.collectAsStateWithLifecycle()
+    val transportError by model.transport.error.collectAsStateWithLifecycle()
+    val upcoming = transportState.upcoming()
     var commentsSheet by remember { mutableStateOf(false) }
     var playlistSheet by remember { mutableStateOf(false) }
     var shortsMode by rememberSaveable { mutableStateOf(false) }
@@ -300,7 +303,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
         val listener = object : Player.Listener {
             override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) { playIntent = playWhenReady }
             override fun onIsPlayingChanged(value: Boolean) { isPlaying = value }
-            override fun onPlaybackStateChanged(state: Int) { buffering = state == Player.STATE_BUFFERING; if (state == Player.STATE_ENDED) model.next() }
+            override fun onPlaybackStateChanged(state: Int) { buffering = state == Player.STATE_BUFFERING }
             override fun onTracksChanged(tracks: androidx.media3.common.Tracks) { controller?.let { ensureCaptionTrack(it, latestPreferences) } }
             override fun onPlayerError(error: PlaybackException) { playerError = "Playback failed: ${error.errorCodeName}. Try reopening the video or choosing another quality." }
         }
@@ -477,7 +480,8 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                                 ActionChip("Comments", PrismIcons.Info) { model.loadComments(video); commentsSheet = true }
                                 ActionChip("Cast", PrismIcons.Cast) { activity.withLanPermission { casting.discover(); castSheet = true } }
                                 ActionChip("Save", PrismIcons.PlaylistAdd) { playlistSheet = true }
-                                if (upcoming.isNotEmpty() || playlistMore) ActionChip("Next", PrismIcons.Next) { model.next() }
+                                if (transportState.previous() != null) ActionChip("Previous", PrismIcons.Previous) { controller?.seekToPreviousMediaItem() }
+                                if (transportState.next() != null || transportState.continuation != null) ActionChip("Next", PrismIcons.Next) { controller?.seekToNextMediaItem() }
                                 ActionChip("Share", PrismIcons.Share) { share(video) }
                                 ActionChip("Full screen", PrismIcons.Fullscreen) { fullscreen = true }
                                 ActionChip("PiP", PrismIcons.PlayCircle) { enterPip() }
@@ -492,13 +496,15 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
                                     }
                                 }
                             }
-                            if (upcoming.isNotEmpty() || playlistSource != null) Text(if (playlistSource != null) "Up next · Playlist" else "Up next", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                            if (upcoming.isNotEmpty() || playlistSource != null) Text(if (transportState.source != null) "Up next · Playlist" else "Up next", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                         }
                     }
                     items(upcoming, key = { it.id }) { related ->
-                        VideoRow(related, { if (playlistSource != null) model.prepareQueuedSelection(related); open(related) }, { model.save(related) }, (googleLikes[related.id] == true))
+                        VideoRow(related, { if (transportState.source != null) model.prepareQueuedSelection(related); open(related) }, { model.save(related) }, (googleLikes[related.id] == true))
                     }
                     item {
+                        transportError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                        if (transportBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
                         playlistQueueError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                         if (playlistQueueBusy) CircularProgressIndicator()
                         else if (playlistMore) TextButton(onClick = { model.morePlaylistQueue() }) { Text("More from playlist") }
@@ -695,14 +701,6 @@ internal fun VideoSurface(controller: MediaController?, modifier: Modifier, cont
     val preferences by model.library.collectAsStateWithLifecycle()
     val onVisibility by rememberUpdatedState(visibilityChanged)
     val watched by model.watch.collectAsStateWithLifecycle()
-    val queue by model.queue.collectAsStateWithLifecycle()
-    val source by model.playlistSource.collectAsStateWithLifecycle()
-    val more by model.playlistMore.collectAsStateWithLifecycle()
-    val canNext = PlaylistQueuePolicy.upcoming(queue, watched.video?.id, source != null, watched.details?.related.orEmpty())
-        .any { it.id != watched.video?.id } || (source != null && more)
-    val nextPlayer = remember(controller, canNext) {
-        controller?.let { NextVideoPlayer(it, canNext) { model.next() } }
-    }
     val vr by model.vrViewing.collectAsStateWithLifecycle()
     if (vr) { Box(modifier.background(Color.Black)); return }
     val projection = watched.quality?.projection ?: watched.video?.projection ?: VideoProjection.FLAT
@@ -735,14 +733,14 @@ internal fun VideoSurface(controller: MediaController?, modifier: Modifier, cont
         if (projection != VideoProjection.FLAT) PanoramaSurface(controller, projection, stereo = false, modifier = Modifier.matchParentSize(), onView = { panorama = it })
         key(projection) {
     AndroidView(factory = { context -> (if (projection == VideoProjection.FLAT) PhotonPlayerView(context)
-        else android.view.LayoutInflater.from(context).inflate(com.prism.music.R.layout.photon_panorama_controls, null) as PhotonPlayerView).apply { player = nextPlayer; useController = controls; resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT; setShowSubtitleButton(true); setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
+        else android.view.LayoutInflater.from(context).inflate(com.prism.music.R.layout.photon_panorama_controls, null) as PhotonPlayerView).apply { player = controller; useController = controls; resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT; setShowSubtitleButton(true); setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
         configure(this)
         if (visibilityChanged != null) hideController()
         if (context.isPhotonTv() && controls) { isFocusable = true; isFocusableInTouchMode = true; requestFocus(); showController() }
         if (youtubeLayout) findViewById<androidx.media3.ui.DefaultTimeBar>(androidx.media3.ui.R.id.exo_progress)?.setPlayedColor(android.graphics.Color.rgb(255, 0, 51))
     } },
         modifier = Modifier.matchParentSize(),
-        update = { it.player = nextPlayer; it.useController = controls; it.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT; configure(it) },
+        update = { it.player = controller; it.useController = controls; it.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT; configure(it) },
         onRelease = { it.panoramaSurface = null; it.setControllerVisibilityListener(null as PlayerView.ControllerVisibilityListener?); it.player = null })
         }
     }

@@ -4,7 +4,7 @@ package com.prism.music.photon
 internal object PlaylistQueuePolicy {
     fun append(current: List<Video>, incoming: List<Video>): List<Video> = (current + incoming).distinctBy { it.id }
     fun upcoming(queue: List<Video>, currentId: String?, playlist: Boolean, related: List<Video>): List<Video> {
-        if (!playlist) return related
+        if (!playlist) return related.filter { it.id != currentId }
         val index = queue.indexOfFirst { it.id == currentId }
         return if (index >= 0) queue.drop(index + 1) else emptyList()
     }

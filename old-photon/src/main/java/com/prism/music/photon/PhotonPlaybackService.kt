@@ -34,6 +34,7 @@ import androidx.media3.session.MediaSessionService
 class PhotonPlaybackService : MediaSessionService() {
     private var session: MediaSession? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private var navigationJob: Job? = null
     private var lastTick = android.os.SystemClock.elapsedRealtime()
     private var lastVideo: Video? = null
     private var wasPlaying = false
@@ -132,7 +133,63 @@ class PhotonPlaybackService : MediaSessionService() {
         }
         val launch = PendingIntent.getActivity(this, 0, Intent(this, PhotonActivity::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        session = MediaSession.Builder(this, player).setSessionActivity(launch)
+        val app = application as PhotonApplication
+        val transport = app.transport
+        fun navigate(forward: Boolean) {
+            if (navigationJob?.isActive == true) return
+            navigationJob = scope.launch {
+                transport.busy.value = true; transport.error.value = null
+                val started = transport.state.value
+                try {
+                    if (started.source?.startsWith("account:") == true)
+                        check(started.revision == app.library.state.value.youtubeSessionRevision && app.library.state.value.youtubeSessionReady) { "Reconnect the playlist's Google account" }
+                    var state = started
+                    if (forward && state.next() == null && state.continuation != null) {
+                        val seen = mutableSetOf<String>()
+                        for (pageNumber in 0 until 200) {
+                            val token = state.continuation ?: break
+                            check(seen.add(token)) { "Playlist page repeated" }
+                            val incoming: List<Video>
+                            if (transport.publicPage != null) {
+                                val page = app.videos.playlist(requireNotNull(transport.publicUrl), transport.publicPage)
+                                transport.publicPage = page.next
+                                incoming = page.videos
+                                state = state.copy(continuation = if (page.next != null) "@public:$pageNumber" else null)
+                            } else {
+                                check(token != "@public") { "Reopen this public playlist to load more items" }
+                                val page = app.accountLibrary.more(app.youtubeHistory.session(),
+                                    AccountLibraryPage(emptyList(), token, state.context), AccountEntryKind.VIDEO)
+                                incoming = page.items.mapNotNull { it.video }
+                                state = state.copy(continuation = page.continuation, context = page.context)
+                            }
+                            state = state.copy(items = PlaylistQueuePolicy.append(state.items, incoming))
+                            if (state.next() != null) break
+                        }
+                    }
+                    val target = (if (forward) state.next() else state.previous()) ?: return@launch
+                    val library = app.library.state.value
+                    val local = library.downloads.firstOrNull { it.video.id == target.id && java.io.File(it.path).isFile }
+                    val details = if (local == null) app.videos.details(target.id) else null
+                    // A foreground selection or account change during extraction wins over this request.
+                    if (transport.state.value.currentId != started.currentId || transport.state.value.source != started.source) return@launch
+                    if (state.source?.startsWith("account:") == true)
+                        check(state.revision == app.library.state.value.youtubeSessionRevision && app.library.state.value.youtubeSessionReady)
+                    val video = details?.video?.copy(music = target.music || details.video.music, short = target.short || details.video.short) ?: target
+                    val quality = details?.let { it.qualities.firstOrNull { q -> q.height <= library.defaultHeight } ?: it.qualities.last() }
+                    transport.update(state.move(video, details?.related.orEmpty()))
+                    player.setMediaItem(playbackItem(video, quality, local?.path, details?.subtitles.orEmpty(),
+                        android.os.SystemClock.elapsedRealtime(), library.youtubeSessionRevision))
+                    player.prepare(); player.play()
+                    transport.selection.value = TransportSelection(video, details, local?.path)
+                } catch (cancelled: CancellationException) { throw cancelled }
+                catch (_: Exception) { transport.error.value = "Could not play the requested queue item. Your playlist has not been replaced. Retry Next or Previous." }
+                finally { transport.busy.value = false }
+            }
+        }
+        app.transportNavigate = ::navigate
+        val transportPlayer = QueueSessionPlayer(player, { transport.state.value }, ::navigate)
+        scope.launch { transport.state.collect { transportPlayer.refreshCommands() } }
+        session = MediaSession.Builder(this, transportPlayer).setSessionActivity(launch)
             .setCallback(object : MediaSession.Callback {
                 override fun onPlaybackResumption(mediaSession: MediaSession, controller: MediaSession.ControllerInfo,
                     isForPlayback: Boolean): ListenableFuture<MediaSession.MediaItemsWithStartPosition> = scope.future {
@@ -154,6 +211,8 @@ class PhotonPlaybackService : MediaSessionService() {
                         playbackItem(details.video.copy(music = video.music), quality, subtitles = details.subtitles,
                             openedAtMs = android.os.SystemClock.elapsedRealtime(), webRevision = library.youtubeSessionRevision)
                     }
+                    if (app.transport.state.value.currentId != video.id)
+                        app.transport.select(video, emptyList(), emptyList(), null, library.youtubeSessionRevision, null)
                     MediaSession.MediaItemsWithStartPosition(listOf(item), 0, MusicRecoveryPolicy.position(stored.getLong("position", 0), stored.getLong("duration", 0)))
                 }
             }).build()
@@ -172,6 +231,7 @@ class PhotonPlaybackService : MediaSessionService() {
                 if (!playbackAllowed()) player.pause()
             }
             override fun onPlaybackStateChanged(state: Int) {
+                if (state == Player.STATE_ENDED) navigate(true)
                 PhotonDiagnostics.event("Playback state=$state")
                 if (state == androidx.media3.common.Player.STATE_BUFFERING && player.playWhenReady && player.currentPosition > 0)
                     PhotonDiagnostics.event("Rebuffer: buffered=${player.totalBufferedDuration} ms, speed=${player.playbackParameters.speed}")
@@ -214,6 +274,7 @@ class PhotonPlaybackService : MediaSessionService() {
 
     override fun onDestroy() {
         snapshot(true)
+        (application as PhotonApplication).transportNavigate = null
         scope.cancel()
         (application as PhotonApplication).sleepTimer.set(0)
         session?.let { it.player.release(); it.release() }

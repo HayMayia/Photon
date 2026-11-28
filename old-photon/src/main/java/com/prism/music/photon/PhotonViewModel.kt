@@ -884,7 +884,15 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
         val opened = android.os.SystemClock.elapsedRealtime()
         val revision = library.value.youtubeSessionRevision
         PhotonDiagnostics.event("Open video requested")
-        if (!fromQueue && !preparedPlaylistSelection(video.id)) clearPlaylistQueue()
+        val activeTransport = app.transport.state.value
+        val reloadingPlaylistItem = activeTransport.source != null && activeTransport.currentId == video.id
+        if (reloadingPlaylistItem && !preparedPlaylistSelection(video.id)) {
+            queue.value = activeTransport.items; playlistSource.value = activeTransport.source
+            queuedAccountPage = activeTransport.continuation?.takeUnless { it.startsWith("@public") }?.let {
+                AccountLibraryPage(emptyList(), it, activeTransport.context)
+            }
+        }
+        if (!fromQueue && !preparedPlaylistSelection(video.id) && !reloadingPlaylistItem) clearPlaylistQueue()
         queuedSelection = null; queueAdvanceFrom = null
         watchJob?.cancel()
         watchJob = viewModelScope.launch {

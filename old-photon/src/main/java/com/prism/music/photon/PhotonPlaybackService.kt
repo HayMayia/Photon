@@ -156,7 +156,7 @@ class PhotonPlaybackService : MediaSessionService() {
                                 incoming = page.videos
                                 state = state.copy(continuation = if (page.next != null) "@public:$pageNumber" else null)
                             } else {
-                                check(token != "@public") { "Reopen this public playlist to load more items" }
+                                check(!token.startsWith("@public")) { "Reopen this public playlist to load more items" }
                                 val page = app.accountLibrary.more(app.youtubeHistory.session(),
                                     AccountLibraryPage(emptyList(), token, state.context), AccountEntryKind.VIDEO)
                                 incoming = page.items.mapNotNull { it.video }

@@ -21,6 +21,8 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34], application = Application::class)
 class PlatformMediaControlsTest {
     private class ReadyPlayer : SimpleBasePlayer(Looper.getMainLooper()) {
+        override fun handleRelease(): com.google.common.util.concurrent.ListenableFuture<*> =
+            com.google.common.util.concurrent.Futures.immediateVoidFuture()
         override fun getState(): State = State.Builder()
             .setAvailableCommands(Player.Commands.Builder().addAllCommands().build())
             .setPlaylist(listOf(MediaItemData.Builder("one")

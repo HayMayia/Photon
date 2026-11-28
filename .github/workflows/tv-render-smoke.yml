@@ -1,6 +1,12 @@
 name: TV real-frame and Back smoke test
 on:
   workflow_dispatch:
+  push:
+    branches: ["arena/f7d21a23-photon"]
+    paths:
+      - '.github/workflows/tv-render-smoke.yml'
+      - 'old-photon/src/androidTest/**'
+      - 'old-photon/src/debug/**'
 permissions:
   contents: read
 jobs:
@@ -20,7 +26,7 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
       - name: Install compile SDK
-        run: yes | sdkmanager 'platforms;android-37' 'build-tools;36.0.0' || true
+        run: sdkmanager 'platforms;android-37.2' 'build-tools;36.0.0' 
       - uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 30

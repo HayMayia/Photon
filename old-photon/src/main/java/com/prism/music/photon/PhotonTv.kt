@@ -69,7 +69,7 @@ internal fun PhotonTvScreen(model: PhotonViewModel, selected: Int, select: (Int)
         Column(Modifier.fillMaxSize().padding(10.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
                 Text(if (library.youtubeLayout) "YouTube" else "Photon", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                Text("YOUR NEXT GREAT WATCH", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(com.prism.music.BuildConfig.VERSION_NAME + " · TV", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             listOf(0 to "Home", 1 to "Search", 5 to "Subscriptions", 6 to "Shorts", 2 to "Library", 4 to "Downloads", 3 to "Settings").forEach { (tab, label) ->
                 FilledTonalButton(onClick = { focusedVideo = null; select(tab); if (tab == 0) model.home(); if (tab == 5) model.subscriptionsFeed(); if (tab == 6) model.shorts() },

@@ -51,12 +51,12 @@ jobs:
           target: google_apis
           profile: pixel_2
           disable-animations: true
-          script: bash -o pipefail -c './gradlew :old-photon:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.prism.music.photon.TvRenderSmokeTest --stacktrace 2>&1 | tee render.log' 
+          script: bash -o pipefail -c 'trap "timeout 10 adb logcat -d -t 1800 > render-logcat.log; timeout 10 adb pull /sdcard/Android/data/io.github.haymayia.photon/files/tv-render-smoke.png tv-render-smoke.png || true" EXIT; ./gradlew :old-photon:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.prism.music.photon.TvRenderSmokeTest --stacktrace 2>&1 | tee render.log'
       - name: Collect frame screenshot
         if: always()
         run: |
-          adb pull /sdcard/Android/data/io.github.haymayia.photon/files/tv-render-smoke.png tv-render-smoke.png || true
-          adb logcat -d -t 1800 > render-logcat.log || true
+          echo "Device evidence was collected inside the emulator action before teardown."
+          ls -l tv-render-smoke.png render-logcat.log 2>/dev/null || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -77,6 +77,14 @@ internal fun TvCinemaPlayer(model: PhotonViewModel, controller: MediaController?
     }.focusRequester(root).focusable()) {
         VideoSurface(controller, Modifier.fillMaxSize(), controls = false)
         if (watch.busy || controller == null) CircularProgressIndicator(Modifier.align(Alignment.Center))
+        watch.error?.let { message ->
+            Surface(Modifier.align(Alignment.Center).widthIn(max = 500.dp), color = Color.Black.copy(.9f)) {
+                Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(message, color = Color.White)
+                    OutlinedButton(onClick = { model.retryPlayback(video) }, modifier = Modifier.remoteFocus()) { Text("Retry video") }
+                }
+            }
+        }
         if (visible) {
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Black.copy(.65f), Color.Transparent, Color.Black.copy(.8f)))))
             if (shelf == null) Row(Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(horizontal = 48.dp, vertical = 32.dp), horizontalArrangement = Arrangement.SpaceBetween) {

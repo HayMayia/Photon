@@ -429,7 +429,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
         if (pip) {
             VideoSurface(controller, Modifier.fillMaxSize(), controls = false)
         } else if (tv && expanded && watch.video?.short == true) {
-            TvShortsPlayer(watch, controller, model, close = {
+            TvShortsPlayer(watch.copy(error = watch.error ?: playerError), controller, model, close = {
                 shortsMode = false; expanded = false; fullscreen = false
                 controller?.pause()
                 model.close()
@@ -442,7 +442,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
         } else if (collection != null && !expanded) {
             CollectionScreen(model, library, { open(it) }, ::closeCollection)
         } else if (tv && expanded && watch.video != null) {
-            TvCinemaPlayer(model, controller, watch, open = ::open, close = { expanded = false; fullscreen = false })
+            TvCinemaPlayer(model, controller, watch.copy(error = watch.error ?: playerError), open = ::open, close = { expanded = false; fullscreen = false })
         } else if (expanded && watch.video != null) {
             val video = watch.video!!
             Column(Modifier.fillMaxSize().background(if (immersive) Color.Black else MaterialTheme.colorScheme.background)

@@ -27,6 +27,8 @@ paths; no physical-TV verification or confirmed decoder/first-frame fix claimed.
   rather than default SurfaceView. Focus settings are applied after PlayerView's
   constructor resets XML attributes. This changes the output path but is NOT a
   verified physical-TV black-picture fix.
+- Surface Media3 playback/decoder errors in the TV players instead of showing
+  controls alone; the landscape error panel includes Retry video.
 - No further Home/phone redesign is mixed into these regression corrections.
 
 ## Validation

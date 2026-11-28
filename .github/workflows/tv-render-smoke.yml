@@ -9,6 +9,7 @@ on:
       - 'old-photon/src/debug/**'
 permissions:
   contents: read
+  checks: write
 jobs:
   render:
     runs-on: ubuntu-24.04
@@ -25,8 +26,24 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      - name: Install compile SDK
-        run: sdkmanager 'platforms;android-37.2' 'build-tools;36.0.0' 
+      - name: Install Android SDK
+        shell: bash
+        run: |
+          set -o pipefail
+          {
+            export ANDROID_HOME="${ANDROID_HOME:-$RUNNER_TEMP/android-sdk}"
+            SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+            if [ ! -x "$SDKMANAGER" ]; then
+              mkdir -p "$ANDROID_HOME/cmdline-tools"
+              curl --fail --location --retry 3 https://dl.google.com/android/repository/commandlinetools-linux-13114758_latest.zip -o "$RUNNER_TEMP/android-tools.zip"
+              unzip -q "$RUNNER_TEMP/android-tools.zip" -d "$RUNNER_TEMP/android-tools"
+              mv "$RUNNER_TEMP/android-tools/cmdline-tools" "$ANDROID_HOME/cmdline-tools/latest"
+            fi
+            echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
+            echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
+            yes | "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --licenses >/dev/null || true
+            "$SDKMANAGER" --sdk_root="$ANDROID_HOME" 'platforms;android-37.2' 'build-tools;36.0.0'
+          } 2>&1 | tee sdk.log
       - uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 30
@@ -34,7 +51,7 @@ jobs:
           target: google_apis
           profile: pixel_2
           disable-animations: true
-          script: ./gradlew :old-photon:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.prism.music.photon.TvRenderSmokeTest --stacktrace
+          script: set -o pipefail; ./gradlew :old-photon:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.prism.music.photon.TvRenderSmokeTest --stacktrace 2>&1 | tee render.log
       - name: Collect frame screenshot
         if: always()
         run: adb pull /sdcard/Android/data/io.github.haymayia.photon/files/tv-render-smoke.png tv-render-smoke.png || true
@@ -46,3 +63,18 @@ jobs:
             tv-render-smoke.png
             old-photon/build/reports/androidTests/
             old-photon/build/outputs/androidTest-results/
+      - name: Publish render diagnostics
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PYDIAG'
+          import json, pathlib, os
+          parts = []
+          for pattern in ['render.log', 'sdk.log', 'old-photon/build/outputs/androidTest-results/**/*.xml']:
+              for p in pathlib.Path('.').glob(pattern):
+                  parts.append(str(p) + '\n' + p.read_text(errors='replace')[-18000:])
+          text = '\n'.join(parts)[-58000:] or 'Failure before render logs. See job annotations.'
+          pathlib.Path('render-diag.json').write_text(json.dumps({'name':'TV render diagnostics','head_sha':os.environ['GITHUB_SHA'],'status':'completed','conclusion':'failure','output':{'title':'Real renderer test failure','summary':'```text\n'+text+'\n```'}}))
+          PYDIAG
+          gh api "repos/$GITHUB_REPOSITORY/check-runs" --method POST --input render-diag.json

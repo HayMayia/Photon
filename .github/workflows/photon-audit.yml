@@ -1,0 +1,117 @@
+name: Full Photon source audit
+on:
+  push:
+    branches: ["arena/f7d21a23-photon"]
+    paths:
+      - '.github/workflows/photon-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  checks: write
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
+      - name: Install Android SDK
+        shell: bash
+        run: |
+          set -o pipefail
+          {
+            export ANDROID_HOME="${ANDROID_HOME:-$RUNNER_TEMP/android-sdk}"
+            SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+            if [ ! -x "$SDKMANAGER" ]; then
+              mkdir -p "$ANDROID_HOME/cmdline-tools"
+              curl --fail --location --retry 3 https://dl.google.com/android/repository/commandlinetools-linux-13114758_latest.zip -o "$RUNNER_TEMP/android-tools.zip"
+              unzip -q "$RUNNER_TEMP/android-tools.zip" -d "$RUNNER_TEMP/android-tools"
+              mv "$RUNNER_TEMP/android-tools/cmdline-tools" "$ANDROID_HOME/cmdline-tools/latest"
+            fi
+            echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
+            echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
+            yes | "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --licenses >/dev/null || true
+            "$SDKMANAGER" --sdk_root="$ANDROID_HOME" 'platforms;android-37.2' 'build-tools;36.0.0'
+          } 2>&1 | tee sdk.log
+      - name: Full original unit suite (no package filter)
+        id: original
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          ./gradlew :old-photon:testDebugUnitTest --stacktrace 2>&1 | tee audit-original.log
+      - name: Full supplied unit suite (no package filter)
+        id: supplied
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          ./gradlew :app:testDebugUnitTest --stacktrace 2>&1 | tee audit-supplied.log
+      - name: Lint both modules
+        id: lint
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          ./gradlew :old-photon:lintDebug :app:lintDebug --continue --stacktrace 2>&1 | tee audit-lint.log
+      - name: Record test and lint evidence
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          python3 - <<'PYREPORT'
+          import json, os, pathlib, subprocess, xml.etree.ElementTree as ET
+          parts = []
+          for module in ['old-photon', 'app']:
+              count = failures = errors = skipped = 0
+              for path in pathlib.Path(module + '/build/test-results/testDebugUnitTest').glob('TEST-*.xml'):
+                  root = ET.parse(path).getroot()
+                  count += int(root.get('tests', 0)); failures += int(root.get('failures', 0)); errors += int(root.get('errors', 0)); skipped += int(root.get('skipped', 0))
+                  for case in root.findall('testcase'):
+                      for failure in list(case.findall('failure')) + list(case.findall('error')):
+                          parts.append(case.get('classname', '') + '.' + case.get('name', '') + '\n' + (failure.text or '')[:1800])
+              parts.insert(0, f'{module}: tests={count} failures={failures} errors={errors} skipped={skipped}')
+              for path in pathlib.Path(module + '/build/reports').glob('lint-results-debug.xml'):
+                  issues = ET.parse(path).getroot().findall('issue')
+                  parts.append(f'{module}: lint issues={len(issues)}')
+                  for issue in issues:
+                      if issue.get('severity') in ['Error', 'Fatal']:
+                          loc = issue.find('location')
+                          parts.append(f"{issue.get('id')} {issue.get('message')} {loc.attrib if loc is not None else ''}")
+          for path in pathlib.Path('.').glob('audit-*.log'):
+              lines = path.read_text(errors='replace').splitlines()
+              parts.append(path.name + '\n' + '\n'.join(lines[-15:]))
+          text = '\n\n'.join(parts)[:61000]
+          pathlib.Path('audit-evidence.txt').write_text(text)
+          payload = {'name':'Full audit evidence', 'head_sha':os.environ['GITHUB_SHA'], 'status':'completed', 'conclusion':'neutral', 'output':{'title':'Full tests and lint: actual results', 'summary':'```text\n' + text + '\n```'}}
+          pathlib.Path('audit-check.json').write_text(json.dumps(payload))
+          subprocess.run(['gh','api','--method','POST','repos/'+os.environ['GITHUB_REPOSITORY']+'/check-runs','--input','audit-check.json'], check=True)
+          PYREPORT
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: photon-full-audit-evidence
+          path: |
+            audit-*.log
+            audit-evidence.txt
+            old-photon/build/reports/
+            old-photon/build/test-results/
+            app/build/reports/
+            app/build/test-results/
+      - name: Enforce all gates
+        if: always()
+        env:
+          ORIGINAL: ${{ steps.original.outcome }}
+          SUPPLIED: ${{ steps.supplied.outcome }}
+          LINT: ${{ steps.lint.outcome }}
+        run: |
+          test "$ORIGINAL" = success
+          test "$SUPPLIED" = success
+          test "$LINT" = success

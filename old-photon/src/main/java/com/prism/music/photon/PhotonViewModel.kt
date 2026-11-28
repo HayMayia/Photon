@@ -911,7 +911,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
         watchJob = viewModelScope.launch {
             mutableWatch.value = WatchState(video = video, busy = true)
             try {
-                val details = app.videos.details(video.id)
+                val details = kotlinx.coroutines.withTimeout(30_000) { app.videos.details(video.id) }
                 // Metadata may finish while stream extraction is suspended; use the latest proof, not the opening snapshot.
                 val presentation = videoPresentation.value[video.id] ?: video
                 val proved = MusicPlaybackPolicy.retainProof(ShortsPresentation.merge(ShortsPresentation.merge(details.video, video), videoPresentation.value[video.id]), video)
@@ -928,6 +928,8 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 viewModelScope.launch { kotlinx.coroutines.delay(1_000); if (mutableWatch.value.video?.id == video.id) { resolveVideoPresentation(proved); details.channel?.let(::resolveSubscription) } }
                 // No speculative next-video extraction while the selected video is using the connection.
 
+            } catch (_: kotlinx.coroutines.TimeoutCancellationException) {
+                mutableWatch.value = WatchState(video = video, error = "Stream lookup took longer than 30 seconds. Retry this video; playback has not been switched to another video.")
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (error: Exception) { mutableWatch.value = WatchState(video = video, error = error.message ?: "This video could not be played") }
         }

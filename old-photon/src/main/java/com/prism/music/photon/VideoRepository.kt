@@ -88,7 +88,7 @@ class VideoRepository {
 
     init {
         val country = Locale.getDefault().country.ifBlank { "IN" }
-        NewPipe.init(NewPipeDownloader(http, ProjectionMetadata::observe), Localization("en", country), ContentCountry(country))
+        NewPipe.init(NewPipeDownloader(http, ProjectionMetadata::observe, ExtractionRequests::track), Localization("en", country), ContentCountry(country))
     }
 
     suspend fun search(query: String, next: Page? = null): VideoPage = withContext(Dispatchers.IO) {
@@ -129,7 +129,7 @@ class VideoRepository {
         detailLocks[(id.hashCode() and Int.MAX_VALUE) % detailLocks.size].withLock {
         detailsCache.get(id)?.let { PhotonDiagnostics.event("Stream details cache hit"); return@withLock it }
         val started = android.os.SystemClock.elapsedRealtime()
-        val info = StreamInfo.getInfo(ServiceList.YouTube, "https://www.youtube.com/watch?v=$id")
+        val info = ExtractionRequests.run { StreamInfo.getInfo(ServiceList.YouTube, "https://www.youtube.com/watch?v=$id") }
         val live = info.streamType == StreamType.LIVE_STREAM || info.streamType == StreamType.AUDIO_LIVE_STREAM
         val compatibleAudio = info.audioStreams.filter {
             it.isUrl && it.deliveryMethod == DeliveryMethod.PROGRESSIVE_HTTP && it.format?.mimeType in setOf("audio/mp4", "audio/webm", "audio/ogg", "audio/ac3", "audio/eac3")

@@ -24,7 +24,15 @@ ExoPlayer's current-item seek behaviour.
 - UI metadata and Up next follow the service's selection, without restarting a
   background-selected stream on return to the screen.
 
-Validation pending hosted build/tests. Added serialized Liked Music boundary,
-back/forward ordering and service-command adapter regression tests. No physical
-speaker/device background validation claimed; Android force-stop/routing limits
-from the prior release still apply.
+Validation: Actions run 46119416876 passed debug/release assembly, configured
+Photon unit/rendered tests and permanent signing-certificate verification.
+Regressions cover serialized Liked Music boundaries, queue-store recreation,
+back/forward ordering, session command availability/notifications and stale
+metadata clearing. Published source a2e79cfd29481124c279eca654bc5af0f42e6a4c;
+GitHub asset 803624513, Photon.apk, 24,567,517 bytes.
+
+After upgrading from 1.1.1.2, select a song from Liked Music once to establish the
+new persisted source-aware queue. The previous version saved only the current
+song, so its original queue cannot be reconstructed reliably. Do not uninstall.
+No physical speaker/device background validation claimed; Android force-stop/
+routing limits from the prior release still apply.

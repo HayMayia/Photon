@@ -151,6 +151,7 @@ class PhotonActivity : ComponentActivity() {
         if (authGeneration >= 0 && !account.current(authGeneration)) authGeneration = -1L
         enableEdgeToEdge()
         accept(intent)
+        // Ask once at the first real playback, not only when downloading a file.
         setContent {
             val model: PhotonViewModel = viewModel()
             val library by model.library.collectAsStateWithLifecycle()
@@ -329,6 +330,11 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
         controller.setMediaItem(playbackItem(video, watch.quality, watch.localPath, watch.details?.subtitles.orEmpty(), watch.openedAtMs, watch.webRevision), position)
         controller.prepare()
         controller.playWhenReady = play
+        val notificationPrefs = activity.getSharedPreferences("photon_notification_permission", android.content.Context.MODE_PRIVATE)
+        if (android.os.Build.VERSION.SDK_INT >= 33 && !notificationPrefs.getBoolean("playback_asked", false)) {
+            notificationPrefs.edit().putBoolean("playback_asked", true).apply()
+            notifications()
+        }
     }
     LaunchedEffect(watch.video?.id) { if (watch.video != null) { expanded = true; if (tv) fullscreen = true } }
     LaunchedEffect(watch.video?.id, watch.busy, controller) {

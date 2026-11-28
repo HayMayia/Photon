@@ -38,12 +38,17 @@ class QueueSessionPlayerTest {
     }
     @Test fun queueUpdatesNotifyTheSessionAboutButtonAvailability() {
         var changes = 0
+        var batches = 0
         val player = QueueSessionPlayer(raw(), { PlaybackQueueState() }) { }
         val listener = object : Player.Listener {
             override fun onAvailableCommandsChanged(availableCommands: Player.Commands) { changes++ }
+            override fun onEvents(player: Player, events: Player.Events) {
+                if (events.contains(Player.EVENT_AVAILABLE_COMMANDS_CHANGED)) batches++
+            }
         }
         player.addListener(listener); player.refreshCommands()
         assertEquals(1, changes)
+        assertEquals(1, batches)
         player.removeListener(listener); player.refreshCommands()
         assertEquals(1, changes)
     }

@@ -28,6 +28,7 @@ import androidx.media3.exoplayer.source.FilteringMediaSource
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import androidx.media3.session.DefaultMediaNotificationProvider
 
 /** A real media session: headset, lock-screen and background playback survive closing the screen. */
 @UnstableApi
@@ -101,6 +102,11 @@ class PhotonPlaybackService : MediaSessionService() {
 
     override fun onCreate() {
         super.onCreate()
+        setMediaNotificationProvider(DefaultMediaNotificationProvider.Builder(this).build().apply {
+            setSmallIcon(com.prism.music.R.drawable.ic_notification)
+        })
+        // Match Prism: paused/restored queues must keep a visible media control card too.
+        setShowNotificationForIdlePlayer(SHOW_NOTIFICATION_FOR_IDLE_PLAYER_ALWAYS)
         val repository = (application as PhotonApplication).videos
         val data = DefaultDataSource.Factory(this, OkHttpDataSource.Factory(repository.streamHttp))
         val delegate = DefaultMediaSourceFactory(data)
@@ -188,9 +194,23 @@ class PhotonPlaybackService : MediaSessionService() {
         }
         app.transportNavigate = ::navigate
         val transportPlayer = QueueSessionPlayer(player, { transport.state.value }, ::navigate)
-        scope.launch { transport.state.collect { transportPlayer.refreshCommands() } }
+        scope.launch { transport.state.collect {
+            transportPlayer.refreshCommands()
+            session?.let { onUpdateNotification(it, false) }
+        } }
         session = MediaSession.Builder(this, transportPlayer).setSessionActivity(launch)
             .setCallback(object : MediaSession.Callback {
+                override fun onMediaButtonEvent(session: MediaSession, controllerInfo: MediaSession.ControllerInfo, intent: Intent): Boolean {
+                    @Suppress("DEPRECATION")
+                    val event = intent.getParcelableExtra<android.view.KeyEvent>(Intent.EXTRA_KEY_EVENT) ?: return false
+                    val forward = when (event.keyCode) {
+                        android.view.KeyEvent.KEYCODE_MEDIA_NEXT, android.view.KeyEvent.KEYCODE_MEDIA_SKIP_FORWARD -> true
+                        android.view.KeyEvent.KEYCODE_MEDIA_PREVIOUS, android.view.KeyEvent.KEYCODE_MEDIA_SKIP_BACKWARD -> false
+                        else -> return false // Play/Pause stays with Media3; do not hijack seek/volume keys.
+                    }
+                    if (event.action == android.view.KeyEvent.ACTION_DOWN && event.repeatCount == 0) navigate(forward)
+                    return true
+                }
                 override fun onPlaybackResumption(mediaSession: MediaSession, controller: MediaSession.ControllerInfo,
                     isForPlayback: Boolean): ListenableFuture<MediaSession.MediaItemsWithStartPosition> = scope.future {
                     val app = application as PhotonApplication
@@ -220,6 +240,8 @@ class PhotonPlaybackService : MediaSessionService() {
                     MediaSession.MediaItemsWithStartPosition(listOf(item), 0, if (savedVideo?.id == video.id) MusicRecoveryPolicy.position(stored.getLong("position", 0), stored.getLong("duration", 0)) else 0)
                 }
             }).build()
+        // Register immediately, including cold media-button starts, instead of depending on UI binding.
+        addSession(requireNotNull(session))
         player.addListener(object : androidx.media3.common.Player.Listener {
             override fun onPositionDiscontinuity(oldPosition: androidx.media3.common.Player.PositionInfo, newPosition: androidx.media3.common.Player.PositionInfo, reason: Int) {
                 if (reason == androidx.media3.common.Player.DISCONTINUITY_REASON_SEEK) snapshot(true)

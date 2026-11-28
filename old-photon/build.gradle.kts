@@ -26,8 +26,8 @@ android {
         applicationId = "io.github.haymayia.photon"
         minSdk = 26
         targetSdk = 36
-        versionCode = 58
-        versionName = "1.1.1.3 Beta"
+        versionCode = 59
+        versionName = "1.1.1.4 Beta"
         vectorDrawables { useSupportLibrary = true }
         // The name under the launcher icon; a side-by-side build (below) is called "Photon Dev" so it can't be mistaken for Prism.
         manifestPlaceholders["appLabel"] = "@string/app_name"

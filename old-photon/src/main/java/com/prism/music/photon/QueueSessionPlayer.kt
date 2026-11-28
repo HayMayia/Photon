@@ -3,6 +3,7 @@ package com.prism.music.photon
 import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.common.util.FlagSet
 
 /** Installed on MediaSession itself: notification, Bluetooth and UI share these commands. */
 @UnstableApi
@@ -35,5 +36,12 @@ internal class QueueSessionPlayer(player: Player, private val queue: () -> Playb
     override fun seekToNextMediaItem() { navigate(true) }
     override fun seekToPrevious() { navigate(false) }
     override fun seekToPreviousMediaItem() { navigate(false) }
-    fun refreshCommands() { listeners.keys.toList().forEach { it.onAvailableCommandsChanged(availableCommands) } }
+    fun refreshCommands() {
+        val commands = availableCommands
+        val events = Player.Events(FlagSet.Builder().add(Player.EVENT_AVAILABLE_COMMANDS_CHANGED).build())
+        listeners.keys.toList().forEach {
+            it.onAvailableCommandsChanged(commands)
+            it.onEvents(this, events)
+        }
+    }
 }

@@ -32,7 +32,12 @@ paths; no physical-TV verification or confirmed decoder/first-frame fix claimed.
 - No further Home/phone redesign is mixed into these regression corrections.
 
 ## Validation
-Pending final versioned CI. New tests exercise production Shorts frame remote Back,
+Final CI [46170992635](https://github.com/HayMayia/Photon/actions/runs/46170992635)
+passed: debug/release builds, Photon regression tests, device-test compilation,
+permanent signing verification and release publication.
+Published source: `85b499ad849eb5704ec9034798dc70e861a27208`.
+[Download Photon.apk](https://github.com/HayMayia/Photon/releases/download/v1.1.1.6-beta/Photon.apk)
+(24,617,263 bytes; non-draft uploaded asset verified). New tests exercise production Shorts frame remote Back,
 action navigation versus video stepping, bounded source/Shorts policies,
 recommendation-policy persistence, actual TV video-view inflation and runtime focus
 configuration. These tests cannot prove hardware decoding or first-frame rendering.

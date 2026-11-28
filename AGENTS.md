@@ -34,3 +34,8 @@ an email using the connected Gmail app:
 - 1.1.1.5 Beta (original Photon TV update): sent after successful CI and
   non-draft uploaded APK verification; Gmail message ID `1a223270373ce279`.
   Subject: `Updated Photon to 1.1.1.5 Beta`.
+
+- 1.1.1.6 Beta (original Photon TV regression corrections): sent after CI and
+  uploaded asset verification; Gmail message ID `1a2233e6a9aec779`.
+  Subject: `Updated Photon to 1.1.1.6 Beta`. Black-picture device validation
+  remains explicitly unverified in the notification.

@@ -146,10 +146,11 @@ class PhotonPlaybackService : MediaSessionService() {
             navigationJob = scope.launch {
                 transport.busy.value = true; transport.error.value = null
                 val started = transport.state.value
+                val generation = transport.generation
                 try {
                     if (started.source?.startsWith("account:") == true)
                         check(started.revision == app.library.state.value.youtubeSessionRevision && app.library.state.value.youtubeSessionReady) { "Reconnect the playlist's Google account" }
-                    var state = started
+                    var state = if (app.library.state.value.youtubeHome) started else started.copy(recommendationsAllowed = false, related = emptyList())
                     if (forward && state.next() == null && state.continuation != null) {
                         val seen = mutableSetOf<String>()
                         for (pageNumber in 0 until 200) {
@@ -177,7 +178,7 @@ class PhotonPlaybackService : MediaSessionService() {
                     val local = library.downloads.firstOrNull { it.video.id == target.id && java.io.File(it.path).isFile }
                     val details = if (local == null) app.videos.details(target.id) else null
                     // A foreground selection or account change during extraction wins over this request.
-                    if (transport.state.value.currentId != started.currentId || transport.state.value.source != started.source) return@launch
+                    if (transport.generation != generation || transport.state.value.currentId != started.currentId || transport.state.value.source != started.source) return@launch
                     if (state.source?.startsWith("account:") == true)
                         check(state.revision == app.library.state.value.youtubeSessionRevision && app.library.state.value.youtubeSessionReady)
                     val video = details?.video?.copy(music = target.music || details.video.music, short = target.short || details.video.short) ?: target
@@ -257,7 +258,10 @@ class PhotonPlaybackService : MediaSessionService() {
                 if (!playbackAllowed()) player.pause()
             }
             override fun onPlaybackStateChanged(state: Int) {
-                if (state == Player.STATE_ENDED) navigate(true)
+                // Shorts stay on the selected item. Advancing always needs an explicit action.
+                val current = transport.state.value
+                if (state == Player.STATE_ENDED && transport.automaticAdvance &&
+                    TvPlaybackPolicy.autoAdvance(current, app.library.state.value.youtubeHome)) navigate(true)
                 PhotonDiagnostics.event("Playback state=$state")
                 if (state == androidx.media3.common.Player.STATE_BUFFERING && player.playWhenReady && player.currentPosition > 0)
                     PhotonDiagnostics.event("Rebuffer: buffered=${player.totalBufferedDuration} ms, speed=${player.playbackParameters.speed}")

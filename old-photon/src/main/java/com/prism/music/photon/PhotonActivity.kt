@@ -380,7 +380,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
     }
     BackHandler(shortsMode && !pip) { shortsMode = false; expanded = false }
     BackHandler(collection != null && !expanded && !pip && !shortsMode) { closeCollection() }
-    BackHandler(expanded && !pip && !shortsMode) { if (immersive) leaveFullscreen() else expanded = false }
+    BackHandler(expanded && !pip && !shortsMode) { if (tv) { expanded = false; fullscreen = false } else if (immersive) leaveFullscreen() else expanded = false }
 
     fun open(source: Video) {
         val video = ShortsPresentation.merge(source, model.videoPresentation.value[source.id])
@@ -424,13 +424,17 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
     val glassBackdrop = rememberLayerBackdrop()
     CompositionLocalProvider(LocalLiquidBackdrop provides glassBackdrop, LocalPlayerMenus provides PlayerMenuActions(
         settings = { playerSettings = true }, captions = { captionSettings = true },
-        back = { if (immersive) leaveFullscreen() else expanded = false })) {
+        back = { if (tv) { expanded = false; fullscreen = false } else if (immersive) leaveFullscreen() else expanded = false })) {
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         if (pip) {
             VideoSurface(controller, Modifier.fillMaxSize(), controls = false)
-        } else if (tv && shortsMode) {
-            TvShortsPlayer(browse, watch, controller, model, close = { shortsMode = false; expanded = false })
-        } else if (shortsMode) {
+        } else if (tv && expanded && watch.video?.short == true) {
+            TvShortsPlayer(watch, controller, model, close = {
+                shortsMode = false; expanded = false; fullscreen = false
+                controller?.pause()
+                model.close()
+            })
+        } else if (shortsMode && !tv) {
             Column(Modifier.fillMaxSize()) {
                 Box(Modifier.weight(1f)) { ShortsScreen(browse, watch, controller, model, fullscreen = { shortsMode = false; expanded = true; fullscreen = true }) { shortsMode = false; expanded = false } }
                 if (library.youtubeLayout) nativeNavigation(5)
@@ -744,7 +748,9 @@ internal fun VideoSurface(controller: MediaController?, modifier: Modifier, cont
     Box(modifier.background(Color.Black)) {
         if (projection != VideoProjection.FLAT) PanoramaSurface(controller, projection, stereo = false, modifier = Modifier.matchParentSize(), onView = { panorama = it })
         key(projection) {
-    AndroidView(factory = { context -> (if (projection == VideoProjection.FLAT) PhotonPlayerView(context)
+    AndroidView(factory = { context -> (if (projection == VideoProjection.FLAT && context.isPhotonTv())
+        android.view.LayoutInflater.from(context).inflate(com.prism.music.R.layout.photon_tv_video, null) as PhotonPlayerView
+        else if (projection == VideoProjection.FLAT) PhotonPlayerView(context)
         else android.view.LayoutInflater.from(context).inflate(com.prism.music.R.layout.photon_panorama_controls, null) as PhotonPlayerView).apply { player = controller; useController = controls; resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT; setShowSubtitleButton(true); setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
         configure(this)
         if (visibilityChanged != null) hideController()

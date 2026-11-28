@@ -892,8 +892,21 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 AccountLibraryPage(emptyList(), it, activeTransport.context)
             }
         }
-        if (!fromQueue && !preparedPlaylistSelection(video.id) && !reloadingPlaylistItem) clearPlaylistQueue()
+        val subscriptionSelection = !fromQueue && !preparedPlaylistSelection(video.id) &&
+            browse.value.query == "Google subscriptions" && browse.value.videos.any { it.id == video.id }
+        if (!fromQueue && !preparedPlaylistSelection(video.id) && !reloadingPlaylistItem) {
+            clearPlaylistQueue()
+            if (subscriptionSelection) {
+                // Freeze this feed's order; never replace its end with related videos.
+                queue.value = browse.value.videos.distinctBy { it.id }
+                playlistSource.value = "feed:subscriptions"
+            }
+        }
         queuedSelection = null; queueAdvanceFrom = null
+        app.transport.invalidatePending()
+        app.transport.automaticAdvance = true
+        // Invalidate old in-flight service advances before extraction starts.
+        app.transport.update(app.transport.state.value.copy(currentId = video.id, related = emptyList()))
         watchJob?.cancel()
         watchJob = viewModelScope.launch {
             mutableWatch.value = WatchState(video = video, busy = true)
@@ -907,7 +920,8 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 val max = library.value.defaultHeight
                 val quality = details.qualities.firstOrNull { it.height <= max } ?: details.qualities.last()
                 app.transport.publicPage = queuedPublicPage; app.transport.publicUrl = queuedPublicUrl
-                app.transport.select(proved, details.related, queue.value, playlistSource.value, revision, queuedAccountPage)
+                app.transport.select(proved, details.related, queue.value, playlistSource.value, revision, queuedAccountPage,
+                    recommendationsAllowed = library.value.youtubeHome && playlistSource.value == null && !proved.short)
                 if (queuedPublicPage != null) app.transport.update(app.transport.state.value.copy(continuation = "@public"))
                 mutableWatch.value = WatchState(MusicPlaybackPolicy.retainProof(details.video, video).copy(short = video.short || presentation.short || details.video.short, thumbnail = if (presentation.short && presentation.thumbnail.isNotBlank()) presentation.thumbnail else details.video.thumbnail), details, quality, request = System.nanoTime(), startPositionMs = library.value.progress[video.id]?.resumeMs() ?: 0, openedAtMs = opened, webRevision = revision)
                 // Playback is published first; account-only reads must not contend with startup.
@@ -949,7 +963,10 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    fun close() { vrViewing.value = false; watchJob?.cancel(); mutableWatch.value = WatchState() }
+    fun close() {
+        app.transport.invalidatePending(); app.transport.automaticAdvance = false
+        vrViewing.value = false; watchJob?.cancel(); mutableWatch.value = WatchState()
+    }
     fun save(video: Video) = requestGoogleChange(GoogleChange(GoogleChangeKind.LIKE, video.id, video.title, video, desired = googleLikes.value[video.id] != true))
     fun download(video: Video, quality: VideoQuality) = VideoDownloadWorker.enqueue(app, video, quality.height, library.value.wifiOnly)
     fun cancel(id: java.util.UUID) { WorkManager.getInstance(app).cancelWorkById(id) }

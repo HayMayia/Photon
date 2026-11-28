@@ -44,11 +44,13 @@ internal fun TvCinemaPlayer(model: PhotonViewModel, controller: MediaController?
     val menus = LocalPlayerMenus.current
     val queue by model.queue.collectAsStateWithLifecycle()
     val source by model.playlistSource.collectAsStateWithLifecycle()
+    val transport by model.transport.state.collectAsStateWithLifecycle()
+    val library by model.library.collectAsStateWithLifecycle()
     val more by model.playlistMore.collectAsStateWithLifecycle()
     val queueBusy by model.playlistQueueBusy.collectAsStateWithLifecycle()
     val queueError by model.playlistQueueError.collectAsStateWithLifecycle()
     val chapters = remember(watch.details?.description) { TvChapterParser.parse(watch.details?.description.orEmpty()) }
-    val section = if (source != null) "Playlist" else if (chapters.isNotEmpty()) "Chapters" else null
+    val section = if (TvPlaybackPolicy.playlist(source)) "Playlist" else if (chapters.isNotEmpty()) "Chapters" else null
     var visible by remember(video.id) { mutableStateOf(true) }
     var shelf by remember(video.id) { mutableStateOf<String?>(null) }
     var interaction by remember { mutableIntStateOf(0) }
@@ -93,10 +95,10 @@ internal fun TvCinemaPlayer(model: PhotonViewModel, controller: MediaController?
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    TextButton(onClick = { shelf = if (shelf == "Up next") null else "Up next" }, modifier = Modifier.remoteFocus()) { Text("Up next", color = Color.White) }
+                    if (library.youtubeHome && source != "feed:subscriptions") TextButton(onClick = { shelf = if (shelf == "Up next") null else "Up next" }, modifier = Modifier.remoteFocus()) { Text("Up next", color = Color.White) }
                     if (section != null) TextButton(onClick = { shelf = if (shelf == section) null else section }, modifier = Modifier.remoteFocus()) { Text(section, color = Color.White) }
                     Spacer(Modifier.weight(1f))
-                    if (queue.any { it.id != video.id }) TextButton(onClick = model::next, modifier = Modifier.remoteFocus()) { Text("Next video", color = Color.White) }
+                    if (transport.next() != null || transport.continuation != null) TextButton(onClick = model::next, modifier = Modifier.remoteFocus()) { Text("Next video", color = Color.White) }
                 }
                 if (shelf != null) {
                     HorizontalDivider(color = Color.White.copy(.3f))

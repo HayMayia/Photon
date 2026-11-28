@@ -1,13 +1,13 @@
-package com.prism.music.baselineprofile
+package io.github.haymayia.photon.baselineprofile
 
 import androidx.benchmark.macro.junit4.BaselineProfileRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.prism.music.baselineprofile.Journeys.library
-import com.prism.music.baselineprofile.Journeys.pastOnboarding
-import com.prism.music.baselineprofile.Journeys.playAndOpenPlayer
-import com.prism.music.baselineprofile.Journeys.scrollHome
-import com.prism.music.baselineprofile.Journeys.search
-import com.prism.music.baselineprofile.Journeys.settings
+import io.github.haymayia.photon.baselineprofile.Journeys.library
+import io.github.haymayia.photon.baselineprofile.Journeys.pastOnboarding
+import io.github.haymayia.photon.baselineprofile.Journeys.playAndOpenPlayer
+import io.github.haymayia.photon.baselineprofile.Journeys.scrollHome
+import io.github.haymayia.photon.baselineprofile.Journeys.search
+import io.github.haymayia.photon.baselineprofile.Journeys.settings
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith

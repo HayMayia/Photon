@@ -1,0 +1,11 @@
+1-build: inspected 9 files; 33 search hits (manual review required)
+2-manifests: inspected 3 files; 34 search hits (manual review required)
+3-network: inspected 20 files; 108 search hits (manual review required)
+4-playback: inspected 47 files; 87 search hits (manual review required)
+5-compose: inspected 543 files; 407 search hits (manual review required)
+6-resources: inspected 131 files; 236 search hits (manual review required)
+7-tv: inspected 20 files; 128 search hits (manual review required)
+8-storage: inspected 18 files; 45 search hits (manual review required)
+XML/SVG parse: PASS (234 files; 124 icons)
+Manifest links/permissions, MainActivity and Inter existence: PASS
+Full per-pass paths and matching lines: docs/audit/source-inventory.json

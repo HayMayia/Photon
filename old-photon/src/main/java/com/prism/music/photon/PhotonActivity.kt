@@ -427,8 +427,9 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
             ensureCaptionTrack(player, library)
         }
     }
-    // A remote Back exits playback in one press, regardless of native surface focus.
+    // Cinema owns HUD-first Back while mounted. Do not overwrite its callback on parent recomposition.
     SideEffect {
+        if (!(tv && expanded && watch.video != null && watch.video?.short != true))
         activity.tvBackDispatcher.action = if (tv && (expanded || shortsMode)) ({
             controller?.pause()
             model.close()
@@ -457,7 +458,7 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
         } else if (collection != null && !expanded) {
             CollectionScreen(model, library, { open(it) }, ::closeCollection)
         } else if (tv && expanded && watch.video != null) {
-            TvCinemaPlayer(model, controller, watch.copy(error = watch.error ?: playerError), open = ::open, close = { expanded = false; fullscreen = false })
+            TvCinemaPlayer(model, controller, watch.copy(error = watch.error ?: playerError), activity.tvBackDispatcher, open = ::open, close = { expanded = false; fullscreen = false })
         } else if (expanded && watch.video != null) {
             val video = watch.video!!
             Column(Modifier.fillMaxSize().background(if (immersive) Color.Black else MaterialTheme.colorScheme.background)
@@ -890,6 +891,14 @@ private fun SettingsPage(library: PhotonLibrary, model: PhotonViewModel, notific
         item { YouTubeAccountCard(model) }
         item {
             SettingsGroup("APPEARANCE") {
+                if (context.isPhotonTv()) {
+                    ListItem(headlineContent = { Text("TV safe zone") },
+                        supportingContent = { Text("Extra inset: ${library.tvSafeZoneOffsetDp.coerceIn(0, 48)} dp. Base margin is 48 dp horizontally and 27 dp vertically.") })
+                    Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        OutlinedButton(onClick = { model.playerOptions { it.copy(tvSafeZoneOffsetDp = (it.tvSafeZoneOffsetDp - 4).coerceIn(0, 48)) } }, modifier = Modifier.remoteFocus()) { Text("Less inset") }
+                        OutlinedButton(onClick = { model.playerOptions { it.copy(tvSafeZoneOffsetDp = (it.tvSafeZoneOffsetDp + 4).coerceIn(0, 48)) } }, modifier = Modifier.remoteFocus()) { Text("More inset") }
+                    }
+                }
                 ListItem(headlineContent = { Text("Playlist shortcut") },
                     supportingContent = { Text(if (PlaylistShortcutPolicy.selected(library)) library.playlistShortcutTitle else "Choose a Google playlist for the separate navigation button") },
                     modifier = Modifier.remoteFocus().clickable(onClick = chooseShortcut))

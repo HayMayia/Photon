@@ -94,27 +94,32 @@ class Backup(private val c: AppContainer) {
         staging.deleteRecursively()
         staging.mkdirs()
         var manifest: BackupManifest? = null
+        val limits = BackupReadLimits((staging.usableSpace - 32L * 1024 * 1024).coerceAtLeast(0))
         try {
             val input = ctx.contentResolver.openInputStream(uri) ?: error("Couldn't open that file")
             ZipInputStream(input.buffered()).use { zip ->
                 while (true) {
                     val e = zip.nextEntry ?: break
-                    if (e.isDirectory) continue
+                    limits.nextEntry()
+                    if (e.isDirectory) { require(e.size == 0L) { "Invalid directory entry in backup" }; continue }
                     val name = e.name
                     if (name == MANIFEST) {
-                        manifest = runCatching { InnerTube.json.decodeFromString(BackupManifest.serializer(), zip.readBytes().decodeToString()) }.getOrNull()
+                        require(manifest == null) { "Backup contains duplicate manifests" }
+                        val bytes = java.io.ByteArrayOutputStream()
+                        limits.copy(zip, bytes, 1024 * 1024)
+                        manifest = InnerTube.json.decodeFromString(BackupManifest.serializer(), bytes.toString("UTF-8"))
                         continue
                     }
                     // Only Prism's own folders, and nothing that climbs out of them.
-                    if (name.contains("..") || name.startsWith("/") || ALLOWED.none { name.startsWith(it) }) continue
+                    require(!name.contains("..") && !name.startsWith("/") && ALLOWED.any { name.startsWith(it) }) { "Backup contains an unsafe or unsupported path" }
                     val target = File(staging, name)
                     target.parentFile?.mkdirs()
-                    target.outputStream().use { zip.copyTo(it) }
+                    target.outputStream().use { limits.copy(zip, it) }
                 }
             }
             val m = manifest ?: error("That file isn't a Prism backup")
             if (m.app != ctx.packageName) error("That backup is from a different app")
-            if (m.format > FORMAT) error("That backup is from a newer Prism; update first")
+            if (m.format < 1 || m.format > FORMAT) error("Unsupported backup format; check the file or update Photon")
             File(staging, MANIFEST).writeText(InnerTube.json.encodeToString(BackupManifest.serializer(), m))
         } catch (e: Throwable) {
             staging.deleteRecursively()

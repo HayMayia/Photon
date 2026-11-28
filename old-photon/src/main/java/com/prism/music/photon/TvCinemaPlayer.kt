@@ -39,7 +39,7 @@ internal object TvChapterParser {
 
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @Composable
-internal fun TvCinemaPlayer(model: PhotonViewModel, controller: MediaController?, watch: WatchState, open: (Video) -> Unit, close: () -> Unit) {
+internal fun TvCinemaPlayer(model: PhotonViewModel, controller: MediaController?, watch: WatchState, backDispatcher: TvBackDispatcher, open: (Video) -> Unit, close: () -> Unit) {
     val video = watch.video ?: return
     val menus = LocalPlayerMenus.current
     val queue by model.queue.collectAsStateWithLifecycle()
@@ -61,7 +61,20 @@ internal fun TvCinemaPlayer(model: PhotonViewModel, controller: MediaController?
     LaunchedEffect(video.id) { root.requestFocus() }
     LaunchedEffect(controller) { while (true) { position = controller?.currentPosition?.coerceAtLeast(0) ?: 0; duration = controller?.duration?.coerceAtLeast(0) ?: 0; playing = controller?.isPlaying == true; delay(300) } }
     LaunchedEffect(interaction, shelf, playing) { if (shelf == null && playing) { delay(6000); visible = false; root.requestFocus() } }
-    BackHandler { when { shelf != null -> shelf = null; visible -> visible = false; else -> close() } }
+    fun back() {
+        when (TvPlayerBackPolicy.action(shelf != null, visible)) {
+            TvPlayerBackPolicy.Action.CLOSE_SHELF -> { shelf = null; root.requestFocus() }
+            TvPlayerBackPolicy.Action.HIDE_HUD -> { visible = false; root.requestFocus() }
+            TvPlayerBackPolicy.Action.EXIT -> close()
+        }
+    }
+    val latestBack by rememberUpdatedState(newValue = { back() })
+    DisposableEffect(backDispatcher) {
+        val callback = { latestBack() }
+        backDispatcher.action = callback
+        onDispose { if (backDispatcher.action === callback) backDispatcher.action = null }
+    }
+    BackHandler { back() }
     fun time(ms: Long): String { val s = ms / 1000; return if (s >= 3600) "%d:%02d:%02d".format(s/3600,s/60%60,s%60) else "%02d:%02d".format(s/60,s%60) }
     Box(Modifier.fillMaxSize().background(Color.Black).onPreviewKeyEvent {
         if (it.type != KeyEventType.KeyDown) false else {

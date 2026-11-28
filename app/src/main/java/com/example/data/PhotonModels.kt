@@ -231,11 +231,14 @@ fun formatDuration(totalSeconds: Int): String {
 fun parseDurationToSeconds(text: String): Int {
     val clean = text.trim()
     if (clean.isEmpty() || clean.equals("LIVE", ignoreCase = true)) return 0
-    val parts = clean.split(":").mapNotNull { it.trim().toIntOrNull() }
-    return when (parts.size) {
-        3 -> parts[0] * 3600 + parts[1] * 60 + parts[2]
-        2 -> parts[0] * 60 + parts[1]
-        1 -> parts[0]
-        else -> 0
+    val tokens = clean.split(":")
+    if (tokens.size !in 1..3) return 0
+    val parts = tokens.map { it.toLongOrNull()?.takeIf { n -> n >= 0 } ?: return 0 }
+    if (parts.drop(1).any { it > 59 }) return 0
+    var seconds = 0L
+    for (part in parts) {
+        if (seconds > (Int.MAX_VALUE.toLong() - part) / 60 || part > Int.MAX_VALUE) return 0
+        seconds = seconds * 60 + part
     }
+    return seconds.toInt()
 }

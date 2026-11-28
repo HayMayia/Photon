@@ -19,6 +19,7 @@ val InterFontFamily = FontFamily(
 // Caption: 12sp Regular (400), 16sp line height, 0.01em tracking
 val PhotonTitleStyle = TextStyle(
     fontFamily = InterFontFamily,
+    fontFeatureSettings = "tnum",
     fontWeight = FontWeight.SemiBold,
     fontSize = 20.sp,
     lineHeight = 28.sp,
@@ -27,6 +28,7 @@ val PhotonTitleStyle = TextStyle(
 
 val PhotonBodyStyle = TextStyle(
     fontFamily = InterFontFamily,
+    fontFeatureSettings = "tnum",
     fontWeight = FontWeight.Normal,
     fontSize = 14.sp,
     lineHeight = 20.sp,
@@ -35,6 +37,7 @@ val PhotonBodyStyle = TextStyle(
 
 val PhotonBodyMediumStyle = TextStyle(
     fontFamily = InterFontFamily,
+    fontFeatureSettings = "tnum",
     fontWeight = FontWeight.Medium,
     fontSize = 14.sp,
     lineHeight = 20.sp,
@@ -43,6 +46,7 @@ val PhotonBodyMediumStyle = TextStyle(
 
 val PhotonCaptionStyle = TextStyle(
     fontFamily = InterFontFamily,
+    fontFeatureSettings = "tnum",
     fontWeight = FontWeight.Normal,
     fontSize = 12.sp,
     lineHeight = 16.sp,
@@ -65,4 +69,18 @@ val PhotonTypography = Typography(
     labelLarge = PhotonBodyMediumStyle,
     labelMedium = PhotonCaptionStyle,
     labelSmall = PhotonCaptionStyle
+)
+
+/** A separate ten-foot scale; phone's 12–20sp scale is not readable across a room. */
+internal val PhotonTvTypography = PhotonTypography.copy(
+    headlineLarge = PhotonTitleStyle.copy(fontSize = 36.sp, lineHeight = 44.sp),
+    headlineMedium = PhotonTitleStyle.copy(fontSize = 32.sp, lineHeight = 40.sp),
+    headlineSmall = PhotonTitleStyle.copy(fontSize = 32.sp, lineHeight = 40.sp),
+    titleLarge = PhotonTitleStyle.copy(fontSize = 24.sp, lineHeight = 32.sp),
+    titleMedium = PhotonTitleStyle.copy(fontSize = 22.sp, lineHeight = 30.sp),
+    titleSmall = PhotonBodyMediumStyle.copy(fontSize = 22.sp, lineHeight = 30.sp),
+    bodyLarge = PhotonBodyStyle.copy(fontSize = 22.sp, lineHeight = 30.sp),
+    bodyMedium = PhotonBodyStyle.copy(fontSize = 22.sp, lineHeight = 30.sp),
+    labelLarge = PhotonBodyMediumStyle.copy(fontSize = 22.sp, lineHeight = 30.sp),
+    labelMedium = PhotonCaptionStyle.copy(fontSize = 20.sp, lineHeight = 28.sp)
 )

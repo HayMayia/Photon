@@ -29,7 +29,7 @@
         <activity android:name=".photon.PhotonActivity" android:exported="true"
             android:launchMode="singleTop" android:resizeableActivity="true"
             android:supportsPictureInPicture="true"
-            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -41,9 +41,11 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" />
+                <data android:scheme="http" />
                 <data android:host="www.youtube.com" />
                 <data android:host="youtube.com" />
                 <data android:host="m.youtube.com" />
+                <data android:host="music.youtube.com" />
                 <data android:host="youtu.be" />
             </intent-filter>
             <intent-filter>

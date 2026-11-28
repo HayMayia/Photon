@@ -285,9 +285,26 @@ object YouTubeLinks {
         return "https://www.youtube.com/playlist?list=$id"
     }
 
+    /** Shared links may specify seconds or h/m/s units. Invalid/overflow input never seeks. */
+    fun startPositionMs(text: String): Long? {
+        val uri = trusted(text) ?: return null
+        if (videoId(text) == null) return null
+        val raw = uri.getQueryParameter("t") ?: uri.getQueryParameter("start")
+            ?: uri.fragment?.takeIf { it.startsWith("t=") }?.removePrefix("t=") ?: return null
+        val numeric = raw.toLongOrNull()
+        val seconds = if (numeric != null) numeric else {
+            val match = Regex("(?:(\\d+)h)?(?:(\\d+)m)?(?:(\\d+)s)?").matchEntire(raw) ?: return null
+            if (raw.isEmpty()) return null
+            val values = match.groupValues.drop(1).map { if (it.isEmpty()) 0L else it.toLongOrNull() ?: return null }
+            // Bound every component before multiplication; 7 days is already beyond normal media.
+            if (values.any { it > 604800 }) return null
+            values[0] * 3600 + values[1] * 60 + values[2]
+        }
+        return seconds.takeIf { it in 0..604800 }?.times(1000)
+    }
+
     fun videoId(text: String): String? {
-        val candidate = Regex("https?://[^\\s<>]+").find(text.trim())?.value ?: text.trim()
-        val uri = Uri.parse(candidate)
+        val uri = trusted(text) ?: return null
         val host = uri.host?.lowercase() ?: return null
         val segments = uri.pathSegments
         val id = when (host) {

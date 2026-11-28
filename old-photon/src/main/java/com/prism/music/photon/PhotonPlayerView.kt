@@ -26,7 +26,7 @@ internal class PhotonPlayerView @JvmOverloads constructor(context: Context, attr
     private var remoteBoosted = false
     override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
         if (television && event.keyCode == android.view.KeyEvent.KEYCODE_BACK && remoteBack != null) {
-            if (event.action == android.view.KeyEvent.ACTION_UP) remoteBack?.invoke()
+            if (event.action == android.view.KeyEvent.ACTION_UP && !event.isCanceled) remoteBack?.invoke()
             return true
         }
         if (television && event.keyCode == android.view.KeyEvent.KEYCODE_DPAD_CENTER) {

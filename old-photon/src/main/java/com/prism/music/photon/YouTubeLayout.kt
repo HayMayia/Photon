@@ -40,7 +40,7 @@ internal fun InterfaceTheme(youtube: Boolean, dark: Boolean, content: @Composabl
         background = Color.White, surface = Color.White, surfaceContainer = Color(0xFFF2F2F2),
         surfaceContainerHigh = Color(0xFFEEEEEE), primaryContainer = Color(0xFFE5E5E5), onPrimaryContainer = Color.Black)
     // Keep this call site stable when switching: retained player effects must not be recreated.
-    MaterialTheme(colorScheme = colors, typography = if (youtube) Typography() else PhotonTypography,
+    MaterialTheme(colorScheme = colors, typography = if (androidx.compose.ui.platform.LocalContext.current.isPhotonTv()) PhotonTvTypography else if (youtube) Typography() else PhotonTypography,
         shapes = if (youtube) Shapes() else PhotonShapes) {
         CompositionLocalProvider(LocalYouTubeLayout provides youtube, content = content)
     }

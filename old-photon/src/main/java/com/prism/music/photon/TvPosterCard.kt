@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.dp
 internal fun TvPosterCard(video: Video, open: () -> Unit, modifier: Modifier = Modifier,
     focused: () -> Unit = {}, remove: (() -> Unit)? = null) {
     var hasFocus by remember(video.id) { mutableStateOf(false) }
-    val scale by animateFloatAsState(if (hasFocus && !com.prism.music.ui.theme.LocalAppSettings.current.reduceMotion) 1.025f else 1f, label = "tv-card-focus")
+    val scale by animateFloatAsState(if (hasFocus && !com.prism.music.ui.theme.LocalAppSettings.current.reduceMotion) 1.05f else 1f, label = "tv-card-focus")
     OutlinedCard(onClick = open, shape = RoundedCornerShape(12.dp),
         border = BorderStroke(if (hasFocus) 3.dp else 1.dp, if (hasFocus) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
         colors = CardDefaults.outlinedCardColors(containerColor = if (hasFocus) MaterialTheme.colorScheme.surfaceContainerHighest else MaterialTheme.colorScheme.surfaceContainer),

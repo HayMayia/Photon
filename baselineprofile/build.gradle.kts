@@ -11,7 +11,7 @@ plugins {
 }
 
 android {
-    namespace = "com.prism.music.baselineprofile"
+    namespace = "io.github.haymayia.photon.baselineprofile"
     compileSdk {
         version = release(37) { minorApiLevel = 2 }
     }
@@ -24,7 +24,7 @@ android {
         testInstrumentationRunnerArguments["androidx.benchmark.suppressErrors"] = "EMULATOR"
     }
 
-    targetProjectPath = ":app"
+    targetProjectPath = ":old-photon"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

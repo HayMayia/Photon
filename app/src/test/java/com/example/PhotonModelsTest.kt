@@ -26,4 +26,10 @@ class PhotonModelsTest {
         assertEquals("https://i.ytimg.com/vi/abcdefghijk/hqdefault.jpg", item.highResThumbnailUrl)
         assertEquals("Creator", item.metadataLine)
     }
+    @Test fun malformedOrOverflowingDurationsDoNotBecomeDifferentValidTimes() {
+        for (text in listOf("1:bad:30", "-1:20", "1:60", "1:99:00", "2147483647:59:59", "999999999999999999999", "1:2:3:4")) {
+            assertEquals(text, 0, parseDurationToSeconds(text))
+        }
+        assertEquals(Int.MAX_VALUE, parseDurationToSeconds(Int.MAX_VALUE.toString()))
+    }
 }

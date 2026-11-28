@@ -29,4 +29,20 @@ class YouTubeLinksTest {
     }
     @Test fun noInvalidId() { assertNull(YouTubeLinks.videoId("https://youtube.com/watch?v=../../etc/passwd")) }
     @Test fun noBlankOrSearchPhrase() { assertNull(YouTubeLinks.videoId("")); assertNull(YouTubeLinks.videoId("science and technology")) }
+    @Test fun timestampUnitsAndBoundaries() {
+        assertEquals(90000L, YouTubeLinks.startPositionMs("Check this out https://youtube.com/watch?v=$id&t=1m30s"))
+        assertEquals(0L, YouTubeLinks.startPositionMs("https://youtu.be/$id?t=0"))
+        assertEquals(3723000L, YouTubeLinks.startPositionMs("https://music.youtube.com/watch?v=$id&t=1h2m3s"))
+        assertEquals(42000L, YouTubeLinks.startPositionMs("http://youtu.be/$id?start=42"))
+        assertEquals(42000L, YouTubeLinks.startPositionMs("https://youtu.be/$id#t=42"))
+        for (time in listOf("", "-1", "NaN", "1m90", "999999999999999999999h", "604801")) {
+            assertNull(YouTubeLinks.startPositionMs("https://youtu.be/$id?t=$time"))
+        }
+    }
+    @Test fun videoLinksRejectUnsafeSchemesCredentialsAndPorts() {
+        for (link in listOf("ftp://youtu.be/$id", "https://name@youtu.be/$id", "https://youtu.be:444/$id")) {
+            assertNull(YouTubeLinks.videoId(link))
+            assertNull(YouTubeLinks.startPositionMs("$link?t=42"))
+        }
+    }
 }

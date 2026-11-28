@@ -1,4 +1,4 @@
-package com.prism.music.baselineprofile
+package io.github.haymayia.photon.baselineprofile
 
 import androidx.benchmark.macro.MacrobenchmarkScope
 import androidx.test.uiautomator.By
@@ -7,7 +7,7 @@ import androidx.test.uiautomator.UiObject2
 import androidx.test.uiautomator.Until
 
 /** The app these journeys drive: the release build (and the build types the plugin derives from it). */
-const val PACKAGE = "com.prism.music"
+const val PACKAGE = "io.github.haymayia.photon"
 
 /**
  * What people do most in Prism, scripted with UI Automator: the screens whose code should be compiled ahead

@@ -844,7 +844,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
         if (text.isEmpty()) return
         YouTubeLinks.playlistUrl(text)?.let { openCollection(it, false); return }
         YouTubeLinks.channelUrl(text)?.let { openCollection(it, true); return }
-        YouTubeLinks.videoId(text)?.let { openId(it); return }
+        YouTubeLinks.videoId(text)?.let { open(Video(it, "Opening video…", "YouTube"), startPositionMs = YouTubeLinks.startPositionMs(text)); return }
         searchJob?.cancel()
         searchJob = viewModelScope.launch {
             page = null
@@ -880,7 +880,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
     val vrViewing = MutableStateFlow(false)
     fun likeShort(video: Video) { if (googleLikes.value[video.id] != true) requestGoogleChange(GoogleChange(GoogleChangeKind.LIKE, video.id, video.title, video, desired = true)) }
 
-    fun open(video: Video, fromQueue: Boolean = false) {
+    fun open(video: Video, fromQueue: Boolean = false, startPositionMs: Long? = null) {
         val opened = android.os.SystemClock.elapsedRealtime()
         val revision = library.value.youtubeSessionRevision
         PhotonDiagnostics.event("Open video requested")
@@ -923,7 +923,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 app.transport.select(proved, details.related, queue.value, playlistSource.value, revision, queuedAccountPage,
                     recommendationsAllowed = library.value.youtubeHome && playlistSource.value == null && !proved.short)
                 if (queuedPublicPage != null) app.transport.update(app.transport.state.value.copy(continuation = "@public"))
-                mutableWatch.value = WatchState(MusicPlaybackPolicy.retainProof(details.video, video).copy(short = video.short || presentation.short || details.video.short, thumbnail = if (presentation.short && presentation.thumbnail.isNotBlank()) presentation.thumbnail else details.video.thumbnail), details, quality, request = System.nanoTime(), startPositionMs = library.value.progress[video.id]?.resumeMs() ?: 0, openedAtMs = opened, webRevision = revision)
+                mutableWatch.value = WatchState(MusicPlaybackPolicy.retainProof(details.video, video).copy(short = video.short || presentation.short || details.video.short, thumbnail = if (presentation.short && presentation.thumbnail.isNotBlank()) presentation.thumbnail else details.video.thumbnail), details, quality, request = System.nanoTime(), startPositionMs = startPositionMs?.coerceIn(0, if (details.video.duration > 0) details.video.duration.coerceAtMost(Long.MAX_VALUE / 1000) * 1000 else Long.MAX_VALUE) ?: library.value.progress[video.id]?.resumeMs() ?: 0, openedAtMs = opened, webRevision = revision)
                 // Playback is published first; account-only reads must not contend with startup.
                 viewModelScope.launch { kotlinx.coroutines.delay(1_000); if (mutableWatch.value.video?.id == video.id) { resolveVideoPresentation(proved); details.channel?.let(::resolveSubscription) } }
                 // No speculative next-video extraction while the selected video is using the connection.

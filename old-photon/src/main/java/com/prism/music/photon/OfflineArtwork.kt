@@ -32,7 +32,7 @@ fun VideoThumbnail(video: Video, description: String?, modifier: Modifier = Modi
     var fallback by remember(original, path) { mutableStateOf(false) }
     val local = path?.let(::File)?.takeIf { it.isFile }
     val data = local ?: if (fallback) original else preview
-    val request = remember(data, context) { ImageRequest.Builder(context).data(data).size(640, 960).build() }
+    val request = remember(data, context) { ImageRequest.Builder(context).data(data).build() }
     val placeholder = ColorPainter(MaterialTheme.colorScheme.surfaceContainerHigh)
     AsyncImage(request, description, modifier, contentScale = contentScale,
         placeholder = placeholder, error = placeholder, onError = { if (local == null && preview != original) fallback = true })

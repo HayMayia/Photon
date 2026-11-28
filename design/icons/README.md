@@ -1,13 +1,19 @@
 # Prism's icons
 
-Every icon in the app is drawn here, one SVG file per icon, named like its Kotlin name (`Home.svg` is
-`PrismIcons.Home`). The build turns these files into `PrismIconData` (`generatePrismIcons` in `app/build.gradle.kts`),
-so the app always shows exactly what's drawn here. Open them in any vector editor or browser.
+Photon's original Android module retains the upstream internal names `PrismIcons`
+and `PrismIconData`; these are real Kotlin APIs, not the application ID.
+Every SVG is named after its Kotlin icon (`Home.svg` becomes `PrismIcons.Home`).
+The generator is **`old-photon/build.gradle.kts`**, task `generatePrismIcons`:
 
-## The grid
+```sh
+./gradlew :old-photon:generatePrismIcons
+```
 
-- 24 × 24 units, with the drawing kept inside 3 to 21 (2 to 22 for the widest shapes, strokes included).
-- Lines are 1.5 units with round ends and round joins (the root's `stroke-width`). An element may set its own
+The separate supplied Firebase `app/` module does not use this generator.
+
+## Drawing rules
+
+- Use a 24 by 24 viewBox, round caps and round joins (the root's `stroke-width`). An element may set its own
   `stroke-width` (only `SearchBold` does).
 - Shapes are circles, straight lines and arcs. Corners use one radius: 2 for large shapes, 1 to 1.5 for small ones.
 - Play, pause, skip and the dots of a menu are filled; everything else is a line.
@@ -30,4 +36,4 @@ quietly dropped. The `<style>` line in each file only makes `class="f"` show fil
 ## Looking at them
 
 `IconRenderTest` draws every icon at 20, 24 and 32 dp in each weight (Thin, Regular, Bold), light and dark, onto
-`app/build/icon-previews/`.
+`old-photon/build/icon-previews/`.

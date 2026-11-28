@@ -51,6 +51,7 @@ data class PhotonLibrary(
     val musicBackground: Boolean = true,
     val musicOverride: Boolean = true,
     val tvMusicBackground: Boolean = false,
+    val tvSafeZoneOffsetDp: Int = 0,
     val videoBackground: Boolean = false,
     val captionsEnabled: Boolean = true,
     val captionLanguage: String = "",
@@ -64,7 +65,13 @@ class PhotonStore(context: Context) {
     private val json = Json { ignoreUnknownKeys = true }
     private val mutable = MutableStateFlow(runCatching {
         json.decodeFromString<PhotonLibrary>(preferences.getString("library", "{}")!!)
-    }.getOrDefault(PhotonLibrary()))
+    }.getOrElse {
+        preferences.getString("library", null)?.let { raw ->
+            preferences.edit().putString("library_corrupt_recovery", raw).apply()
+        }
+        PhotonDiagnostics.event("Library preferences could not be decoded; original retained for recovery")
+        PhotonLibrary()
+    })
     val state: StateFlow<PhotonLibrary> = mutable
 
     @Synchronized

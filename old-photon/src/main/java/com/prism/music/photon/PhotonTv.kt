@@ -64,7 +64,7 @@ internal fun PhotonTvScreen(model: PhotonViewModel, selected: Int, select: (Int)
     CompositionLocalProvider(LocalLiquidBackdrop provides backdrop) {
     Box(Modifier.fillMaxSize()) {
         Box(Modifier.fillMaxSize().then(if (library.performanceMode || !library.liquidGlass || library.youtubeLayout || android.os.Build.VERSION.SDK_INT < 31) Modifier else Modifier.layerBackdrop(backdrop)).background(MaterialTheme.colorScheme.background))
-    Row(Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal = 40.dp, vertical = 28.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+    Row(Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal = 48.dp + library.tvSafeZoneOffsetDp.coerceIn(0, 48).dp, vertical = 27.dp + library.tvSafeZoneOffsetDp.coerceIn(0, 48).dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
         GlassSurface(Modifier.width(168.dp).fillMaxHeight(), shape = RoundedCornerShape(12.dp)) {
         Column(Modifier.fillMaxSize().padding(10.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {

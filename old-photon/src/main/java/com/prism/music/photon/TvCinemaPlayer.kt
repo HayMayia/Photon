@@ -68,6 +68,10 @@ internal fun TvCinemaPlayer(model: PhotonViewModel, controller: MediaController?
             else if (it.key == Key.DirectionCenter || it.key == Key.Enter) false
             else if (it.key == Key.MediaPlayPause) { if (playing) controller?.pause() else controller?.play(); true } else false
         }
+    }.onKeyEvent {
+        if (it.type == KeyEventType.KeyDown && (it.key == Key.DirectionCenter || it.key == Key.Enter)) {
+            if (playing) controller?.pause() else controller?.play(); true
+        } else false
     }.focusRequester(root).focusable()) {
         VideoSurface(controller, Modifier.fillMaxSize(), controls = false)
         if (watch.busy || controller == null) CircularProgressIndicator(Modifier.align(Alignment.Center))

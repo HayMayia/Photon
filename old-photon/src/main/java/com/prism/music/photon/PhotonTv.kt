@@ -116,7 +116,25 @@ internal fun PhotonTvScreen(model: PhotonViewModel, selected: Int, select: (Int)
                         TvCollectionNotice(message)
                         OutlinedButton(onClick = { when (selected) { 0 -> if (library.youtubeHome) model.refreshYouTubeHome() else model.home(); 1 -> model.search(query); 5 -> model.subscriptionsFeed(); 6 -> model.shorts() } }, modifier = Modifier.remoteFocus()) { Text("Retry") }
                     }
-                    LazyVerticalGrid(columns = GridCells.Adaptive(220.dp), modifier = Modifier.weight(1f), contentPadding = PaddingValues(8.dp),
+                    if (selected == 0 && videos.isNotEmpty()) {
+                        androidx.compose.foundation.lazy.LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(22.dp), contentPadding = PaddingValues(8.dp)) {
+                            val groups = listOf("For you" to videos.filter { !it.short && !it.music }, "Music" to videos.filter { it.music && !it.short }, "Shorts" to videos.filter { it.short })
+                            groups.filter { it.second.isNotEmpty() }.forEach { (heading, entries) ->
+                                item {
+                                    Text(heading, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 12.dp))
+                                    androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(18.dp), contentPadding = PaddingValues(6.dp)) {
+                                        items(entries, key = { it.id }) { entry ->
+                                            Box(Modifier.width(230.dp)) { TvPosterCard(resolvedVideo(entry), { focusedVideo = entry.id; open(entry) }, focused = { focusedVideo = entry.id }) }
+                                        }
+                                    }
+                                }
+                            }
+                            item {
+                                if (library.youtubeHome && home.page?.continuation != null) OutlinedButton(onClick = model::moreYouTubeHome, modifier = Modifier.remoteFocus()) { Text("More recommendations") }
+                                else if (!library.youtubeHome && browse.hasMore) OutlinedButton(onClick = model::loadMore, modifier = Modifier.remoteFocus()) { Text("More recommendations") }
+                            }
+                        }
+                    } else LazyVerticalGrid(columns = GridCells.Adaptive(220.dp), modifier = Modifier.weight(1f), contentPadding = PaddingValues(8.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         items(videos, key = { it.id }) { source ->
                             val video = resolvedVideo(source)

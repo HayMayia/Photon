@@ -58,6 +58,24 @@ class TvPresentationTest {
         compose.onNodeWithText("MUSIC").assertIsDisplayed()
         assertEquals(firstHeight, compose.onNodeWithTag("tv-preview").fetchSemanticsNode().boundsInRoot.height, 1f)
     }
+    @Test fun speedNeedsOkAndAllowsDirectionalNavigationWithoutMutation() {
+        var speed by mutableFloatStateOf(1f)
+        compose.setContent { MaterialTheme {
+            Column { TvSpeedControl(speed, true) { speed = it }; androidx.compose.material3.Button(onClick = {}) { androidx.compose.material3.Text("Next option") } }
+            val mode = LocalInputModeManager.current
+            LaunchedEffect(Unit) { mode.requestInputMode(InputMode.Keyboard) }
+        } }
+        compose.onNodeWithText("Speed · 1.0× · OK to adjust").performSemanticsAction(SemanticsActions.RequestFocus) { it() }
+            .performKeyInput { pressKey(Key.DirectionRight) }
+        assertEquals(1f, speed, .001f)
+        compose.onNodeWithText("Speed · 1.0× · OK to adjust").performSemanticsAction(SemanticsActions.RequestFocus) { it() }
+            .performKeyInput { pressKey(Key.DirectionCenter); pressKey(Key.DirectionRight) }
+        assertEquals(1f, speed, .001f) // draft only until OK
+        compose.onNodeWithText("Speed · 1.1×", substring = true).performKeyInput { pressKey(Key.DirectionCenter) }
+        assertEquals(1.1f, speed, .001f)
+        compose.onNodeWithText("Speed · 1.1×", substring = true).performKeyInput { pressKey(Key.DirectionDown) }
+        compose.onNodeWithText("Next option").assertIsFocused()
+    }
     @Test fun tvMusicSwitchStartsOffAndCanBeEnabledExplicitly() {
         var enabled by mutableStateOf(false)
         compose.setContent { MaterialTheme { TvMusicBackgroundSetting(enabled) { enabled = it } } }

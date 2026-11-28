@@ -138,13 +138,13 @@ internal fun TvSpeedControl(value: Float, enabled: Boolean, commit: (Float) -> U
     var editing by remember { mutableStateOf(false) }
     var draft by remember(value) { mutableFloatStateOf(value) }
     OutlinedButton(enabled = enabled, onClick = { if (editing) { commit(draft); editing = false } else editing = true },
-        modifier = Modifier.fillMaxWidth().onFocusChanged { if (!it.hasFocus) editing = false }.onPreviewKeyEvent { event ->
+        modifier = Modifier.fillMaxWidth().onFocusChanged { if (!it.hasFocus) { editing = false; draft = value } }.onPreviewKeyEvent { event ->
             if (!editing || event.type != KeyEventType.KeyDown) false else when (event.key) {
                 Key.DirectionLeft, Key.DirectionRight -> {
                     draft = PlayerOptions.speed(kotlin.math.round((draft + if (event.key == Key.DirectionRight) .1f else -.1f) * 10) / 10f)
                     true
                 }
-                Key.DirectionUp, Key.DirectionDown -> { editing = false; false }
+                Key.DirectionUp, Key.DirectionDown -> { draft = value; editing = false; false }
                 Key.Back -> { draft = value; editing = false; true }
                 else -> false
             }

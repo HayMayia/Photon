@@ -3,7 +3,7 @@ package com.prism.music.photon
 import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.common.util.FlagSet
+import androidx.media3.common.FlagSet
 
 /** Installed on MediaSession itself: notification, Bluetooth and UI share these commands. */
 @UnstableApi

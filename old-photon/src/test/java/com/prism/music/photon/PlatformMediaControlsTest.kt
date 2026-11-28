@@ -43,13 +43,13 @@ class PlatformMediaControlsTest {
         try {
             val controller = MediaController(context, session.platformToken)
             repeat(10) { shadowOf(Looper.getMainLooper()).idle() }
-            assertTrue(controller.playbackState.actions and PlaybackState.ACTION_SKIP_TO_NEXT != 0L)
+            assertTrue(requireNotNull(controller.playbackState).actions and PlaybackState.ACTION_SKIP_TO_NEXT != 0L)
             controller.transportControls.skipToNext()
             repeat(10) { shadowOf(Looper.getMainLooper()).idle() }
             assertEquals(b.id, queue.currentId)
             player.refreshCommands()
             repeat(10) { shadowOf(Looper.getMainLooper()).idle() }
-            assertTrue(controller.playbackState.actions and PlaybackState.ACTION_SKIP_TO_PREVIOUS != 0L)
+            assertTrue(requireNotNull(controller.playbackState).actions and PlaybackState.ACTION_SKIP_TO_PREVIOUS != 0L)
             controller.transportControls.skipToPrevious()
             repeat(10) { shadowOf(Looper.getMainLooper()).idle() }
             assertEquals(a.id, queue.currentId)

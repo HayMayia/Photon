@@ -2,8 +2,7 @@ package com.prism.music.photon
 
 import android.app.Application
 import android.os.Looper
-import android.media.session.MediaController
-import android.media.session.PlaybackState
+import androidx.media3.session.MediaController
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.SimpleBasePlayer
@@ -16,7 +15,9 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
-/** Exercise the actual framework transport used by AVRCP, not only the Kotlin adapter. */
+/** Connect through the real MediaSession binder, not only the Kotlin adapter.
+ * Framework AVRCP assertions live in androidTest: Robolectric ShadowMediaController
+ * returns only manually injected state and does not bridge to a framework session. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
 class PlatformMediaControlsTest {
@@ -43,18 +44,20 @@ class PlatformMediaControlsTest {
         }
         val session = MediaSession.Builder(context, player).build()
         try {
-            val controller = MediaController(context, session.platformToken)
-            repeat(10) { shadowOf(Looper.getMainLooper()).idle() }
-            assertTrue(requireNotNull(controller.playbackState).actions and PlaybackState.ACTION_SKIP_TO_NEXT != 0L)
-            controller.transportControls.skipToNext()
+            val connection = MediaController.Builder(context, session.token).buildAsync()
+            repeat(20) { shadowOf(Looper.getMainLooper()).idle() }
+            val controller = connection.get(5, java.util.concurrent.TimeUnit.SECONDS)
+            assertTrue(controller.isCommandAvailable(Player.COMMAND_SEEK_TO_NEXT))
+            controller.seekToNext()
             repeat(10) { shadowOf(Looper.getMainLooper()).idle() }
             assertEquals(b.id, queue.currentId)
             player.refreshCommands()
             repeat(10) { shadowOf(Looper.getMainLooper()).idle() }
-            assertTrue(requireNotNull(controller.playbackState).actions and PlaybackState.ACTION_SKIP_TO_PREVIOUS != 0L)
-            controller.transportControls.skipToPrevious()
+            assertTrue(controller.isCommandAvailable(Player.COMMAND_SEEK_TO_PREVIOUS))
+            controller.seekToPrevious()
             repeat(10) { shadowOf(Looper.getMainLooper()).idle() }
             assertEquals(a.id, queue.currentId)
+            controller.release()
         } finally { session.release(); raw.release() }
     }
 }

@@ -26,6 +26,7 @@ android {
         applicationId = "io.github.haymayia.photon"
         minSdk = 26
         targetSdk = 36
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         versionCode = 59
         versionName = "1.1.1.4 Beta"
         vectorDrawables { useSupportLibrary = true }
@@ -210,6 +211,8 @@ dependencies {
     implementation("dev.chrisbanes.haze:haze-blur:2.0.1")
     implementation("dev.chrisbanes.haze:haze-glass:2.0.1")
 
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
     testImplementation("junit:junit:4.13.2")
     // NewPipe's own JavaScript engine (shipped with it already), for testing the stream solver's scripts.
     testImplementation("org.mozilla:rhino:1.8.1")

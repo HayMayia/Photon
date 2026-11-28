@@ -1,0 +1,5 @@
+render-smoke.mp4 is AndroidX Media's sample.mp4 test fixture.
+Source: https://github.com/androidx/media/blob/1.11.1/libraries/test_data/src/test/assets/media/mp4/sample.mp4
+AndroidX Media is licensed under Apache License 2.0:
+https://github.com/androidx/media/blob/1.11.1/LICENSE
+Test-only fixture, not packaged in the application APK.

@@ -85,6 +85,12 @@ import java.util.UUID
 
 @UnstableApi
 class PhotonActivity : ComponentActivity() {
+    internal val tvBackDispatcher = TvBackDispatcher()
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+        if (isPhotonTv() && tvBackDispatcher.dispatch(event)) return true
+        return super.dispatchKeyEvent(event)
+    }
+
     private val account get() = (application as PhotonApplication).account
     private var authGeneration = -1L
     private val googleAuthorization = registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
@@ -421,6 +427,15 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
             ensureCaptionTrack(player, library)
         }
     }
+    // A remote Back exits playback in one press, regardless of native surface focus.
+    SideEffect {
+        activity.tvBackDispatcher.action = if (tv && (expanded || shortsMode)) ({
+            controller?.pause()
+            model.close()
+            shortsMode = false; expanded = false; fullscreen = false
+        }) else null
+    }
+    DisposableEffect(activity) { onDispose { activity.tvBackDispatcher.action = null } }
     val glassBackdrop = rememberLayerBackdrop()
     CompositionLocalProvider(LocalLiquidBackdrop provides glassBackdrop, LocalPlayerMenus provides PlayerMenuActions(
         settings = { playerSettings = true }, captions = { captionSettings = true },

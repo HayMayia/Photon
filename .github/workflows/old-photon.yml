@@ -71,7 +71,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/photon-artifact"
           cp old-photon/build/outputs/apk/debug/*.apk "$RUNNER_TEMP/photon-artifact/"
           if [ "$GITHUB_EVENT_NAME" != 'pull_request' ] && [ -f signing/ANDROID_OAUTH.txt ]; then
-            "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs old-photon/build/outputs/apk/debug/app-debug.apk > "$RUNNER_TEMP/photon-apk-certificate.txt"
+            "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs old-photon/build/outputs/apk/debug/old-photon-debug.apk > "$RUNNER_TEMP/photon-apk-certificate.txt"
             python3 - <<'PYVERIFY'
           import os, pathlib, re
           expected = re.search(r'SHA-1 certificate fingerprint: ([A-Fa-f0-9:]+)', pathlib.Path('signing/ANDROID_OAUTH.txt').read_text()).group(1).replace(':', '').lower()
@@ -97,7 +97,7 @@ jobs:
         run: |
           set -euo pipefail
           ./gradlew :old-photon:assembleRelease --stacktrace
-          APK=old-photon/build/outputs/apk/release/app-release.apk
+          APK=old-photon/build/outputs/apk/release/old-photon-release.apk
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs "$APK" > "$RUNNER_TEMP/photon-release-certificate.txt"
           python3 - <<'PYRELEASE'
           import os, pathlib, re

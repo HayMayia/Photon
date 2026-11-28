@@ -64,12 +64,12 @@ internal fun PhotonTvScreen(model: PhotonViewModel, selected: Int, select: (Int)
     CompositionLocalProvider(LocalLiquidBackdrop provides backdrop) {
     Box(Modifier.fillMaxSize()) {
         Box(Modifier.fillMaxSize().then(if (library.performanceMode || !library.liquidGlass || library.youtubeLayout || android.os.Build.VERSION.SDK_INT < 31) Modifier else Modifier.layerBackdrop(backdrop)).background(MaterialTheme.colorScheme.background))
-    Row(Modifier.fillMaxSize().safeDrawingPadding().padding(24.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-        GlassSurface(Modifier.width(180.dp).fillMaxHeight(), shape = RoundedCornerShape(12.dp)) {
+    Row(Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal = 40.dp, vertical = 28.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+        GlassSurface(Modifier.width(168.dp).fillMaxHeight(), shape = RoundedCornerShape(12.dp)) {
         Column(Modifier.fillMaxSize().padding(10.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
                 Text(if (library.youtubeLayout) "YouTube" else "Photon", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                Text("WATCH · LISTEN", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("YOUR NEXT GREAT WATCH", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             listOf(0 to "Home", 1 to "Search", 5 to "Subscriptions", 6 to "Shorts", 2 to "Library", 4 to "Downloads", 3 to "Settings").forEach { (tab, label) ->
                 FilledTonalButton(onClick = { focusedVideo = null; select(tab); if (tab == 0) model.home(); if (tab == 5) model.subscriptionsFeed(); if (tab == 6) model.shorts() },
@@ -144,17 +144,14 @@ internal fun PhotonTvScreen(model: PhotonViewModel, selected: Int, select: (Int)
 /** Stable, non-focusable preview: arrow navigation never starts playback or changes layout height. */
 @Composable
 internal fun TvFocusedPreview(video: Video) {
-    Surface(shape = RoundedCornerShape(22.dp), color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = .45f),
-        modifier = Modifier.fillMaxWidth().testTag("tv-preview")) {
-        Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(if (video.short) "SHORTS" else if (video.music) "MUSIC" else "SPOTLIGHT", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-                Text(video.title, minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Text(video.channel, maxLines = 1, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodyMedium)
-            }
-            Icon(PrismIcons.Play, null, Modifier.size(36.dp), tint = MaterialTheme.colorScheme.primary)
+    Box(Modifier.fillMaxWidth().height(190.dp).testTag("tv-preview").background(Color(0xFF121B2C), RoundedCornerShape(18.dp))) {
+        VideoThumbnail(video, null, Modifier.align(Alignment.CenterEnd).fillMaxHeight().fillMaxWidth(.6f))
+        Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Color(0xFF121B2C), Color(0xFF121B2C).copy(.95f), Color.Transparent))))
+        Column(Modifier.fillMaxWidth(.65f).align(Alignment.CenterStart).padding(24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(if (video.short) "SHORTS" else if (video.music) "MUSIC" else "SPOTLIGHT", style = MaterialTheme.typography.labelMedium, color = Color(0xFF68DDF5))
+            Text(video.title, minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = Color.White)
+            Text(video.channel, maxLines = 1, overflow = TextOverflow.Ellipsis, color = Color.White.copy(.7f))
         }
     }
 }

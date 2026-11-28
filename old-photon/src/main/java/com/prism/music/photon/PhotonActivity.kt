@@ -428,6 +428,8 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         if (pip) {
             VideoSurface(controller, Modifier.fillMaxSize(), controls = false)
+        } else if (tv && shortsMode) {
+            TvShortsPlayer(browse, watch, controller, model, close = { shortsMode = false; expanded = false })
         } else if (shortsMode) {
             Column(Modifier.fillMaxSize()) {
                 Box(Modifier.weight(1f)) { ShortsScreen(browse, watch, controller, model, fullscreen = { shortsMode = false; expanded = true; fullscreen = true }) { shortsMode = false; expanded = false } }
@@ -435,12 +437,8 @@ private fun PhotonRoot(model: PhotonViewModel, controller: MediaController?, pip
             }
         } else if (collection != null && !expanded) {
             CollectionScreen(model, library, { open(it) }, ::closeCollection)
-        } else if (tv && expanded && watch.video != null && !immersive) {
-            TvVideoDetails(model, controller, watch, fullscreen = { fullscreen = true }, close = { expanded = false },
-                comments = { model.loadComments(watch.video!!); commentsSheet = true },
-                channel = { url -> collectionBackToPlayer = true; expanded = false; model.openCollection(url, true) },
-                cast = { activity.withLanPermission { casting.discover(); castSheet = true } }, open = ::open,
-                download = { downloadSheet = true }, save = { playlistSheet = true })
+        } else if (tv && expanded && watch.video != null) {
+            TvCinemaPlayer(model, controller, watch, open = ::open, close = { expanded = false; fullscreen = false })
         } else if (expanded && watch.video != null) {
             val video = watch.video!!
             Column(Modifier.fillMaxSize().background(if (immersive) Color.Black else MaterialTheme.colorScheme.background)

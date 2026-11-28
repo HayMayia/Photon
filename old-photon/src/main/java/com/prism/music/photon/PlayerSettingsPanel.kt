@@ -7,6 +7,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.input.key.*
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -26,6 +29,7 @@ internal val LocalPlayerMenus = staticCompositionLocalOf { PlayerMenuActions() }
 @androidx.annotation.OptIn(UnstableApi::class)
 @Composable
 internal fun PlayerSettingsPanel(model: PhotonViewModel, controller: MediaController?, captionsOnly: Boolean, dismiss: () -> Unit) {
+    val tv = LocalContext.current.isPhotonTv()
     val initialFocus = remember { androidx.compose.ui.focus.FocusRequester() }
     LaunchedEffect(Unit) { initialFocus.requestFocus() }
     val sleepDeadline by model.sleepTimerDeadline.collectAsStateWithLifecycle()
@@ -75,7 +79,8 @@ internal fun PlayerSettingsPanel(model: PhotonViewModel, controller: MediaContro
                                     label = { Text(if (speed == 1f) "1× (normal)" else "${speed}×") }, modifier = Modifier.remoteFocus())
                             }
                         } }
-                        item { Slider(value = speedDraft, onValueChange = { v -> speedDraft = kotlin.math.round(v * 10) / 10f },
+                        item { if (tv) TvSpeedControl(speedDraft, speedEnabled) { value -> speedDraft = value; update { it.copy(playbackSpeed = value) } }
+                        else Slider(value = speedDraft, onValueChange = { v -> speedDraft = kotlin.math.round(v * 10) / 10f },
                             onValueChangeFinished = { update { it.copy(playbackSpeed = speedDraft) } }, enabled = speedEnabled, valueRange = .1f..10f, steps = 98, modifier = Modifier.remoteFocus()) }
                         if (!speedEnabled) item { Text("Speed changes are unavailable for this playback.") }
                         item { Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -123,6 +128,30 @@ internal fun PlayerSettingsPanel(model: PhotonViewModel, controller: MediaContro
                     } }
                 }
             }
+        }
+    }
+}
+
+/** Focus is navigation; only OK enters adjustment. Up/Down/Back leave without trapping focus. */
+@Composable
+internal fun TvSpeedControl(value: Float, enabled: Boolean, commit: (Float) -> Unit) {
+    var editing by remember { mutableStateOf(false) }
+    var draft by remember(value) { mutableFloatStateOf(value) }
+    OutlinedButton(enabled = enabled, onClick = { if (editing) { commit(draft); editing = false } else editing = true },
+        modifier = Modifier.fillMaxWidth().onFocusChanged { if (!it.hasFocus) editing = false }.onPreviewKeyEvent { event ->
+            if (!editing || event.type != KeyEventType.KeyDown) false else when (event.key) {
+                Key.DirectionLeft, Key.DirectionRight -> {
+                    draft = PlayerOptions.speed(kotlin.math.round((draft + if (event.key == Key.DirectionRight) .1f else -.1f) * 10) / 10f)
+                    true
+                }
+                Key.DirectionUp, Key.DirectionDown -> { editing = false; false }
+                Key.Back -> { draft = value; editing = false; true }
+                else -> false
+            }
+        }.remoteFocus()) {
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Speed · ${"%.1f".format(java.util.Locale.US, draft)}× · " + if (editing) "← / → adjust · OK apply · Back cancel" else "OK to adjust")
+            LinearProgressIndicator(progress = { (draft - .1f) / 9.9f }, modifier = Modifier.fillMaxWidth())
         }
     }
 }

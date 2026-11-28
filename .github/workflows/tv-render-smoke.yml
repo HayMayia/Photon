@@ -51,7 +51,7 @@ jobs:
           target: google_apis
           profile: pixel_2
           disable-animations: true
-          script: set -o pipefail; ./gradlew :old-photon:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.prism.music.photon.TvRenderSmokeTest --stacktrace 2>&1 | tee render.log
+          script: bash -o pipefail -c './gradlew :old-photon:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.prism.music.photon.TvRenderSmokeTest --stacktrace 2>&1 | tee render.log' 
       - name: Collect frame screenshot
         if: always()
         run: adb pull /sdcard/Android/data/io.github.haymayia.photon/files/tv-render-smoke.png tv-render-smoke.png || true

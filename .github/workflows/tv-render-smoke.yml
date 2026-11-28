@@ -54,13 +54,16 @@ jobs:
           script: bash -o pipefail -c './gradlew :old-photon:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.prism.music.photon.TvRenderSmokeTest --stacktrace 2>&1 | tee render.log' 
       - name: Collect frame screenshot
         if: always()
-        run: adb pull /sdcard/Android/data/io.github.haymayia.photon/files/tv-render-smoke.png tv-render-smoke.png || true
+        run: |
+          adb pull /sdcard/Android/data/io.github.haymayia.photon/files/tv-render-smoke.png tv-render-smoke.png || true
+          adb logcat -d -t 1800 > render-logcat.log || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: TV-real-frame-results
           path: |
             tv-render-smoke.png
+            render-logcat.log
             old-photon/build/reports/androidTests/
             old-photon/build/outputs/androidTest-results/
       - name: Publish render diagnostics
@@ -71,7 +74,7 @@ jobs:
           python3 - <<'PYDIAG'
           import json, pathlib, os
           parts = []
-          for pattern in ['render.log', 'sdk.log', 'old-photon/build/outputs/androidTest-results/**/*.xml']:
+          for pattern in ['render.log', 'sdk.log', 'render-logcat.log', 'old-photon/build/outputs/androidTest-results/**/*.xml']:
               for p in pathlib.Path('.').glob(pattern):
                   parts.append(str(p) + '\n' + p.read_text(errors='replace')[-18000:])
           text = '\n'.join(parts)[-58000:] or 'Failure before render logs. See job annotations.'

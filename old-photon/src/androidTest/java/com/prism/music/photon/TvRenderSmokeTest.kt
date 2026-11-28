@@ -56,7 +56,10 @@ class TvRenderSmokeTest {
                 player.repeatMode = Player.REPEAT_MODE_ONE
                 player.prepare(); player.play()
             }
-            assertTrue("No first-frame callback within 20 seconds", frame.await(20, TimeUnit.SECONDS))
+            val firstFrame = frame.await(20, TimeUnit.SECONDS)
+            var state = ""
+            scenario.onActivity { activity -> state = "state=${player.playbackState} ready=${player.playWhenReady} playing=${player.isPlaying} position=${player.currentPosition} tracks=${player.currentTracks.groups.size} video=${player.videoSize} surface=${(activity.output.videoSurfaceView as TextureView).isAvailable} commands=${player.availableCommands}\n" + PhotonDiagnostics.report() }
+            assertTrue("No first-frame callback within 20 seconds: $state", firstFrame)
             assertNull("Decoder failure", failed.get())
             val pixels = CountDownLatch(1)
             val path = File(instrumentation.targetContext.getExternalFilesDir(null), "tv-render-smoke.png")

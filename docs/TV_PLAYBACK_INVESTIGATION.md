@@ -51,3 +51,8 @@ after the adapter replacement: first-frame callback, nonblack texture pixels
 under Compose, and Activity-level remote Back dispatch. The earlier run
 46174734538 failed on the same local fixture with service playing/controller idle.
 This is a failing-before/passing-after emulator result, not physical-TV validation.
+
+Final versioned source `ebe68b3e409c6b64bb5fff030384aa906a296d63`: real-frame/Back
+run **46175827262 PASS**, original build/unit/signing/publication run
+**46175827287 PASS**. Published as original Photon **1.1.1.7 Beta**, versionCode62.
+Physical TV and public-network startup benchmarking remain unverified.

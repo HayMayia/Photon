@@ -39,3 +39,9 @@ an email using the connected Gmail app:
   uploaded asset verification; Gmail message ID `1a2233e6a9aec779`.
   Subject: `Updated Photon to 1.1.1.6 Beta`. Black-picture device validation
   remains explicitly unverified in the notification.
+
+- 1.1.1.7 Beta (original Photon event-path correction/new icon): sent after
+  exact-source real-frame check and verified non-draft uploaded APK.
+  Gmail message ID `1a223718c8d7339a`.
+  Subject: `Updated Photon to 1.1.1.7 Beta`. Email explicitly distinguishes
+  emulator pixel/Back checks from physical-TV and network-performance claims.

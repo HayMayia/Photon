@@ -30,10 +30,13 @@ service played. It does not claim every TV/codec has been physically verified.
   OK-to-adjust speed controls. No unrelated phone redesign.
 
 ## Validation
-Final versioned validation pending. Release publication now requires the
-real-frame/Back emulator check to pass on the exact release commit, in addition
-to the original unit/regression tests, instrumentation compilation and signing
-checks. The debug probe activity and local fixture are not in the release APK.
+Final versioned checks passed on source `ebe68b3e409c6b64bb5fff030384aa906a296d63`:
+- [Real decoded-frame/Back emulator check 46175827262](https://github.com/HayMayia/Photon/actions/runs/46175827262).
+- [Original build/unit/signing/release check 46175827287](https://github.com/HayMayia/Photon/actions/runs/46175827287).
+
+Publication was gated on the successful real-frame check for that exact source,
+not just a successful compile. [Download Photon.apk](https://github.com/HayMayia/Photon/releases/download/v1.1.1.7-beta/Photon.apk)
+(24,626,288 bytes; non-draft release and uploaded asset verified). The debug probe activity and local fixture are not in the release APK.
 
 After installation verify the new icon and version label, open the same video,
 check actual picture/clock and press Back. If the picture is still black on the

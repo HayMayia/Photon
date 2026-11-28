@@ -294,8 +294,9 @@ class PhotonPlaybackService : MediaSessionService() {
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         if (!playbackAllowed()) { session?.player?.pause(); stopSelf(); return }
-        // An explicitly paused session can stop; playing media keeps its foreground notification.
-        if (session?.player?.playWhenReady != true) stopSelf()
+        // Keep an allowed paused music queue and its controls when the task is swiped away.
+        // Explicit Stop/close clears the items; Android may still reclaim an inactive service.
+        if (session?.player?.mediaItemCount == 0) stopSelf()
     }
 
     override fun onDestroy() {

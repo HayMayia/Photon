@@ -2,6 +2,10 @@
 
 Only original Photon changes. Version code 59; same package and signing identity.
 
+- Preserve genuine native Liked Music classification when publishing the initial
+  playback item; a missing extractor category must not make the service pause a
+  verified song when the screen closes. Keep allowed paused music sessions when
+  the app task is swiped away, rather than stopping solely because they are paused.
 - Configure the playback notification explicitly with a proper status-bar icon,
   and retain controls for paused/restored queues using the same idle-notification
   setting as Prism. Register the service's session immediately on creation.

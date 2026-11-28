@@ -909,7 +909,7 @@ class PhotonViewModel(application: Application) : AndroidViewModel(application) 
                 app.transport.publicPage = queuedPublicPage; app.transport.publicUrl = queuedPublicUrl
                 app.transport.select(proved, details.related, queue.value, playlistSource.value, revision, queuedAccountPage)
                 if (queuedPublicPage != null) app.transport.update(app.transport.state.value.copy(continuation = "@public"))
-                mutableWatch.value = WatchState(details.video.copy(short = video.short || presentation.short || details.video.short, thumbnail = if (presentation.short && presentation.thumbnail.isNotBlank()) presentation.thumbnail else details.video.thumbnail), details, quality, request = System.nanoTime(), startPositionMs = library.value.progress[video.id]?.resumeMs() ?: 0, openedAtMs = opened, webRevision = revision)
+                mutableWatch.value = WatchState(MusicPlaybackPolicy.retainProof(details.video, video).copy(short = video.short || presentation.short || details.video.short, thumbnail = if (presentation.short && presentation.thumbnail.isNotBlank()) presentation.thumbnail else details.video.thumbnail), details, quality, request = System.nanoTime(), startPositionMs = library.value.progress[video.id]?.resumeMs() ?: 0, openedAtMs = opened, webRevision = revision)
                 // Playback is published first; account-only reads must not contend with startup.
                 viewModelScope.launch { kotlinx.coroutines.delay(1_000); if (mutableWatch.value.video?.id == video.id) { resolveVideoPresentation(proved); details.channel?.let(::resolveSubscription) } }
                 // No speculative next-video extraction while the selected video is using the connection.

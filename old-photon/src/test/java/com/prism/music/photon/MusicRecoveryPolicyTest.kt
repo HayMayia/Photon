@@ -6,6 +6,10 @@ import org.junit.Test
 
 class MusicRecoveryPolicyTest {
     private val song = Video("abcdefghijk", "Song", "Artist", music = true)
+    @Test fun nativeLikedMusicProofSurvivesMissingExtractorCategory() {
+        assertTrue(MusicPlaybackPolicy.retainProof(song.copy(music = false), song).music)
+        assertFalse(MusicPlaybackPolicy.retainProof(song.copy(music = false), song.copy(music = false)).music)
+    }
     @Test fun overrideDefaultsOnForExistingInstallations() {
         val library = Json.decodeFromString<PhotonLibrary>("{}")
         assertTrue(library.musicOverride)

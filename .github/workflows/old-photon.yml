@@ -56,13 +56,13 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          if ./gradlew :old-photon:testDebugUnitTest --tests 'com.prism.music.photon.*' --stacktrace 2>&1 | tee tests.log; then
+          if ./gradlew :old-photon:compileDebugAndroidTestKotlin :old-photon:testDebugUnitTest --tests 'com.prism.music.photon.*' --stacktrace 2>&1 | tee tests.log; then
             exit 0
           fi
           # Retry only a dependency rate-limit, never a failing assertion.
           if grep -q 'Received status code 429' tests.log && ! grep -q 'There were failing tests' tests.log; then
             sleep 20
-            ./gradlew :old-photon:testDebugUnitTest --tests 'com.prism.music.photon.*' --stacktrace 2>&1 | tee -a tests.log
+            ./gradlew :old-photon:compileDebugAndroidTestKotlin :old-photon:testDebugUnitTest --tests 'com.prism.music.photon.*' --stacktrace 2>&1 | tee -a tests.log
           else
             exit 1
           fi

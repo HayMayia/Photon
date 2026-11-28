@@ -14,8 +14,12 @@ Only original Photon changes. Version code 59; same package and signing identity
 - Request notification permission once at first playback on Android 13+, not only
   through the Downloads flow. Android/device settings can still block a channel;
   the app does not override a user's notification or background preferences.
-- Add a framework MediaController/MediaSession transport regression test to check
-  the route used by speaker controls, rather than testing only adapter methods.
+- Add an actual service/notification-manager test without an Activity, and a
+  Media3 controller-to-session binder transport regression (not only adapter
+  methods). A separate Android instrumentation test covers the framework legacy
+  transport used by AVRCP; it is compiled but not executed in the hosted build.
+  Robolectric's framework MediaController shadow only returns manually injected
+  playback state, so it cannot validate that OS-level bridge.
 
 Validation pending. No physical speaker, Bluetooth firmware or notification-shade
 validation claimed. Android force-stop/routing limitations remain. No UI redesign,
